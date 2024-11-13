@@ -1,87 +1,71 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>promptME</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            text-align: center;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'VT323', monospace;
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
         }
-        
-        .title {
-            color: #FF7F7F;
-            font-size: 72px;
+
+        h1 {
+            color: #FF9999;
+            font-size: 48px;
             margin-bottom: 40px;
         }
-        
-        .student-section {
-            margin: 40px 0;
+
+        .buttons {
+            display: flex;
+            gap: 20px;
         }
-        
-        .student-label {
-            color: #FF8C00;
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-        
-        .student-input {
-            width: 300px;
-            padding: 10px;
-            font-size: 18px;
-            text-align: center;
-            border: 2px solid #FF8C00;
-            border-radius: 8px;
-            margin: 10px 0;
-        }
-        
-        .button {
-            padding: 15px 40px;
-            margin: 15px;
+
+        button {
+            font-family: 'VT323', monospace;
+            padding: 15px 30px;
             border: none;
             border-radius: 25px;
-            cursor: pointer;
             font-size: 24px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
             color: white;
-            transition: background-color 0.3s;
-            width: 250px;
+            transition: background-color 0.3s ease;
         }
-        
-        .launch-button {
-            background-color: #66CDAA;
+
+        .generate {
+            background-color: #A8D5BA;
         }
-        
-        .edit-button {
-            background-color: #FF7F7F;
+
+        .generate:hover {
+            background-color: #8FC3A3;
         }
-        
-        .button:hover {
-            opacity: 0.9;
+
+        .edit {
+            background-color: #FF9999;
+        }
+
+        .edit:hover {
+            background-color: #FF7777;
         }
     </style>
 </head>
 <body>
-    <h1 class="title">promptME</h1>
-    
-    <div class="student-section">
-        <div class="student-label">STUDENT NAME</div>
-        <input type="text" id="student-name" class="student-input" value="A">
-    </div>
-    
+    <h1>Prompt Generator</h1>
     <div class="buttons">
-        <button class="button launch-button" onclick="launchApp()">LAUNCH</button>
-        <br>
-        <button class="button edit-button" onclick="window.location.href='editor.html'">EDIT PROMPTS</button>
+        <button class="generate" onclick="window.location.href='sketch.html'">Generate Prompts</button>
+        <button class="edit" onclick="window.location.href='editor.html'">Edit Prompts</button>
     </div>
 </body>
 </html>
-
-<script>
-function launchApp() {
-    const studentName = document.getElementById('student-name').value;
-    localStorage.setItem('studentName', studentName);
-    window.location.href = 'sketch.html';
-}
-</script>
