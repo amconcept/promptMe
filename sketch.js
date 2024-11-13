@@ -13,10 +13,10 @@ let saveButton;
 
 // Animation timing
 const TIMING = {
-    SCRAMBLE_SPEED: 15,
-    REVEAL_SPEED: 20,
-    SCRAMBLE_CYCLES: 30,
-    PAUSE_BETWEEN: 500
+    SCRAMBLE_SPEED: 5,
+    REVEAL_SPEED: 10,
+    SCRAMBLE_CYCLES: 10,
+    PAUSE_BETWEEN: 100
 };
 
 // Sound settings
