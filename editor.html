@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Prompt Designer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #FF7F7F;
+            margin-bottom: 40px;
+        }
+        .objective-section {
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .objective-label {
+            color: #FF7F7F;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .objective-input {
+            flex-grow: 1;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        /* Main grid layout */
+        .prompt-headers {
+            margin-left: 80px;
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .prompt-column {
+            width: 200px;
+        }
+
+        .header-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .category-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .row-label-container {
+            width: 60px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .delete-category {
+            background: #FF7F7F;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .row-label {
+            font-size: 24px;
+            font-weight: bold;
+            color: #FF7F7F;
+        }
+
+        textarea {
+            width: 200px;
+            height: 100px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            resize: vertical;
+        }
+
+        .buttons {
+            text-align: center;
+            margin-top: 30px;
+        }
+        .save, .return {
+            padding: 15px 30px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .save { background-color: #66CDAA; color: white; }
+        .return { background-color: #FF7F7F; color: white; }
+
+        .add-category-circle {
+            position: fixed;
+            bottom: 40px;
+            right: 40px;
+            background: #66CDAA;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Add styles for prompt add button */
+        .add-prompt-button {
+            width: 200px;  /* Same width as other columns */
+            height: 36px;  /* Match height of header input */
+            background: #f5f5f5;
+            border: 1px dashed #ccc;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .add-prompt-button span {
+            background: #66CDAA;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Add styles for category add button */
+        .add-category-row {
+            margin-left: 80px;  /* Match prompt-headers margin */
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            height: 100px;  /* Match textarea height */
+            background: #f5f5f5;
+            border: 1px dashed #ccc;
+            border-radius: 4px;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .add-category-button {
+            background: #66CDAA;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Prompt Designer</h1>
+    
+    <div class="objective-section">
+        <div class="objective-label">OBJECTIVE:</div>
+        <input type="text" id="objective-input" class="objective-input" 
+               placeholder="Enter the objective for this prompt set">
+    </div>
+    
+    <div class="prompt-headers" id="prompt-headers">
+        <!-- Prompt headers will be added here -->
+        <button class="add-prompt-button" onclick="addNewPrompt()">
+            <span>+</span>
+        </button>
+    </div>
+    
+    <div id="categories-container">
+        <!-- Category rows will be added here -->
+    </div>
+    
+    <div class="add-category-row" onclick="addNewCategory()">
+        <button class="add-category-button">+</button>
+    </div>
+    
+    <div class="buttons">
+        <button class="save" onclick="saveChanges()">SAVE CHANGES</button>
+        <button class="return" onclick="returnToApp()">RETURN TO APP</button>
+    </div>
+
+    <script src="editor.js"></script>
+</body>
+</html>

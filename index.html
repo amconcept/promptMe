@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>promptME</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .title {
+            color: #FF7F7F;
+            font-size: 72px;
+            margin-bottom: 40px;
+        }
+        
+        .student-section {
+            margin: 40px 0;
+        }
+        
+        .student-label {
+            color: #FF8C00;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .student-input {
+            width: 300px;
+            padding: 10px;
+            font-size: 18px;
+            text-align: center;
+            border: 2px solid #FF8C00;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        .button {
+            padding: 15px 40px;
+            margin: 15px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 24px;
+            color: white;
+            transition: background-color 0.3s;
+            width: 250px;
+        }
+        
+        .launch-button {
+            background-color: #66CDAA;
+        }
+        
+        .edit-button {
+            background-color: #FF7F7F;
+        }
+        
+        .button:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="title">promptME</h1>
+    
+    <div class="student-section">
+        <div class="student-label">STUDENT NAME</div>
+        <input type="text" id="student-name" class="student-input" value="A">
+    </div>
+    
+    <div class="buttons">
+        <button class="button launch-button" onclick="launchApp()">LAUNCH</button>
+        <br>
+        <button class="button edit-button" onclick="window.location.href='editor.html'">EDIT PROMPTS</button>
+    </div>
+</body>
+</html>
+
+<script>
+function launchApp() {
+    const studentName = document.getElementById('student-name').value;
+    localStorage.setItem('studentName', studentName);
+    window.location.href = 'sketch.html';
+}
+</script>
