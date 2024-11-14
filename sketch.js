@@ -25,6 +25,9 @@ let usedPrompts = {
 // Add at the top of your file
 let DEBUG = true;
 
+// Add at the top with your other state variables
+let showInstructions = true;
+
 function debugLog(...args) {
     if (DEBUG) {
         console.log(...args);
@@ -34,16 +37,16 @@ function debugLog(...args) {
 // Animation timing
 const TIMING = {
     SCRAMBLE_SPEED: 50,
-    REVEAL_SPEED: 100,
+    REVEAL_SPEED: 50,
     SCRAMBLE_CYCLES: 15,
     PAUSE_BETWEEN: 200
-};
+}
 
 // Sound settings
 const SOUND = {
     SCRAMBLE: { FREQUENCY: 440, DURATION: 15 },
-    REVEAL: { FREQUENCY: 880, DURATION: 25 },
-    FINAL: { FREQUENCY: 1320, DURATION: 100 },
+    REVEAL: { FREQUENCY: 600, DURATION: 25 },
+    FINAL: { FREQUENCY: 1200, DURATION: 100 },
     VOLUME: 0.03
 };
 
@@ -51,7 +54,7 @@ let categories = {};
 let currentPrompts = {};
 
 // You can also modify the scramble characters themselves
-// const ROTATING_CHARS = ['║', '╔', '��', '╗', '║', '╚', '═', '╝'];  // Current set
+// const ROTATING_CHARS = ['║', '╔', '', '╗', '║', '╚', '═', '╝'];  // Current set
 // or try alternatives like:
 const ROTATING_CHARS = ['█', '▀', '▄', '▌', '▐', '░', '▒', '▓'];  // More solid blocks
 // const ROTATING_CHARS = ['┃', '┏', '━', '┓', '┃', '┗', '━', '┛'];  // Thinner lines
@@ -68,7 +71,7 @@ const COLORS = {
 const SPACING = {
     TOP_MARGIN: 0.05,        // 5% of height
     OBJECTIVE_MARGIN: 0.12,  // 12% of height
-    PROMPT_START: 0.35,      // 25% of height
+    PROMPT_START: 0.45,      // 25% of height
     PROMPT_SPACING: 0.06,    // 12% of height between prompts
     CATEGORY_OFFSET: 0.45,   // 45% of width
     PROMPT_OFFSET: 0.48,     // 48% of width
@@ -122,6 +125,9 @@ function setup() {
         height - bottomMargin - elementHeight
     );
     
+    // Add this line to connect the click handler
+    saveButton.mousePressed(saveImage);
+    
     // Style save button responsively
     saveButton.style('background-color', '#001100');
     saveButton.style('color', '#00FF00');
@@ -172,10 +178,13 @@ function setup() {
 
 function saveImage() {
     if (studentName) {
-        // Save the canvas using the student's name
+        showInstructions = false;  // Hide instructions
+        draw();  // Redraw once without instructions
         const sanitizedStudentName = studentName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '');
         const filename = `${sanitizedStudentName}_prompts`;
         saveCanvas(filename, 'png');
+        showInstructions = true;   // Show instructions again
+        draw();  // Redraw with instructions
     } else {
         alert('Student name is not set. Unable to save the image.');
     }
@@ -232,13 +241,15 @@ function draw() {
         }
     });
     
-    // Draw instructions
-    fill(COLORS.DIM);
-    textSize(FONT_SIZES.INSTRUCTIONS());
-    textAlign(CENTER, BOTTOM);
-    text('Press ESC to return to main menu', 
-         width/2, 
-         height * (1 - SPACING.BOTTOM_MARGIN));
+    // Draw instructions only if showInstructions is true
+    if (showInstructions) {
+        fill(COLORS.DIM);
+        textSize(FONT_SIZES.INSTRUCTIONS());
+        textAlign(CENTER, BOTTOM);
+        text('Press ESC to return to main menu', 
+             width/2, 
+             height * (1 - SPACING.BOTTOM_MARGIN));
+    }
 }
 
 function keyPressed() {
