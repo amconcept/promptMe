@@ -1,3 +1,11 @@
+// Add this BEFORE the DOMContentLoaded event listener
+document.addEventListener('keyup', (event) => {
+    if (event.key === 'Escape') {
+        event.preventDefault(); // Prevent any default ESC behavior
+        window.location.href = 'index.html';
+    }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     let categoryCounter = 0;
     let promptCounter = 0;
@@ -18,14 +26,45 @@ document.addEventListener('DOMContentLoaded', () => {
         newPrompt.className = 'prompt-column';
         promptCounter++;
         
-        // Add input and delete button
+        // Add input and delete button with retro styling
         newPrompt.innerHTML = `
-            <input type="text" class="header-input" placeholder="Enter label">
-            <button class="delete-prompt" onclick="deletePrompt(this)">x</button>
+            <div style="position: relative; width: 100%;">
+                <input type="text" class="header-input" placeholder="Enter label">
+                <button class="delete-prompt" onclick="deletePrompt(this)" 
+                    style="
+                        position: absolute;
+                        top: 0;
+                        right: 0;
+                        width: 24px;
+                        height: 24px;
+                        background: #FFFFFF;
+                        color: #00FF00;
+                        border: 1px solid #00FF00;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-family: 'VT323', monospace;
+                        font-size: 14px;
+                        padding: 0;
+                        margin: 0;
+                        border-radius: 4px;
+                    ">x</button>
+            </div>
         `;
         
-        // Insert the new prompt before the add button
+        // Add hover effects after the element is added to the DOM
         promptHeaders.insertBefore(newPrompt, addButton);
+        
+        const deleteBtn = newPrompt.querySelector('.delete-prompt');
+        deleteBtn.onmouseover = () => {
+            deleteBtn.style.backgroundColor = '#00FF00';
+            deleteBtn.style.color = '#FFFFFF';
+        };
+        deleteBtn.onmouseout = () => {
+            deleteBtn.style.backgroundColor = '#FFFFFF';
+            deleteBtn.style.color = '#00FF00';
+        };
         
         updateCategoryRows();
     }
@@ -370,31 +409,62 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Style the buttons
+    // Style the buttons to match retro terminal theme
     [downloadButton, uploadButton].forEach(button => {
-        button.style.backgroundColor = '#A8D5BA';  // Light green like Save Changes
-        button.style.color = 'white';
-        button.style.fontSize = '20px';
+        button.style.backgroundColor = '#FFFFFF';  // White background
+        button.style.color = '#00FF00';  // Green text
+        button.style.fontSize = '16px';
         button.style.padding = '15px 30px';
-        button.style.border = 'none';
-        button.style.borderRadius = '25px';  // More rounded corners
+        button.style.border = '1px solid #00FF00';  // Green border
+        button.style.borderRadius = '4px';
         button.style.cursor = 'pointer';
-        button.style.fontFamily = 'Arial, sans-serif';
+        button.style.fontFamily = 'VT323, monospace';
         button.style.width = 'auto';
         button.style.margin = '10px';
-        button.style.textTransform = 'uppercase';  // Make text uppercase
-        button.style.letterSpacing = '1px';  // Add letter spacing
-        button.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';  // Subtle shadow
+        button.style.textTransform = 'uppercase';
     });
     
-    // Add hover effect
+    // Update hover effect
     [downloadButton, uploadButton].forEach(button => {
         button.onmouseover = () => {
-            button.style.backgroundColor = '#8FC3A3';  // Slightly darker on hover
-            button.style.transition = 'background-color 0.3s ease';
+            button.style.backgroundColor = '#00FF00';
+            button.style.color = '#FFFFFF';
         };
         button.onmouseout = () => {
-            button.style.backgroundColor = '#A8D5BA';
+            button.style.backgroundColor = '#FFFFFF';
+            button.style.color = '#00FF00';
+        };
+    });
+
+    // Add this new section to style the delete buttons
+    const deleteButtons = document.querySelectorAll('.delete-prompt');
+    deleteButtons.forEach(button => {
+        button.style.backgroundColor = '#FFFFFF';  // White background
+        button.style.color = '#00FF00';  // Green text
+        button.style.border = '1px solid #00FF00';  // Green border
+        button.style.fontFamily = 'VT323, monospace';
+        button.style.width = '24px';
+        button.style.height = '24px';
+        button.style.display = 'flex';
+        button.style.alignItems = 'center';
+        button.style.justifyContent = 'center';
+        button.style.cursor = 'pointer';
+        button.style.fontSize = '14px';
+        button.style.padding = '0';
+        button.style.margin = '0';
+        button.style.position = 'absolute';
+        button.style.top = '0';
+        button.style.right = '0';
+        button.style.borderRadius = '4px';
+        
+        // Add hover effect
+        button.onmouseover = () => {
+            button.style.backgroundColor = '#00FF00';
+            button.style.color = '#FFFFFF';
+        };
+        button.onmouseout = () => {
+            button.style.backgroundColor = '#FFFFFF';
+            button.style.color = '#00FF00';
         };
     });
 });
