@@ -412,10 +412,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Style the buttons to match retro terminal theme
     [downloadButton, uploadButton].forEach(button => {
         button.style.backgroundColor = '#FFFFFF';  // White background
-        button.style.color = '#00FF00';  // Green text
+        button.style.color = '#000000';  // Green text
         button.style.fontSize = '16px';
         button.style.padding = '15px 30px';
-        button.style.border = '1px solid #00FF00';  // Green border
+        button.style.border = '1px solid #000000';  // Green border
         button.style.borderRadius = '4px';
         button.style.cursor = 'pointer';
         button.style.fontFamily = 'VT323, monospace';
