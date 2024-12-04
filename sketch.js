@@ -270,10 +270,14 @@ function keyPressed() {
         debugLog('2. A key pressed:', {
             isGenerating,
             generationStep,
-            categoriesLength: Object.keys(categories).length,
-            unusedPromptsLength: unusedPrompts.AGE.length,
             categories: categories
         });
+        
+        // Check if categories exists and has content
+        if (!categories || Object.keys(categories).filter(cat => cat !== 'objective').length === 0) {
+            console.error('No categories loaded or categories empty');
+            return;
+        }
         
         // Force reset regardless of isGenerating state
         resetGeneratorState();
@@ -298,157 +302,124 @@ function startGeneration() {
 }
 
 function generateNextAttribute() {
-    debugLog('5. generateNextAttribute called', {
-        step: generationStep,
-        shouldStop,
-        categories: Object.keys(categories)
-    });
+    debugLog('5. generateNextAttribute called');
     
-    if (generationStep < Object.keys(categories).length && !shouldStop) {
-        const categoryNames = ['AGE', 'STATUS', 'STRENGTH', 'WEAKNESS'];
+    const categoryNames = Object.keys(categories).filter(cat => cat !== 'objective');
+    
+    if (!categoryNames.length) {
+        console.error('No valid categories found');
+        return;
+    }
+    
+    if (generationStep < categoryNames.length && !shouldStop) {
         const currentCategory = categoryNames[generationStep];
-        
         debugLog('6. Current category:', currentCategory);
-        debugLog('Current generation step:', generationStep);
         
-        if (categories[currentCategory]) {
-            let finalSelection;
-            
-            if (currentCategory === 'AGE') {
-                // Reset if all subcategories have been used
-                if (usedAgeSubcategories.size >= Object.keys(categories['AGE']).length) {
-                    usedAgeSubcategories.clear();
-                    debugLog('Reset used age subcategories');
-                }
-                
-                // Get available subcategories
-                const availableSubcats = Object.keys(categories['AGE'])
-                    .filter(subcat => !usedAgeSubcategories.has(subcat));
-                
-                // Randomly select from remaining subcategories
-                const randomIndex = Math.floor(Math.random() * availableSubcats.length);
-                selectedSubcategory = availableSubcats[randomIndex];
-                usedAgeSubcategories.add(selectedSubcategory);
-                
-                debugLog('Available age subcategories:', availableSubcats);
-                debugLog('Selected subcategory:', selectedSubcategory);
-                debugLog('Used subcategories:', Array.from(usedAgeSubcategories));
-                
-                // Get the prompt from the selected subcategory
-                finalSelection = { text: categories['AGE'][selectedSubcategory][0] };
-            } else {
-                // Get all prompts for this subcategory
-                const allPrompts = categories[currentCategory][selectedSubcategory];
-                
-                // Reset if all prompts have been used
-                if (usedPrompts[currentCategory].size >= allPrompts.length) {
-                    usedPrompts[currentCategory].clear();
-                    debugLog(`Reset used prompts for ${currentCategory}`);
-                }
-                
-                // Get available prompts
-                const availablePrompts = allPrompts.filter(
-                    prompt => !usedPrompts[currentCategory].has(prompt)
-                );
-                
-                // Select random prompt from available ones
-                const randomIndex = Math.floor(Math.random() * availablePrompts.length);
-                const selectedPrompt = availablePrompts[randomIndex];
-                usedPrompts[currentCategory].add(selectedPrompt);
-                
-                debugLog(`${currentCategory} selection:`, {
-                    available: availablePrompts,
-                    selected: selectedPrompt,
-                    used: Array.from(usedPrompts[currentCategory])
-                });
-                
-                finalSelection = { text: selectedPrompt };
+        // Get prompts directly from the category
+        const allPrompts = categories[currentCategory]['0'];
+        
+        if (!allPrompts || !Array.isArray(allPrompts) || allPrompts.length === 0) {
+            console.error(`No valid prompts for category ${currentCategory}`);
+            generationStep++;
+            generateNextAttribute();
+            return;
+        }
+        
+        // Initialize usedPrompts for this category if needed
+        if (!usedPrompts[currentCategory]) {
+            usedPrompts[currentCategory] = new Set();
+        }
+        
+        // Reset if all prompts have been used
+        if (usedPrompts[currentCategory].size >= allPrompts.length) {
+            usedPrompts[currentCategory].clear();
+        }
+        
+        // Get available prompts
+        const availablePrompts = allPrompts.filter(
+            prompt => !usedPrompts[currentCategory].has(prompt)
+        );
+        
+        if (availablePrompts.length === 0) {
+            usedPrompts[currentCategory].clear();  // Reset if no prompts available
+            generateNextAttribute();  // Try again
+            return;
+        }
+        
+        // Select random prompt
+        const randomIndex = Math.floor(Math.random() * availablePrompts.length);
+        const selectedPrompt = availablePrompts[randomIndex];
+        usedPrompts[currentCategory].add(selectedPrompt);
+        
+        // Animation part
+        let scrambleCycles = 0;
+        let charIndex = 0;
+        const finalText = selectedPrompt;
+        
+        // Clear any existing intervals
+        if (scrambleInterval) clearInterval(scrambleInterval);
+        if (revealInterval) clearInterval(revealInterval);
+        
+        // Start scramble animation
+        scrambleInterval = setInterval(() => {
+            if (shouldStop) {
+                clearInterval(scrambleInterval);
+                return;
             }
             
-            debugLog('Final selection:', finalSelection.text);
+            let scrambledText = '';
+            for (let i = 0; i < finalText.length; i++) {
+                scrambledText += ROTATING_CHARS[Math.floor(Math.random() * ROTATING_CHARS.length)];
+            }
             
-            let scrambleCycles = 0;
-            let charIndex = 0;
-            let rotationIndex = 0;
-            let finalText = finalSelection.text;
-            let currentText = '';
+            currentPrompts[currentCategory] = {
+                revealed: '',
+                rotating: scrambledText
+            };
             
-            // Fill current text with rotating chars initially
-            currentText = Array(finalText.length)
-                .fill(ROTATING_CHARS[0])
-                .join('');
+            playSound(SOUND.SCRAMBLE);
+            scrambleCycles++;
             
-            if (scrambleInterval) clearInterval(scrambleInterval);
-            if (revealInterval) clearInterval(revealInterval);
-            
-            // Start with full scramble
-            scrambleInterval = setInterval(() => {
-                if (shouldStop) {
-                    clearInterval(scrambleInterval);
-                    return;
-                }
+            if (scrambleCycles >= TIMING.SCRAMBLE_CYCLES) {
+                clearInterval(scrambleInterval);
                 
-                // Update the rotating characters
-                let scrambledText = '';
-                for (let i = 0; i < finalText.length; i++) {
-                    scrambledText += ROTATING_CHARS[Math.floor(Math.random() * ROTATING_CHARS.length)];
-                }
-                
-                currentPrompts[currentCategory] = {
-                    revealed: '',
-                    rotating: scrambledText
-                };
-                
-                scrambleCycles++;
-                
-                if (scrambleCycles >= TIMING.SCRAMBLE_CYCLES) {
-                    clearInterval(scrambleInterval);
-                    
-                    // Start reveal after pause
-                    setTimeout(() => {
-                        revealInterval = setInterval(() => {
-                            if (shouldStop) {
-                                clearInterval(revealInterval);
-                                return;
+                // Start reveal after pause
+                setTimeout(() => {
+                    revealInterval = setInterval(() => {
+                        if (shouldStop) {
+                            clearInterval(revealInterval);
+                            return;
+                        }
+                        
+                        if (charIndex < finalText.length) {
+                            const revealed = finalText.substring(0, charIndex + 1);
+                            let rotating = '';
+                            
+                            for (let i = charIndex + 1; i < finalText.length; i++) {
+                                rotating += ROTATING_CHARS[Math.floor(Math.random() * ROTATING_CHARS.length)];
                             }
                             
-                            if (charIndex < finalText.length) {
-                                // Reveal one character
-                                let revealed = finalText.substring(0, charIndex + 1);
-                                let rotating = '';
-                                
-                                // Keep scrambling the unrevealed portion
-                                for (let i = charIndex + 1; i < finalText.length; i++) {
-                                    rotating += ROTATING_CHARS[Math.floor(Math.random() * ROTATING_CHARS.length)];
-                                }
-                                
-                                currentPrompts[currentCategory] = {
-                                    revealed: revealed,
-                                    rotating: rotating
-                                };
-                                
-                                charIndex++;
-                                playSound(SOUND.REVEAL);
-                            } else {
-                                clearInterval(revealInterval);
-                                playSound(SOUND.FINAL);
-                                
-                                // Move to next step after pause
-                                setTimeout(() => {
-                                    generationStep++;
-                                    debugLog('Moving to next step:', generationStep);
-                                    generateNextAttribute();
-                                }, TIMING.PAUSE_BETWEEN);
-                            }
-                        }, TIMING.REVEAL_SPEED);
-                    }, TIMING.PAUSE_BETWEEN);
-                }
-                
-                playSound(SOUND.SCRAMBLE);
-            }, TIMING.SCRAMBLE_SPEED);
-        }
+                            currentPrompts[currentCategory] = {
+                                revealed: revealed,
+                                rotating: rotating
+                            };
+                            
+                            charIndex++;
+                            playSound(SOUND.REVEAL);
+                        } else {
+                            clearInterval(revealInterval);
+                            playSound(SOUND.FINAL);
+                            
+                            setTimeout(() => {
+                                generationStep++;
+                                generateNextAttribute();
+                            }, TIMING.PAUSE_BETWEEN);
+                        }
+                    }, TIMING.REVEAL_SPEED);
+                }, TIMING.PAUSE_BETWEEN);
+            }
+        }, TIMING.SCRAMBLE_SPEED);
     } else {
-        debugLog('Generation complete or should stop');
         isGenerationComplete = true;
     }
 }
@@ -475,14 +446,31 @@ function resetGeneratorState() {
     isGenerationComplete = false;
     currentPrompts = {};
     selectedSubcategory = null;
-    // Reset all unused prompts
-    unusedPrompts = {
-        AGE: [],
-        STATUS: [],
-        STRENGTH: [],
-        WEAKNESS: []
-    };
-    initializeUnusedPrompts();
+    
+    // Reset usedPrompts for all categories
+    usedPrompts = {};
+    Object.keys(categories).forEach(category => {
+        if (category !== 'objective') {
+            usedPrompts[category] = new Set();
+        }
+    });
+    
+    // Reset unusedPrompts for all categories
+    unusedPrompts = {};
+    Object.keys(categories).forEach(category => {
+        if (category !== 'objective') {
+            unusedPrompts[category] = [];
+            if (categories[category] && categories[category]['0']) {
+                unusedPrompts[category] = [...categories[category]['0']];
+            }
+        }
+    });
+    
+    debugLog('Reset state:', {
+        categories: Object.keys(categories),
+        usedPrompts,
+        unusedPrompts
+    });
 }
 
 function resetPrompts() {
@@ -494,39 +482,62 @@ function resetPrompts() {
 
 function loadPromptsFromLocalStorage() {
     const savedData = localStorage.getItem('promptCategories');
-    console.log('Raw saved data:', savedData);
+    debugLog('Loading prompts from localStorage:', savedData);
     
     if (savedData) {
         try {
             const parsedData = JSON.parse(savedData);
-            console.log('Parsed data structure:', {
-                type: typeof parsedData,
-                keys: Object.keys(parsedData),
-                categories: parsedData.categories
-            });
+            debugLog('Parsed data:', parsedData);
             
-            // Direct assignment if the structure is already correct
             if (parsedData.categories) {
                 categories = parsedData.categories;
                 
-                // Ensure prompts are in array format
+                // Debug the structure
+                debugLog('Categories before processing:', JSON.stringify(categories, null, 2));
+                
+                // Ensure each category has a '0' subcategory with prompts
                 Object.keys(categories).forEach(catName => {
-                    if (categories[catName] && categories[catName]['0']) {
-                        if (typeof categories[catName]['0'] === 'string') {
-                            categories[catName]['0'] = categories[catName]['0']
-                                .split('\n')
-                                .filter(p => p.trim());
+                    if (catName !== 'objective') {
+                        // If category has direct array of prompts, wrap it in '0' subcategory
+                        if (Array.isArray(categories[catName])) {
+                            categories[catName] = { '0': categories[catName] };
+                        }
+                        // If category has no '0' subcategory but has prompts in other subcategories
+                        else if (typeof categories[catName] === 'object' && !categories[catName]['0']) {
+                            // Collect all prompts from subcategories
+                            const allPrompts = [];
+                            Object.values(categories[catName]).forEach(subcatPrompts => {
+                                if (Array.isArray(subcatPrompts)) {
+                                    allPrompts.push(...subcatPrompts);
+                                }
+                            });
+                            categories[catName] = { '0': allPrompts };
+                        }
+                        // Ensure '0' subcategory is an array
+                        if (!Array.isArray(categories[catName]['0'])) {
+                            categories[catName]['0'] = [];
                         }
                     }
                 });
+                
+                debugLog('Categories after processing:', JSON.stringify(categories, null, 2));
+            } else {
+                console.error('Invalid data structure:', parsedData);
+                categories = {};
             }
-            
-            console.log('Final categories structure:', categories);
         } catch (e) {
-            console.error('Error loading prompts:', e);
+            console.error('Error parsing prompts:', e);
             categories = {};
         }
     }
+    
+    // Debug final structure
+    debugLog('Final categories structure:', {
+        categoryNames: Object.keys(categories),
+        prompts: Object.fromEntries(
+            Object.entries(categories).map(([k, v]) => [k, v['0']])
+        )
+    });
 }
 
 // Add this helper function to check the data
