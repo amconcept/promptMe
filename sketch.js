@@ -204,11 +204,12 @@ function draw() {
     textAlign(LEFT, TOP);
     text(studentName, width * SPACING.TOP_MARGIN, height * SPACING.TOP_MARGIN);
     
-    // Draw objective
+    // Draw objective - make it dynamic
     fill(COLORS.HIGHLIGHT);
     textSize(FONT_SIZES.OBJECTIVE());
     textAlign(LEFT, TOP);
-    text(categories.objective || 'Design an object for a character with the following traits:', 
+    const defaultObjective = 'Design an object for a character with the following traits:';
+    text(categories?.objective || defaultObjective, 
          width * SPACING.TOP_MARGIN, 
          height * SPACING.OBJECTIVE_MARGIN);
     
@@ -492,8 +493,13 @@ function loadPromptsFromLocalStorage() {
             if (parsedData.categories) {
                 categories = parsedData.categories;
                 
-                // Debug the structure
-                debugLog('Categories before processing:', JSON.stringify(categories, null, 2));
+                // Debug objective
+                debugLog('Loaded objective:', categories.objective);
+                
+                // If objective is not set, check if it's in a different structure
+                if (!categories.objective && parsedData.objective) {
+                    categories.objective = parsedData.objective;
+                }
                 
                 // Ensure each category has a '0' subcategory with prompts
                 Object.keys(categories).forEach(catName => {
@@ -520,7 +526,10 @@ function loadPromptsFromLocalStorage() {
                     }
                 });
                 
-                debugLog('Categories after processing:', JSON.stringify(categories, null, 2));
+                debugLog('Final categories structure:', {
+                    objective: categories.objective,
+                    categories: Object.keys(categories)
+                });
             } else {
                 console.error('Invalid data structure:', parsedData);
                 categories = {};
@@ -530,14 +539,6 @@ function loadPromptsFromLocalStorage() {
             categories = {};
         }
     }
-    
-    // Debug final structure
-    debugLog('Final categories structure:', {
-        categoryNames: Object.keys(categories),
-        prompts: Object.fromEntries(
-            Object.entries(categories).map(([k, v]) => [k, v['0']])
-        )
-    });
 }
 
 // Add this helper function to check the data
