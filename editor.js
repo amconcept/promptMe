@@ -33,53 +33,56 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button class="delete-prompt" onclick="deletePrompt(this)" 
                     style="
                         position: absolute;
-                        top: 0;
-                        right: 0;
+                        top: 5px;
+                        right: 5px;
                         width: 24px;
                         height: 24px;
-                        background: #FFFFFF;
-                        color: #00FF00;
-                        border: 1px solid #00FF00;
+                        background: #FF7F7F;
+                        color: white;
+                        border: none;
+                        border-radius: 50%;
                         cursor: pointer;
-                        display: flex;
+                        display: none;
                         align-items: center;
                         justify-content: center;
                         font-family: 'VT323', monospace;
-                        font-size: 14px;
+                        font-size: 16px;
                         padding: 0;
                         margin: 0;
-                        border-radius: 4px;
-                    ">x</button>
+                    ">×</button>
             </div>
         `;
         
-        // Add hover effects after the element is added to the DOM
+        // Add the new prompt to DOM
         promptHeaders.insertBefore(newPrompt, addButton);
-        
-        const deleteBtn = newPrompt.querySelector('.delete-prompt');
-        deleteBtn.onmouseover = () => {
-            deleteBtn.style.backgroundColor = '#00FF00';
-            deleteBtn.style.color = '#FFFFFF';
-        };
-        deleteBtn.onmouseout = () => {
-            deleteBtn.style.backgroundColor = '#FFFFFF';
-            deleteBtn.style.color = '#00FF00';
-        };
-        
         updateCategoryRows();
     }
 
     function updateCategoryRows() {
         const categoryRows = document.querySelectorAll('.category-row');
-        const promptCount = document.querySelectorAll('.prompt-column').length;
+        const promptColumns = document.querySelectorAll('.prompt-column');
+        const promptCount = promptColumns.length;
         
-        categoryRows.forEach((row, index) => {
-            const currentTextareas = row.querySelectorAll('textarea').length;
+        // Update delete button visibility
+        promptColumns.forEach((column, index) => {
+            const deleteBtn = column.querySelector('.delete-prompt');
+            if (deleteBtn) {
+                deleteBtn.style.display = index === 0 ? 'none' : 'flex';
+            }
+        });
+        
+        categoryRows.forEach((row, rowIndex) => {
             const label = row.querySelector('.row-label');
-            label.textContent = String.fromCharCode(65 + index); // A, B, C, D
+            label.textContent = String.fromCharCode(65 + rowIndex);
+            
+            // Remove excess textareas
+            const textareas = row.querySelectorAll('textarea');
+            for (let i = textareas.length - 1; i >= promptCount; i--) {
+                textareas[i].remove();
+            }
             
             // Add new textareas if needed
-            for (let i = currentTextareas; i < promptCount; i++) {
+            for (let i = textareas.length; i < promptCount; i++) {
                 const textarea = document.createElement('textarea');
                 textarea.placeholder = 'Enter prompts (one per line)';
                 row.appendChild(textarea);
@@ -116,7 +119,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function deletePrompt(button) {
-        const promptColumn = button.parentElement;
+        const promptColumn = button.closest('.prompt-column');
+        const promptColumns = document.querySelectorAll('.prompt-column');
+        const promptIndex = Array.from(promptColumns).indexOf(promptColumn);
+        
+        // Don't allow deletion of the first prompt
+        if (promptColumns.length <= 1 || promptIndex === 0) {
+            return;
+        }
+        
+        // Remove corresponding textarea from each category row
+        const categoryRows = document.querySelectorAll('.category-row');
+        categoryRows.forEach(row => {
+            const textareas = row.querySelectorAll('textarea');
+            if (textareas[promptIndex]) {
+                textareas[promptIndex].remove();
+            }
+        });
+        
         promptColumn.remove();
         promptCounter--;
         updateCategoryRows();
@@ -424,7 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
         button.style.textTransform = 'uppercase';
     });
     
-    // Update hover effect
+    // Update hover effect for download/upload buttons only
     [downloadButton, uploadButton].forEach(button => {
         button.onmouseover = () => {
             button.style.backgroundColor = '#00FF00';
@@ -436,35 +456,12 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     });
 
-    // Add this new section to style the delete buttons
-    const deleteButtons = document.querySelectorAll('.delete-prompt');
-    deleteButtons.forEach(button => {
-        button.style.backgroundColor = '#FFFFFF';  // White background
-        button.style.color = '#00FF00';  // Green text
-        button.style.border = '1px solid #00FF00';  // Green border
-        button.style.fontFamily = 'VT323, monospace';
-        button.style.width = '24px';
-        button.style.height = '24px';
-        button.style.display = 'flex';
-        button.style.alignItems = 'center';
-        button.style.justifyContent = 'center';
-        button.style.cursor = 'pointer';
-        button.style.fontSize = '14px';
-        button.style.padding = '0';
-        button.style.margin = '0';
-        button.style.position = 'absolute';
-        button.style.top = '0';
-        button.style.right = '0';
-        button.style.borderRadius = '4px';
-        
-        // Add hover effect
-        button.onmouseover = () => {
-            button.style.backgroundColor = '#00FF00';
-            button.style.color = '#FFFFFF';
-        };
-        button.onmouseout = () => {
-            button.style.backgroundColor = '#FFFFFF';
-            button.style.color = '#00FF00';
-        };
+    // Initial update of delete button visibility
+    const promptColumns = document.querySelectorAll('.prompt-column');
+    promptColumns.forEach((column, index) => {
+        const deleteBtn = column.querySelector('.delete-prompt');
+        if (deleteBtn) {
+            deleteBtn.style.display = index === 0 ? 'none' : 'flex';
+        }
     });
 });
