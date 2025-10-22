@@ -4,40 +4,41 @@
     <title>Prompt Designer</title>
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
     <style>
-        /* Base styles */
+        /* CSS Variables for Theme Colors */
+        :root {
+            --primary-color: #D2691E;
+            --primary-hover: #CD853F;
+            --primary-shadow: rgba(210, 105, 30, 0.3);
+            --primary-shadow-hover: rgba(210, 105, 30, 0.5);
+            --primary-shadow-light: rgba(210, 105, 30, 0.1);
+            --accent-color: #FF7F7F;
+            --background-color: #000000;
+            --text-color: #FFFFFF;
+            --border-color: #333;
+            --delete-color: #FF6B6B;
+            --frame-color: #D2691E;
+            --frame-border: #D2691E;
+            --frame-background: #000000;
+        }
+
+        /* Terminal-style base styles */
         body {
-            font-family: Arial, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
+            font-family: 'VT323', monospace;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
             padding: 20px;
+            min-height: 100vh;
+            box-sizing: border-box;
         }
 
         h1 {
             text-align: center;
-            color: #FF7F7F;
-            margin-bottom: 20px;
-        }
-
-        /* Top buttons section */
-        .top-buttons {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .run-app {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        .run-app:hover {
-            background-color: #45a049;
+            color: var(--primary-color);
+            margin-bottom: 40px;
+            font-size: 32px;
+            text-shadow: 0 0 5px var(--primary-shadow);
+            letter-spacing: 2px;
         }
 
         /* Objective section */
@@ -45,198 +46,191 @@
             margin-bottom: 30px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 15px;
+            padding-left: 0; /* Align with category labels */
         }
 
         .objective-label {
-            color: #FF7F7F;
+            color: var(--primary-color);
             font-weight: bold;
-            font-size: 16px;
+            font-size: 18px;
+            text-shadow: 0 0 3px var(--primary-shadow);
+            min-width: 120px;
         }
 
         .objective-input {
             flex-grow: 1;
-            padding: 8px;
-            border: 1px solid #ccc;
+            max-width: calc(50vw - 300px); /* Half the previous width */
+            padding: 12px;
+            border: 1px solid var(--primary-color);
             border-radius: 4px;
-            font-size: 14px;
-        }
-
-        /* Constraint section */
-        .constraint-section {
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: center;
-        }
-
-        .constraint-checkbox {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            cursor: pointer;
-            font-family: 'VT323', monospace;
-            font-size: 16px;
-            color: #FF7F7F;
-        }
-
-
-        .constraint-checkbox input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-            accent-color: #66CDAA;
-        }
-
-        .constraint-label {
-            user-select: none;
-        }
-
-        /* Exhaust column section */
-        .exhaust-column-section {
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            justify-content: center;
-        }
-
-        .exhaust-column-label {
-            color: #FF7F7F;
-            font-weight: bold;
             font-size: 16px;
             font-family: 'VT323', monospace;
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            box-shadow: inset 0 0 3px var(--primary-shadow-light);
         }
 
-        .exhaust-column-select {
-            padding: 8px 12px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 14px;
-            background-color: white;
-            min-width: 200px;
+        .objective-input:focus {
+            outline: none;
+            border-color: var(--primary-hover);
+            box-shadow: 0 0 5px var(--primary-shadow), inset 0 0 3px var(--primary-shadow-light);
         }
 
-        /* Constraint control section */
-        .constraint-control-section {
+        /* Settings section */
+        .settings-section {
             margin-bottom: 20px;
+            padding: 15px;
+            border: none;
+            border-radius: 6px;
+            background-color: transparent;
+            padding-left: 320px; /* Align with criterion label fields */
+        }
+
+        .settings-checkbox {
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .constraint-control-label {
-            color: #FF7F7F;
-            font-weight: bold;
-            font-size: 16px;
-            font-family: 'VT323', monospace;
-        }
-
-        .constraint-checkboxes {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            justify-content: center;
-        }
-
-        .constraint-checkbox-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            font-family: 'VT323', monospace;
-            font-size: 14px;
-            color: #FF7F7F;
-            padding: 8px 12px;
-            border: 1px solid #FF7F7F;
-            border-radius: 4px;
-            background-color: rgba(255, 127, 127, 0.05);
-        }
-
-        .constraint-checkbox-item:hover {
-            background-color: rgba(255, 127, 127, 0.1);
-        }
-
-        .constraint-checkbox-item input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            cursor: pointer;
-            accent-color: #66CDAA;
-        }
-
-        .constraint-checkbox-item.checked {
-            background-color: #66CDAA;
-            color: white;
-            border-color: #66CDAA;
-        }
-
-
-        /* Theme section */
-        .theme-section {
-            margin-bottom: 20px;
-            display: flex;
-            flex-direction: column;
             align-items: center;
             gap: 10px;
         }
 
-        .theme-label {
-            color: #FF7F7F;
-            font-weight: bold;
-            font-size: 16px;
-            font-family: 'VT323', monospace;
-        }
-
-        .theme-buttons {
+        .settings-buttons {
             display: flex;
-            flex-wrap: wrap;
             gap: 10px;
-            justify-content: center;
+            margin-top: 10px;
         }
 
-        .theme-btn {
-            background-color: #FFFFFF;
-            color: #FF7F7F;
-            border: 2px solid #FF7F7F;
+        .settings-buttons button {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
             border-radius: 4px;
             padding: 8px 16px;
             font-family: 'VT323', monospace;
             font-size: 14px;
+            font-weight: bold;
             cursor: pointer;
+            text-shadow: 0 0 3px var(--primary-shadow);
             transition: all 0.3s ease;
-            min-width: 120px;
         }
 
-        .theme-btn:hover {
-            background-color: #FF7F7F;
-            color: #FFFFFF;
+        .settings-buttons .settings-action-btn {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            padding: 8px 16px;
+            font-family: 'VT323', monospace;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            text-shadow: 0 0 3px var(--primary-shadow);
+            transition: all 0.3s ease;
         }
 
-        .theme-btn.active {
-            background-color: #66CDAA;
-            color: #FFFFFF;
-            border-color: #66CDAA;
+        .settings-buttons button:hover,
+        .settings-buttons .settings-action-btn:hover {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            box-shadow: 0 0 8px var(--primary-shadow);
         }
 
-        .theme-btn.active:hover {
-            background-color: #5BB89A;
-            border-color: #5BB89A;
+        .settings-buttons .new {
+            background-color: var(--background-color);
+            color: var(--accent-color);
+            border: 1px solid var(--accent-color);
         }
+
+        .settings-buttons .new:hover {
+            background-color: var(--accent-color);
+            color: var(--background-color);
+            box-shadow: 0 0 8px rgba(255, 127, 127, 0.3);
+        }
+
+        .settings-buttons .save-as {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+        }
+
+        .settings-buttons .save-as:hover {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            box-shadow: 0 0 8px var(--primary-shadow);
+        }
+
+        .settings-buttons .share {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+        }
+
+        .settings-buttons .share:hover {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            box-shadow: 0 0 8px var(--primary-shadow);
+        }
+
+        .settings-buttons .load {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+        }
+
+        .settings-buttons .load:hover {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            box-shadow: 0 0 8px var(--primary-shadow);
+        }
+
+        .settings-buttons .restore {
+            background-color: var(--background-color);
+            color: var(--accent-color);
+            border: 1px solid var(--accent-color);
+        }
+
+        .settings-buttons .restore:hover {
+            background-color: var(--accent-color);
+            color: var(--background-color);
+            box-shadow: 0 0 8px rgba(255, 127, 127, 0.3);
+        }
+
+        .settings-checkbox-input {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            outline: none;
+            box-shadow: none;
+            background: var(--background-color);
+            cursor: pointer;
+        }
+
+        .settings-checkbox-label {
+            color: var(--primary-color);
+            font-family: 'VT323', monospace;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            text-shadow: 0 0 3px var(--primary-shadow);
+        }
+
+
+
+
+
+
 
         /* Teacher guidance section */
         .teacher-guidance {
-            background-color: #f8f9fa;
-            border: 2px solid #66CDAA;
-            border-radius: 8px;
-            padding: 20px;
             margin: 20px 0;
             font-family: 'VT323', monospace;
         }
 
         .teacher-guidance h3 {
-            color: #FF7F7F;
+            color: var(--primary-color);
             margin-top: 0;
-            font-size: 18px;
+            font-size: 20px;
+            text-shadow: 0 0 3px var(--primary-shadow);
         }
 
         .teacher-guidance ul {
@@ -246,12 +240,13 @@
 
         .teacher-guidance li {
             margin: 8px 0;
-            color: #333;
+            color: var(--primary-color);
             line-height: 1.4;
         }
 
         .teacher-guidance strong {
-            color: #FF7F7F;
+            color: var(--primary-hover);
+            text-shadow: 0 0 2px var(--primary-shadow);
         }
 
         /* Action buttons at top */
@@ -271,37 +266,49 @@
         }
 
         .circle-button {
-            width: 30px;
-            height: 30px;
-            background: #66CDAA;
-            border: none;
+            width: 40px;
+            height: 40px;
+            background: var(--primary-color);
+            border: 2px solid var(--primary-color);
             border-radius: 50%;
-            color: white;
-            font-size: 20px;
+            color: var(--background-color);
+            font-size: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
+            font-family: 'VT323', monospace;
+            font-weight: bold;
+            box-shadow: 0 0 5px var(--primary-shadow);
+            transition: all 0.3s ease;
+        }
+
+        .circle-button:hover {
+            background: var(--primary-hover);
+            box-shadow: 0 0 8px var(--primary-shadow-hover);
+            transform: scale(1.1);
         }
 
         .button-label {
-            color: #66CDAA;
+            color: var(--primary-color);
             font-family: 'VT323', monospace;
-            font-size: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            text-shadow: 0 0 3px var(--primary-shadow);
         }
 
         /* Connection explanation */
         .connection-explanation {
             text-align: center;
-            color: #FF7F7F;
+            color: var(--primary-color);
             font-family: 'VT323', monospace;
-            font-size: 14px;
-            margin: 20px 0 40px 0;
+            font-size: 16px;
+            margin: 20px 0 60px 0; /* Increased bottom margin from 40px to 60px */
+            text-shadow: 0 0 3px var(--primary-shadow);
         }
 
         /* Prompt section */
         .prompt-container {
-            margin-left: 120px;
             margin-bottom: 20px;
         }
 
@@ -310,25 +317,72 @@
             gap: 60px;
             margin-bottom: 40px;
             position: relative;
-            padding-left: 0;
+            padding-left: 342px; /* Increased from 120px to align with criterion label fields */
+            justify-content: flex-start;
         }
 
         .prompt-column {
             position: relative;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: flex-start;
             width: 200px;
+        }
+
+        .prompt-count-display {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-family: 'VT323', monospace;
+            font-weight: bold;
+            margin-top: 10px;
+            min-width: 20px;
+            text-align: center;
+            box-shadow: 0 0 3px var(--primary-shadow);
+            align-self: center;
         }
 
         .header-input {
             width: 100%;
-            padding: 5px;
+            padding: 10px;
             margin-bottom: 10px;
-            font-family: inherit;
+            font-family: 'VT323', monospace;
+            font-size: 16px;
+            text-align: center;
+            background-color: var(--frame-background);
+            color: var(--frame-color);
+            border: 1px solid var(--frame-border);
+            border-radius: 4px;
+            box-shadow: inset 0 0 3px var(--primary-shadow-light);
+        }
+
+        .header-input:focus {
+            outline: none;
+            border-color: var(--primary-hover);
+            box-shadow: 0 0 5px var(--primary-shadow), inset 0 0 3px var(--primary-shadow-light);
         }
 
         /* Category section */
+        .criterion-label-container {
+            display: flex;
+            align-items: center;
+            min-width: 150px;
+            margin-right: 10px;
+        }
+        
+        .criterion-label-input {
+            width: 100%;
+            padding: 5px 8px;
+            background-color: var(--background-color);
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            color: var(--text-color);
+            font-family: 'VT323', monospace;
+            font-size: 14px;
+        }
+        
         #categories-container {
             display: flex;
             flex-direction: column;
@@ -341,6 +395,7 @@
             align-items: flex-start;
             margin-bottom: 40px;
             padding-right: 0;
+            justify-content: flex-start;
         }
 
         .row-label-container {
@@ -349,28 +404,36 @@
             align-items: center;
             gap: 10px;
             margin-right: 0;
+            justify-content: center;
         }
 
         .row-label {
             font-size: 24px;
             font-weight: bold;
-            color: #FF7F7F;
+            color: var(--primary-color);
+            text-shadow: 0 0 3px var(--primary-shadow);
+        }
+
+        /* Align category A with others by adding space for [x] button */
+        .category-row:first-child .row-label-container {
+            padding-left: 20px; /* Space to align with [x] button in other rows */
+        }
+
+        /* Offset the category box back to the left to compensate for label padding */
+        .category-row:first-child {
+            margin-left: -20px; /* Pull the entire row back to the left */
         }
 
         /* Delete buttons */
         .delete-category, .delete-prompt {
-            background: #FF7F7F;
-            color: white;
+            background: transparent;
+            color: var(--delete-color);
             border: none;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
             font-size: 16px;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: inline;
             font-family: 'VT323', monospace;
+            text-shadow: 0 0 3px rgba(255, 107, 107, 0.3);
         }
 
         .delete-prompt {
@@ -386,27 +449,191 @@
             position: relative;
             width: 200px;
             margin-right: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        /* Settings Control Panel */
+        .settings-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 250px;
+            background-color: var(--background-color);
+            border: none;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'VT323', monospace;
+            color: var(--primary-color);
+            font-size: 14px;
+            box-shadow: 0 0 15px var(--primary-shadow);
+            z-index: 1000;
+        }
+        
+        /* Activity status indicator removed */
+
+        .settings-title {
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+            font-size: 16px;
+            letter-spacing: 1px;
+            text-shadow: 0 0 5px var(--primary-shadow);
+        }
+
+        .theme-picker {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .theme-picker label {
+            font-size: 12px;
+            color: var(--primary-color);
+            font-weight: bold;
+            min-width: 60px;
+        }
+
+        .theme-picker select {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            padding: 4px 6px;
+            font-family: 'VT323', monospace;
+            font-size: 12px;
+            cursor: pointer;
+            flex-grow: 1;
+        }
+
+        .theme-picker select:focus {
+            outline: none;
+            border-color: var(--primary-hover);
+            box-shadow: 0 0 3px var(--primary-shadow);
+        }
+
+        .settings-list {
+            margin-bottom: 15px;
+        }
+
+        .settings-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+            cursor: pointer;
+            border-bottom: 1px solid #333;
+            transition: all 0.3s ease;
+        }
+
+        .settings-item:last-child {
+            border-bottom: none;
+        }
+
+        .settings-item:hover {
+            background-color: var(--primary-shadow-light);
+            padding-left: 5px;
+        }
+
+        .settings-item.selected {
+            background-color: var(--primary-shadow);
+            color: var(--primary-hover);
+        }
+
+        .settings-item-content {
+            display: flex;
+            align-items: center;
+            flex-grow: 1;
+        }
+
+        .settings-item::before {
+            content: ">";
+            margin-right: 8px;
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .settings-item.selected::before {
+            color: var(--primary-hover);
+        }
+
+        .settings-item-delete {
+            color: var(--delete-color);
+            font-weight: bold;
+            font-size: 14px;
+            padding: 2px 6px;
+            margin-left: 8px;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .settings-item-delete:hover {
+            background-color: var(--delete-color);
+            color: var(--background-color);
+        }
+
+        .settings-divider {
+            height: 1px;
+            background-color: var(--primary-color);
+            margin: 15px 0;
+        }
+
+        .settings-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .settings-action-btn {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'VT323', monospace;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+
+        .settings-action-btn:hover {
+            background-color: var(--primary-hover);
+            color: var(--background-color);
+            box-shadow: 0 0 8px var(--primary-shadow);
         }
 
         textarea {
             width: 100%;
             height: 100px;
-            padding: 8px;
-            border: 1px solid #ccc;
+            padding: 12px;
+            border: 1px solid var(--frame-border);
             border-radius: 4px;
             resize: vertical;
             font-family: 'VT323', monospace;
-            font-size: 14px;
+            font-size: 16px;
+            background-color: var(--frame-background);
+            color: var(--frame-color);
+            box-shadow: inset 0 0 3px var(--primary-shadow-light);
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary-hover);
+            box-shadow: 0 0 5px var(--primary-shadow), inset 0 0 3px var(--primary-shadow-light);
         }
 
         /* Connection arrows */
         .horizontal-arrow {
             position: absolute;
-            right: -35px;
+            right: -50px;
             top: 50%;
             transform: translateY(-50%);
-            color: #FF7F7F;
-            font-size: 24px;
+            color: var(--accent-color);
+            font-size: 20px;
             pointer-events: none;
             font-family: 'VT323', monospace;
             display: flex;
@@ -419,7 +646,7 @@
             position: absolute;
             left: 50%;
             bottom: -25px;
-            color: #FF7F7F;
+            color: var(--accent-color);
             font-size: 24px;
             pointer-events: none;
             font-family: 'VT323', monospace;
@@ -437,43 +664,47 @@
         }
 
         .buttons button {
-            background-color: #FFFFFF;
-            color: #ff51ff;
-            font-size: 16px;
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            font-size: 18px;
             padding: 15px 30px;
-            border: 1px solid #ff51ff;
-            border-radius: 4px;
+            border: 2px solid var(--primary-color);
+            border-radius: 6px;
             cursor: pointer;
             font-family: 'VT323', monospace;
             width: auto;
             margin: 10px;
             text-transform: uppercase;
-        }
-
-        .buttons button:hover {
-            background-color: #9d00ff;
-            color: #FFFFFF;
+            box-shadow: 0 0 5px var(--primary-shadow);
             transition: all 0.3s ease;
         }
 
+        .buttons button:hover {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            box-shadow: 0 0 8px var(--primary-shadow-hover);
+            transform: translateY(-2px);
+        }
+
         .buttons .test {
-            background-color: #66CDAA;
-            color: #FFFFFF;
-            border-color: #66CDAA;
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            border-color: var(--primary-color);
         }
 
         .buttons .test:hover {
-            background-color: #5BB89A;
-            color: #FFFFFF;
+            background-color: var(--primary-color);
+            color: var(--background-color);
         }
 
         /* Instructions */
         .instructions {
             text-align: center;
             margin: 20px 0;
-            color: #666;
+            color: var(--primary-color);
             font-family: 'VT323', monospace;
-            font-size: 14px;
+            font-size: 16px;
+            text-shadow: 0 0 3px var(--primary-shadow);
         }
 
         /* Animation */
@@ -489,42 +720,40 @@
     </style>
 </head>
 <body>
+
     <h1>Prompt Designer</h1>
     
-    <div class="top-buttons">
-        <button class="run-app" onclick="quickTest()">RUN APP</button>
+    <!-- Function buttons moved to top -->
+    <div class="settings-section">
+        <div class="settings-buttons">
+            <button class="test" onclick="quickTest()">RUN APP</button>
+            <button class="new" onclick="startNewPromptSet()">NEW</button>
+            <button class="restore" onclick="restoreLastRunActivity()" id="restore-btn" style="display: none;">RESTORE LAST RUN</button>
+            <button class="save" onclick="saveCurrentActivity()" id="save-btn" style="display: none;">SAVE</button>
+            <button class="save-as" onclick="saveAsNewActivity()" id="save-as-btn" style="display: none;">SAVE AS</button>
+            <button class="share" onclick="sharePromptSet()">SHARE</button>
+            <button class="load" onclick="loadPromptSet()">LOAD</button>
+        </div>
     </div>
-    
+
+
+
+
+
+
+    <!-- OBJECTIVE moved above Add buttons -->
     <div class="objective-section">
         <div class="objective-label">OBJECTIVE:</div>
         <input type="text" id="objective-input" class="objective-input" 
                placeholder="Enter the objective for this prompt set">
     </div>
 
-        <div class="constraint-section">
-            <label class="constraint-checkbox">
-                <input type="checkbox" id="exhaust-checkbox">
-                <span class="constraint-label">Stop generation when all options are used</span>
-            </label>
-        </div>
-
-        <div class="exhaust-column-section" id="exhaust-column-section" style="display: none;">
-            <div class="exhaust-column-label">Count items from prompt column:</div>
-            <select id="exhaust-column-select" class="exhaust-column-select">
-                <option value="">Select a prompt column...</option>
-            </select>
-        </div>
-
-
-    <div class="theme-section">
-        <div class="theme-label">THEME:</div>
-        <div class="theme-buttons">
-            <button class="theme-btn active" data-theme="apple2" onclick="selectTheme('apple2')">1. Apple 2</button>
-            <button class="theme-btn" data-theme="macintosh" onclick="selectTheme('macintosh')">2. Macintosh</button>
-            <button class="theme-btn" data-theme="windows94" onclick="selectTheme('windows94')">3. Windows 94</button>
-            <button class="theme-btn" data-theme="graffiti" onclick="selectTheme('graffiti')">4. Graffiti</button>
-            <button class="theme-btn" data-theme="expo67" onclick="selectTheme('expo67')">5. Expo 67</button>
-        </div>
+    <!-- Make Prompt 1 selectable interests moved under objective -->
+    <div class="settings-checkbox">
+        <input type="checkbox" id="prompt1-interests-mode" class="settings-checkbox-input">
+        <label for="prompt1-interests-mode" class="settings-checkbox-label">
+            Make Prompt 1 selectable interests
+        </label>
     </div>
 
     <div class="action-buttons">
@@ -552,26 +781,74 @@
         <!-- Category rows will be added here -->
     </div>
     
+    <div id="column-counts-container" style="display: flex; justify-content: flex-start; gap: 38px; margin-top: 20px; padding-left: 342px;">
+        <!-- Individual column counts will be added here -->
+    </div>
+    
     <div class="instructions">
-        Press ESC to return to main menu • Changes auto-save as you type • Press SAVE CHANGES to manually save
-        <span id="auto-save-indicator" style="display: none; color: #66CDAA; margin-left: 10px;">✓ Auto-saved</span>
+        Press P to test in sketch • Press SAVE to save changes
     </div>
     
     <div class="teacher-guidance">
-        <h3>Teacher Tips:</h3>
-        <ul>
+        <h3 onclick="togglePromptingTips()" style="cursor: pointer; user-select: none;">
+            Prompting Tips: <span id="tips-toggle">▼</span>
+        </h3>
+        <ul id="prompting-tips-list" style="display: none;">
+            <li><strong>Class List:</strong> Upload a text file with one student name per line (optional) - auto-sets prompt count to number of students</li>
             <li><strong>Rows (A, B, C, D):</strong> Create logical groupings - students get items from the same row</li>
             <li><strong>Columns (Prompt 1, 2, 3, 4):</strong> Different characteristics or requirements</li>
             <li><strong>Example:</strong> Row A = "Elementary level", Row B = "Advanced level"</li>
-            <li><strong>Constraint:</strong> Prevents repetition until all options are used</li>
-            <li><strong>Exhaust Mode:</strong> Stop generation when all options are used (perfect for student lists)</li>
+            <li><strong>Prompt Count:</strong> Set how many prompts to generate (stops automatically)</li>
+            <li><strong>Item Counts:</strong> Numbers at top of each column show total items available</li>
+            <li><strong>Student Names:</strong> Entered in sketch app, auto-populated from class list if uploaded</li>
+            <li><strong>Download Results:</strong> Download button in completion popup saves screenshot with student name</li>
+            <li><strong>Repetition Prevention:</strong> Automatically prevents repeats until all options used</li>
         </ul>
     </div>
 
-    <div class="buttons">
-        <button class="save" onclick="saveChanges()">SAVE CHANGES</button>
+
+    <!-- Settings Control Panel -->
+    <div id="settings-panel" class="settings-panel">
+        <!-- Activity Status Indicator removed -->
+        
+        <!-- Theme Picker -->
+        <div class="theme-picker">
+            <label for="theme-select">Theme:</label>
+            <select id="theme-select" onchange="changeTheme(this.value)">
+                <option value="orange">Orange</option>
+                <option value="blue">Blue</option>
+                <option value="green">Green</option>
+                <option value="purple">Purple</option>
+                <option value="pink">Pink</option>
+                <option value="white">White</option>
+                <option value="black">Black</option>
+            </select>
+        </div>
+        <div class="theme-picker">
+            <label for="bg-select">Background:</label>
+            <select id="bg-select" onchange="changeBackground(this.value)">
+                <option value="black">Black</option>
+                <option value="white">White</option>
+                <option value="grey">Grey</option>
+            </select>
+        </div>
+        
+        <!-- Divider line -->
+        <div class="settings-divider"></div>
+        
+        <div class="settings-title">Activity History</div>
+        
+        <div class="settings-list" id="settings-list">
+            <!-- Settings will be populated here -->
+        </div>
+        
+        <div class="settings-divider"></div>
+        
+        <div class="settings-actions">
+            <!-- Download/Upload buttons moved to main settings section -->
+        </div>
     </div>
 
     <script src="editor.js"></script>
 </body>
-</html>
+</html>5

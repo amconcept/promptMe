@@ -6,15 +6,194 @@
     <title>Prompt Generator</title>
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script>
+        // Apply theme immediately to prevent flashing
+        (function() {
+            const editorTheme = localStorage.getItem('selectedTheme') || 'orange';
+            const editorBackground = localStorage.getItem('selectedBackground') || 'black';
+            
+            const themes = {
+                orange: {
+                    '--primary-color': '#D2691E',
+                    '--primary-hover': '#CD853F',
+                    '--primary-shadow': 'rgba(210, 105, 30, 0.3)',
+                    '--primary-shadow-hover': 'rgba(210, 105, 30, 0.5)',
+                    '--primary-shadow-light': 'rgba(210, 105, 30, 0.1)',
+                    '--accent-color': '#FF7F7F',
+                    '--delete-color': '#FF6B6B',
+                    '--frame-color': '#D2691E',
+                    '--frame-border': '#D2691E'
+                },
+                blue: {
+                    '--primary-color': '#4A90E2',
+                    '--primary-hover': '#6BB6FF',
+                    '--primary-shadow': 'rgba(74, 144, 226, 0.3)',
+                    '--primary-shadow-hover': 'rgba(74, 144, 226, 0.5)',
+                    '--primary-shadow-light': 'rgba(74, 144, 226, 0.1)',
+                    '--accent-color': '#7FB3FF',
+                    '--delete-color': '#FF6B6B',
+                    '--frame-color': '#4A90E2',
+                    '--frame-border': '#4A90E2'
+                },
+                green: {
+                    '--primary-color': '#4CAF50',
+                    '--primary-hover': '#66BB6A',
+                    '--primary-shadow': 'rgba(76, 175, 80, 0.3)',
+                    '--primary-shadow-hover': 'rgba(76, 175, 80, 0.5)',
+                    '--primary-shadow-light': 'rgba(76, 175, 80, 0.1)',
+                    '--accent-color': '#81C784',
+                    '--delete-color': '#FF6B6B',
+                    '--frame-color': '#4CAF50',
+                    '--frame-border': '#4CAF50'
+                },
+                purple: {
+                    '--primary-color': '#9C27B0',
+                    '--primary-hover': '#BA68C8',
+                    '--primary-shadow': 'rgba(156, 39, 176, 0.3)',
+                    '--primary-shadow-hover': 'rgba(156, 39, 176, 0.5)',
+                    '--primary-shadow-light': 'rgba(156, 39, 176, 0.1)',
+                    '--accent-color': '#CE93D8',
+                    '--delete-color': '#FF6B6B',
+                    '--frame-color': '#9C27B0',
+                    '--frame-border': '#9C27B0'
+                },
+                pink: {
+                    '--primary-color': '#E91E63',
+                    '--primary-hover': '#F06292',
+                    '--primary-shadow': 'rgba(233, 30, 99, 0.3)',
+                    '--primary-shadow-hover': 'rgba(233, 30, 99, 0.5)',
+                    '--primary-shadow-light': 'rgba(233, 30, 99, 0.1)',
+                    '--accent-color': '#F8BBD9',
+                    '--delete-color': '#FF6B6B',
+                    '--frame-color': '#E91E63',
+                    '--frame-border': '#E91E63'
+                },
+                white: {
+                    '--primary-color': '#FFFFFF',
+                    '--primary-hover': '#F0F0F0',
+                    '--primary-shadow': 'rgba(255, 255, 255, 0.3)',
+                    '--primary-shadow-hover': 'rgba(255, 255, 255, 0.5)',
+                    '--primary-shadow-light': 'rgba(255, 255, 255, 0.1)',
+                    '--accent-color': '#E0E0E0',
+                    '--delete-color': '#FF6B6B',
+                    '--frame-color': '#FFFFFF',
+                    '--frame-border': '#FFFFFF'
+                },
+                black: {
+                    '--primary-color': '#000000',
+                    '--primary-hover': '#333333',
+                    '--primary-shadow': 'rgba(0, 0, 0, 0.3)',
+                    '--primary-shadow-hover': 'rgba(0, 0, 0, 0.5)',
+                    '--primary-shadow-light': 'rgba(0, 0, 0, 0.1)',
+                    '--accent-color': '#404040',
+                    '--delete-color': '#FF6B6B',
+                    '--frame-color': '#000000',
+                    '--frame-border': '#000000'
+                }
+            };
+            
+            const root = document.documentElement;
+            
+            // Apply background first
+            if (editorBackground === 'white') {
+                root.style.setProperty('--background-color', '#FFFFFF');
+                root.style.setProperty('--text-color', '#000000');
+                root.style.setProperty('--border-color', '#CCCCCC');
+                root.style.setProperty('--frame-background', '#FFFFFF');
+            } else if (editorBackground === 'grey') {
+                root.style.setProperty('--background-color', '#808080');
+                root.style.setProperty('--text-color', '#FFFFFF');
+                root.style.setProperty('--border-color', '#A0A0A0');
+                root.style.setProperty('--frame-background', '#808080');
+            } else { // black
+                root.style.setProperty('--background-color', '#000000');
+                root.style.setProperty('--text-color', '#FFFFFF');
+                root.style.setProperty('--border-color', '#333');
+                root.style.setProperty('--frame-background', '#000000');
+            }
+            
+            // Apply theme colors
+            const theme = themes[editorTheme];
+            if (theme) {
+                Object.keys(theme).forEach(key => {
+                    root.style.setProperty(key, theme[key]);
+                });
+            }
+            
+            console.log('Theme applied immediately on page load:', editorTheme, editorBackground);
+        })();
+    </script>
     <style>
+        :root {
+            /* Default theme - will be overridden by editor theme system */
+            --primary-color: #D2691E;
+            --primary-hover: #CD853F;
+            --primary-shadow: rgba(210, 105, 30, 0.3);
+            --primary-shadow-hover: rgba(210, 105, 30, 0.5);
+            --primary-shadow-light: rgba(210, 105, 30, 0.1);
+            --accent-color: #FF7F7F;
+            --background-color: #000000;
+            --text-color: #FFFFFF;
+            --border-color: #333;
+            --delete-color: #FF6B6B;
+            --frame-color: #D2691E;
+            --frame-border: #D2691E;
+            --frame-background: #000000;
+        }
+
         body {
             margin: 0;
             padding: 0;
             overflow: hidden;
             font-family: 'VT323', monospace;
+            background-color: var(--background-color);
+            color: var(--text-color);
         }
         canvas {
             display: block;
+        }
+
+        /* Theme picker CSS removed - now controlled by editor.js */
+
+        /* Retro checkbox styling */
+        .category-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            width: 12px;
+            height: 12px;
+            border: 1px solid var(--primary-color);
+            background-color: var(--background-color);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .category-checkbox:checked {
+            background-color: var(--primary-color);
+        }
+
+        .category-checkbox:checked::after {
+            content: '';
+        }
+
+        #all-categories-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            width: 12px;
+            height: 12px;
+            border: 1px solid var(--primary-color);
+            background-color: var(--background-color);
+            cursor: pointer;
+            position: relative;
+        }
+
+        #all-categories-checkbox:checked {
+            background-color: var(--primary-color);
+        }
+
+        #all-categories-checkbox:checked::after {
+            content: '';
         }
     </style>
 </head>
