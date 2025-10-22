@@ -164,10 +164,10 @@
             root.style.setProperty('--border-color', '#CCCCCC');
             root.style.setProperty('--frame-background', '#FFFFFF');
         } else if (bgColor === 'grey') {
-            root.style.setProperty('--background-color', '#808080');
-            root.style.setProperty('--text-color', '#FFFFFF');
-            root.style.setProperty('--border-color', '#A0A0A0');
-            root.style.setProperty('--frame-background', '#808080');
+            root.style.setProperty('--background-color', '#B0B0B0');
+            root.style.setProperty('--text-color', '#000000');
+            root.style.setProperty('--border-color', '#909090');
+            root.style.setProperty('--frame-background', '#B0B0B0');
         } else {
             // Default to black
             root.style.setProperty('--background-color', '#000000');
@@ -276,6 +276,7 @@
     });
 
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('=== DEBUG: DOMContentLoaded event fired ===');
     let categoryCounter = 0;
     let promptCounter = 0;
     const MAX_CATEGORIES = 6;
@@ -331,9 +332,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function addNewPrompt() {
+        console.log('=== DEBUG: addNewPrompt called ===');
+        console.log('Current promptCounter:', promptCounter);
+        console.log('MAX_PROMPTS:', MAX_PROMPTS);
+        
         // Reset promptCounter based on actual DOM elements
         const actualPromptCount = document.querySelectorAll('.prompt-column').length;
         promptCounter = actualPromptCount;
+        console.log('Actual prompt count from DOM:', actualPromptCount);
+        console.log('Updated promptCounter:', promptCounter);
         
         if (promptCounter >= MAX_PROMPTS) {
             alert(`Maximum of ${MAX_PROMPTS} prompts reached`);
@@ -343,6 +350,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Don't clear current activity when user makes changes - they should be able to update it
         // Only clear during explicit "start new" actions
         const promptHeaders = document.getElementById('prompt-headers');
+        console.log('Found prompt-headers element:', promptHeaders);
+        
+        if (!promptHeaders) {
+            console.log('ERROR: prompt-headers element not found in addNewPrompt');
+            return;
+        }
         
         // Create new prompt column
         const newPromptColumn = document.createElement('div');
@@ -353,16 +366,21 @@ document.addEventListener('DOMContentLoaded', () => {
             ${promptCounter >= 0 ? '<div class="horizontal-arrow">+</div>' : ''}
         `;
         
+        console.log('Created new prompt column:', newPromptColumn);
+        
         // Add the new prompt to DOM
         promptHeaders.appendChild(newPromptColumn);
+        console.log('Added prompt column to DOM');
         
         promptCounter++;
+        console.log('Incremented promptCounter to:', promptCounter);
         
         // Update all arrows and add textareas to existing categories
         updateCategoryRows();
         
         // Update prompt count displays
         updatePromptCounts();
+        console.log('addNewPrompt completed successfully');
     }
 
     function updateCategoryRows() {
@@ -479,6 +497,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function addNewCategory() {
+        console.log('=== DEBUG: addNewCategory called ===');
+        console.log('Current categoryCounter:', categoryCounter);
+        console.log('MAX_CATEGORIES:', MAX_CATEGORIES);
+        
         if (categoryCounter >= MAX_CATEGORIES) {
             alert(`Maximum of ${MAX_CATEGORIES} categories reached`);
             return;
@@ -487,9 +509,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // Don't clear current activity when user makes changes - they should be able to update it
         // Only clear during explicit "start new" actions
         const categoriesContainer = document.getElementById('categories-container');
+        console.log('Found categories-container element:', categoriesContainer);
+        
+        if (!categoriesContainer) {
+            console.log('ERROR: categories-container element not found in addNewCategory');
+            return;
+        }
+        
         const newCategory = document.createElement('div');
         newCategory.className = 'category-row';
         categoryCounter++;
+        console.log('Incremented categoryCounter to:', categoryCounter);
         
         // Create category label container
         const labelContainer = document.createElement('div');
@@ -515,6 +545,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Add a textarea for each existing prompt column
         const promptCount = document.querySelectorAll('.prompt-column').length;
+        console.log('Found prompt columns:', promptCount);
+        
         for (let i = 0; i < promptCount; i++) {
             const textareaContainer = document.createElement('div');
             textareaContainer.className = 'textarea-container';
@@ -535,11 +567,16 @@ document.addEventListener('DOMContentLoaded', () => {
             newCategory.appendChild(textareaContainer);
         }
         
+        console.log('Created new category element:', newCategory);
+        
         categoriesContainer.appendChild(newCategory);
+        console.log('Added category to DOM');
+        
         updateCategoryRows();
         
         // Update prompt count displays
         updatePromptCounts();
+        console.log('addNewCategory completed successfully');
     }
 
     function deletePrompt(button) {
@@ -931,17 +968,21 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // Save as last run activity
-        lastRunActivity = {
-            name: currentLoadedActivity || 'Current Activity',
-            data: currentData,
-            timestamp: Date.now()
-        };
-        
-        // Store in localStorage for persistence
-        localStorage.setItem('lastRunActivity', JSON.stringify(lastRunActivity));
-        
-        console.log('Saved current activity as last run:', lastRunActivity.name);
+        // Save as last run activity only if we have a real loaded activity
+        if (currentLoadedActivity) {
+            lastRunActivity = {
+                name: currentLoadedActivity,
+                data: currentData,
+                timestamp: Date.now()
+            };
+            
+            // Store in localStorage for persistence
+            localStorage.setItem('lastRunActivity', JSON.stringify(lastRunActivity));
+            
+            console.log('Saved current activity as last run:', lastRunActivity.name);
+        } else {
+            console.log('No loaded activity - not saving last run activity');
+        }
     }
 
     // Load the last run activity
@@ -1073,6 +1114,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Attach functions to window object AFTER they are defined
+    console.log('DEBUG: Attaching functions to window object');
     window.addNewPrompt = addNewPrompt;
     window.addNewCategory = addNewCategory;
     window.deletePrompt = deletePrompt;
@@ -1083,6 +1125,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.downloadSettings = downloadSettings;
     window.handleFileUpload = handleFileUpload;
     window.togglePromptingTips = togglePromptingTips;
+    console.log('DEBUG: Functions attached to window object');
 
     // Settings Management Functions
     function saveSettings() {
@@ -1580,7 +1623,40 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (!settings) {
             console.log('Settings not found for:', settingsName);
-            throw new Error('Settings not found');
+            console.log('Falling back to fresh start');
+            
+        // Clear any existing "Current Activity" from localStorage to prevent confusion
+        const savedSettings = JSON.parse(localStorage.getItem('promptSettings') || '{}');
+        if (savedSettings['Current Activity']) {
+            delete savedSettings['Current Activity'];
+            localStorage.setItem('promptSettings', JSON.stringify(savedSettings));
+            console.log('Cleared invalid "Current Activity" from localStorage');
+        }
+        
+        // Clear any loaded activity and start fresh
+        currentLoadedActivity = null;
+            
+            // Clear localStorage first to ensure fresh start
+            localStorage.removeItem('promptCategories');
+            
+            // Save empty data immediately to prevent sketch from loading old data
+            const emptyData = {
+                objective: '',
+                constraintEnabled: true,
+                prompt1InterestsMode: false,
+                criterionLabels: ['', '', '', ''],
+                categories: {}
+            };
+            localStorage.setItem('promptCategories', JSON.stringify(emptyData));
+            
+            // Initialize with fresh content after a small delay to ensure DOM is ready
+            console.log('DEBUG: About to call initializeDefaultContent with setTimeout');
+            setTimeout(() => {
+                console.log('DEBUG: setTimeout callback executing - calling initializeDefaultContent');
+                initializeDefaultContent();
+            }, 10);
+            
+            return;
         }
         
         // Set loading flag to prevent clearing activity during loading
@@ -2034,54 +2110,91 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function initializeDefaultContent() {
+        console.log('=== DEBUG: initializeDefaultContent called ===');
+        
         // Clear objective
-        document.getElementById('objective-input').value = '';
+        const objectiveInput = document.getElementById('objective-input');
+        if (objectiveInput) {
+            objectiveInput.value = '';
+            console.log('DEBUG: Cleared objective input');
+        } else {
+            console.log('ERROR: objective-input element not found');
+        }
         
         // Clear checkbox
-        document.getElementById('prompt1-interests-mode').checked = false;
+        const checkbox = document.getElementById('prompt1-interests-mode');
+        if (checkbox) {
+            checkbox.checked = false;
+            console.log('DEBUG: Cleared checkbox');
+        } else {
+            console.log('ERROR: prompt1-interests-mode element not found');
+        }
         
         // Clear prompt headers
         const promptHeaders = document.getElementById('prompt-headers');
-        const addButton = promptHeaders.querySelector('.add-prompt-button');
-        if (addButton) {
-            addButton.remove();
-        }
-        promptHeaders.innerHTML = '';
-        if (addButton) {
-            promptHeaders.appendChild(addButton);
+        if (promptHeaders) {
+            console.log('DEBUG: Found prompt-headers element');
+            const addButton = promptHeaders.querySelector('.add-prompt-button');
+            if (addButton) {
+                addButton.remove();
+            }
+            promptHeaders.innerHTML = '';
+            if (addButton) {
+                promptHeaders.appendChild(addButton);
+            }
+            console.log('DEBUG: Cleared prompt headers');
+        } else {
+            console.log('ERROR: prompt-headers element not found');
         }
         
         // Clear categories
         const categoriesContainer = document.getElementById('categories-container');
-        categoriesContainer.innerHTML = '';
+        if (categoriesContainer) {
+            categoriesContainer.innerHTML = '';
+            console.log('DEBUG: Cleared categories container');
+        } else {
+            console.log('ERROR: categories-container element not found');
+        }
         
         // Reset counters
         promptCounter = 0;
         categoryCounter = 0;
+        console.log('DEBUG: Reset counters to 0');
         
         // Reset criterion labels to empty
         criterionLabels = ['', '', '', ''];
+        console.log('DEBUG: Reset criterion labels');
         
         // Add 1 default prompt
+        console.log('DEBUG: About to call addNewPrompt()');
         addNewPrompt();
+        console.log('DEBUG: addNewPrompt() completed');
         
         // Add 1 default category
+        console.log('DEBUG: About to call addNewCategory()');
         addNewCategory();
+        console.log('DEBUG: addNewCategory() completed');
         
-        // Enable prompt1InterestsMode by default when starting fresh
-        document.getElementById('prompt1-interests-mode').checked = true;
+        // Keep prompt1InterestsMode unchecked by default for empty start
+        if (checkbox) {
+            checkbox.checked = false;
+            console.log('DEBUG: Ensured checkbox is unchecked');
+        }
         
         // Update UI
+        console.log('DEBUG: About to update UI');
         updatePromptCounts();
         updateColumnCounts();
+        console.log('DEBUG: UI updates completed');
         
-        // Save the fresh state to localStorage with timestamp
-        saveChanges();
+        // Don't call saveChanges() here - we already set empty data in localStorage
+        // saveChanges() would override the empty initialization
         
         // Force sketch to reload by dispatching a custom event
         window.dispatchEvent(new CustomEvent('promptDataUpdated', {
             detail: { timestamp: Date.now() }
         }));
+        console.log('DEBUG: initializeDefaultContent completed successfully');
     }
 
     function clearAllFields() {
@@ -2451,14 +2564,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const emptyData = {
                 objective: '',
                 constraintEnabled: true,
-                prompt1InterestsMode: true,
+                prompt1InterestsMode: false,
                 criterionLabels: ['', '', '', ''],
                 categories: {}
             };
             localStorage.setItem('promptCategories', JSON.stringify(emptyData));
             
-            // Initialize with fresh content
-            initializeDefaultContent();
+            // Initialize with fresh content after a small delay to ensure DOM is ready
+            console.log('DEBUG: About to call initializeDefaultContent with setTimeout');
+            setTimeout(() => {
+                console.log('DEBUG: setTimeout callback executing - calling initializeDefaultContent');
+                initializeDefaultContent();
+            }, 10);
         }
     }
     
@@ -2483,11 +2600,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('visibilitychange', () => {
         console.log('Visibility changed, hidden:', document.hidden);
         if (!document.hidden) {
-            // Page became visible again, reload data
-            console.log('Page became visible, reloading data...');
-            setTimeout(() => {
-                loadSavedData();
-            }, 100); // Small delay to ensure page is fully loaded
+            // Only reload data if we have a loaded activity, not on fresh start
+            if (currentLoadedActivity) {
+                console.log('Page became visible, reloading data for activity:', currentLoadedActivity);
+                setTimeout(() => {
+                    loadSavedData();
+                }, 100); // Small delay to ensure page is fully loaded
+            } else {
+                console.log('Page became visible but no activity loaded - keeping fresh start');
+            }
         }
     });
     
@@ -2552,134 +2673,3 @@ function addNewPrompt() {
     updateColumnCounts();
 }
 
-function addNewCategory() {
-    if (categoryCounter >= MAX_CATEGORIES) {
-        alert(`Maximum ${MAX_CATEGORIES} categories allowed!`);
-        return;
-    }
-    
-    categoryCounter++;
-    
-    // Create category row
-    const categoryRow = document.createElement('div');
-    categoryRow.className = 'category-row';
-    
-    // Add row label container
-    const rowLabelContainer = document.createElement('div');
-    rowLabelContainer.className = 'row-label-container';
-    
-    // Add delete button
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'delete-category';
-    deleteBtn.innerHTML = '[x]';
-    deleteBtn.onclick = () => deleteCategory(categoryCounter - 1);
-    rowLabelContainer.appendChild(deleteBtn);
-    
-    // Add row label
-    const rowLabel = document.createElement('div');
-    rowLabel.className = 'row-label';
-    rowLabel.textContent = String.fromCharCode(64 + categoryCounter); // A, B, C, etc.
-    rowLabelContainer.appendChild(rowLabel);
-    
-    // Add criterion label input
-    const criterionLabelContainer = document.createElement('div');
-    criterionLabelContainer.className = 'criterion-label-container';
-    
-    const criterionLabelInput = document.createElement('input');
-    criterionLabelInput.type = 'text';
-    criterionLabelInput.className = 'criterion-label-input';
-    criterionLabelInput.placeholder = `criterion-${categoryCounter}`;
-    criterionLabelInput.value = criterionLabels[categoryCounter - 1] || '';
-    criterionLabelInput.oninput = (e) => updateCriterionLabel(categoryCounter - 1, e.target.value);
-    criterionLabelContainer.appendChild(criterionLabelInput);
-    
-    categoryRow.appendChild(rowLabelContainer);
-    categoryRow.appendChild(criterionLabelContainer);
-    
-    // Add textareas for each prompt
-    const headerInputs = document.querySelectorAll('.header-input');
-    headerInputs.forEach((header, index) => {
-        const textareaContainer = document.createElement('div');
-        textareaContainer.className = 'textarea-container';
-        
-        const textarea = document.createElement('textarea');
-        textarea.setAttribute('data-column', index);
-        textarea.setAttribute('data-row', categoryCounter - 1);
-        textarea.placeholder = `Enter items for ${header.value || `PROMPT ${index + 1}`}`;
-        textareaContainer.appendChild(textarea);
-        
-        categoryRow.appendChild(textareaContainer);
-    });
-    
-    // Add to categories container
-    document.getElementById('categories-container').appendChild(categoryRow);
-    
-    // Update arrows
-    updateCategoryRows();
-    
-    // Update counters
-    updatePromptCounts();
-    updateColumnCounts();
-}
-
-function deletePrompt(promptIndex) {
-    if (promptCounter <= 1) {
-        alert('At least one prompt is required!');
-        return;
-    }
-    
-    // Remove the prompt column
-    const promptColumns = document.querySelectorAll('.prompt-column');
-    if (promptColumns[promptIndex]) {
-        promptColumns[promptIndex].remove();
-    }
-    
-    promptCounter--;
-    
-    // Update remaining prompt indices
-    const remainingColumns = document.querySelectorAll('.prompt-column');
-    remainingColumns.forEach((column, index) => {
-        const headerInput = column.querySelector('.header-input');
-        if (headerInput) {
-            headerInput.placeholder = `PROMPT ${index + 1}`;
-        }
-    });
-    
-    // Update category rows to remove corresponding textareas
-    updateCategoryRows();
-    
-    // Update counters
-    updatePromptCounts();
-    updateColumnCounts();
-}
-
-function deleteCategory(categoryIndex) {
-    if (categoryCounter <= 1) {
-        alert('At least one category is required!');
-        return;
-    }
-    
-    // Remove the category row
-    const categoryRows = document.querySelectorAll('.category-row');
-    if (categoryRows[categoryIndex]) {
-        categoryRows[categoryIndex].remove();
-    }
-    
-    categoryCounter--;
-    
-    // Update remaining category labels
-    const remainingRows = document.querySelectorAll('.category-row');
-    remainingRows.forEach((row, index) => {
-        const rowLabel = row.querySelector('.row-label');
-        if (rowLabel) {
-            rowLabel.textContent = String.fromCharCode(65 + index); // A, B, C, etc.
-        }
-    });
-    
-    // Update arrows
-    updateCategoryRows();
-    
-    // Update counters
-    updatePromptCounts();
-    updateColumnCounts();
-}

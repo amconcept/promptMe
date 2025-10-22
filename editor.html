@@ -37,7 +37,6 @@
             color: var(--primary-color);
             margin-bottom: 40px;
             font-size: 32px;
-            text-shadow: 0 0 5px var(--primary-shadow);
             letter-spacing: 2px;
         }
 
@@ -54,7 +53,6 @@
             color: var(--primary-color);
             font-weight: bold;
             font-size: 18px;
-            text-shadow: 0 0 3px var(--primary-shadow);
             min-width: 120px;
         }
 
@@ -86,6 +84,34 @@
             background-color: transparent;
             padding-left: 320px; /* Align with criterion label fields */
         }
+        
+        /* START PROMPTING button section */
+        .start-prompting-section {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+        
+        .start-prompting {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            border: 2px solid var(--primary-color);
+            border-radius: 6px;
+            padding: 12px 20px;
+            font-family: 'VT323', monospace;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .start-prompting:hover {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+        }
 
         .settings-checkbox {
             display: flex;
@@ -109,7 +135,6 @@
             font-size: 14px;
             font-weight: bold;
             cursor: pointer;
-            text-shadow: 0 0 3px var(--primary-shadow);
             transition: all 0.3s ease;
         }
 
@@ -123,7 +148,6 @@
             font-size: 14px;
             font-weight: bold;
             cursor: pointer;
-            text-shadow: 0 0 3px var(--primary-shadow);
             transition: all 0.3s ease;
         }
 
@@ -211,7 +235,6 @@
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
-            text-shadow: 0 0 3px var(--primary-shadow);
         }
 
 
@@ -230,7 +253,6 @@
             color: var(--primary-color);
             margin-top: 0;
             font-size: 20px;
-            text-shadow: 0 0 3px var(--primary-shadow);
         }
 
         .teacher-guidance ul {
@@ -246,7 +268,6 @@
 
         .teacher-guidance strong {
             color: var(--primary-hover);
-            text-shadow: 0 0 2px var(--primary-shadow);
         }
 
         /* Action buttons at top */
@@ -294,7 +315,6 @@
             font-family: 'VT323', monospace;
             font-size: 16px;
             font-weight: bold;
-            text-shadow: 0 0 3px var(--primary-shadow);
         }
 
         /* Connection explanation */
@@ -304,7 +324,6 @@
             font-family: 'VT323', monospace;
             font-size: 16px;
             margin: 20px 0 60px 0; /* Increased bottom margin from 40px to 60px */
-            text-shadow: 0 0 3px var(--primary-shadow);
         }
 
         /* Prompt section */
@@ -411,7 +430,6 @@
             font-size: 24px;
             font-weight: bold;
             color: var(--primary-color);
-            text-shadow: 0 0 3px var(--primary-shadow);
         }
 
         /* Align category A with others by adding space for [x] button */
@@ -433,7 +451,6 @@
             cursor: pointer;
             display: inline;
             font-family: 'VT323', monospace;
-            text-shadow: 0 0 3px rgba(255, 107, 107, 0.3);
         }
 
         .delete-prompt {
@@ -454,46 +471,49 @@
             align-items: flex-start;
         }
 
-        /* Settings Control Panel */
+        /* Settings Control Panel - Apple II Retro Style */
         .settings-panel {
             position: fixed;
             top: 20px;
             right: 20px;
-            width: 250px;
+            width: 150px;
             background-color: var(--background-color);
-            border: none;
-            border-radius: 8px;
-            padding: 15px;
+            border: 2px solid var(--primary-color);
+            border-radius: 0px;
+            padding: 10px;
             font-family: 'VT323', monospace;
-            color: var(--primary-color);
+            color: var(--text-color);
             font-size: 14px;
-            box-shadow: 0 0 15px var(--primary-shadow);
+            box-shadow: inset 1px 1px 0px var(--primary-color), inset -1px -1px 0px var(--primary-color);
+            transition: all 0.3s ease-in-out;
             z-index: 1000;
         }
         
         /* Activity status indicator removed */
 
         .settings-title {
+            text-align: center;
             font-weight: bold;
-            margin-bottom: 15px;
+            margin-bottom: 8px;
             color: var(--primary-color);
             font-size: 16px;
             letter-spacing: 1px;
-            text-shadow: 0 0 5px var(--primary-shadow);
         }
 
         .theme-picker {
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 8px;
+            gap: 4px;
         }
 
         .theme-picker label {
-            font-size: 12px;
+            font-size: 13px;
             color: var(--primary-color);
             font-weight: bold;
-            min-width: 60px;
+            text-align: center;
+            letter-spacing: 0.5px;
         }
 
         .theme-picker select {
@@ -505,27 +525,28 @@
             font-family: 'VT323', monospace;
             font-size: 12px;
             cursor: pointer;
-            flex-grow: 1;
+            width: 100%;
+            text-align: center;
         }
 
         .theme-picker select:focus {
             outline: none;
             border-color: var(--primary-hover);
-            box-shadow: 0 0 3px var(--primary-shadow);
         }
 
         .settings-list {
-            margin-bottom: 15px;
+            margin-bottom: 8px;
         }
 
         .settings-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 8px 0;
+            padding: 4px 0;
             cursor: pointer;
-            border-bottom: 1px solid #333;
-            transition: all 0.3s ease;
+            border-bottom: 1px solid var(--primary-color);
+            transition: all 0.1s ease;
+            font-size: 12px;
         }
 
         .settings-item:last-child {
@@ -534,7 +555,7 @@
 
         .settings-item:hover {
             background-color: var(--primary-shadow-light);
-            padding-left: 5px;
+            padding-left: 4px;
         }
 
         .settings-item.selected {
@@ -550,9 +571,10 @@
 
         .settings-item::before {
             content: ">";
-            margin-right: 8px;
+            margin-right: 6px;
             color: var(--primary-color);
             font-weight: bold;
+            font-size: 10px;
         }
 
         .settings-item.selected::before {
@@ -562,12 +584,12 @@
         .settings-item-delete {
             color: var(--delete-color);
             font-weight: bold;
-            font-size: 14px;
-            padding: 2px 6px;
-            margin-left: 8px;
+            font-size: 10px;
+            padding: 2px 4px;
+            margin-left: 6px;
             cursor: pointer;
-            border-radius: 3px;
-            transition: all 0.3s ease;
+            border-radius: 2px;
+            transition: all 0.1s ease;
         }
 
         .settings-item-delete:hover {
@@ -578,32 +600,32 @@
         .settings-divider {
             height: 1px;
             background-color: var(--primary-color);
-            margin: 15px 0;
+            margin: 8px 0;
         }
 
         .settings-actions {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 4px;
         }
 
         .settings-action-btn {
             background-color: var(--background-color);
             color: var(--primary-color);
             border: 1px solid var(--primary-color);
-            padding: 8px 12px;
+            padding: 4px 6px;
             border-radius: 4px;
             cursor: pointer;
             font-family: 'VT323', monospace;
             font-size: 12px;
-            transition: all 0.3s ease;
-            text-align: left;
+            transition: all 0.1s ease;
+            text-align: center;
+            letter-spacing: 0.5px;
         }
 
         .settings-action-btn:hover {
-            background-color: var(--primary-hover);
+            background-color: var(--primary-color);
             color: var(--background-color);
-            box-shadow: 0 0 8px var(--primary-shadow);
         }
 
         textarea {
@@ -704,7 +726,6 @@
             color: var(--primary-color);
             font-family: 'VT323', monospace;
             font-size: 16px;
-            text-shadow: 0 0 3px var(--primary-shadow);
         }
 
         /* Animation */
@@ -723,10 +744,14 @@
 
     <h1>Prompt Designer</h1>
     
+    <!-- START PROMPTING button in top left -->
+    <div class="start-prompting-section">
+        <button class="start-prompting" onclick="quickTest()">START PROMPTING</button>
+    </div>
+    
     <!-- Function buttons moved to top -->
     <div class="settings-section">
         <div class="settings-buttons">
-            <button class="test" onclick="quickTest()">RUN APP</button>
             <button class="new" onclick="startNewPromptSet()">NEW</button>
             <button class="restore" onclick="restoreLastRunActivity()" id="restore-btn" style="display: none;">RESTORE LAST RUN</button>
             <button class="save" onclick="saveCurrentActivity()" id="save-btn" style="display: none;">SAVE</button>

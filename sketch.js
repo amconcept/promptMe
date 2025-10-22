@@ -73,6 +73,16 @@ let manuallyAddedStudents = []; // Track manually added students for report
 let originalClassList = []; // Track original uploaded class list separately
 let addStudentButton; // + button for adding students mid-session
 
+// Function for navigating to editor - defined at global scope
+function goToEditor() {
+    console.log('Design Prompts button clicked - redirecting to editor.html');
+    saveCurrentStateToLocalStorage();
+    setTimeout(() => {
+        console.log('Redirecting to editor.html from button');
+        window.location.href = 'editor.html?from=sketch';
+    }, 50);
+}
+
 // Default styling
 const DEFAULT_COLORS = {
     BACKGROUND: '#000000',
@@ -102,6 +112,7 @@ const SOUND = {
     SCRAMBLE: { FREQUENCY: 440, DURATION: 15 },
     REVEAL: { FREQUENCY: 600, DURATION: 25 },
     FINAL: { FREQUENCY: 1200, DURATION: 100 },
+    RETURN_TO_FIELD: { FREQUENCY: 800, DURATION: 50 }, // New sound for returning to name field
     VOLUME: 0.03
 };
 
@@ -684,37 +695,8 @@ function setup() {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     studentName = '';
     
-    // Add native E key handler as backup
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'e' || event.key === 'E') {
-            // Don't trigger if user is typing in an input field
-            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || event.target.isContentEditable) {
-                return;
-            }
-            
-            event.preventDefault();
-            event.stopPropagation();
-            console.log('E key handler triggered - redirecting to editor.html');
-            console.log('Current URL:', window.location.href);
-            saveCurrentStateToLocalStorage();
-            // Use a small delay to ensure the save completes
-            setTimeout(() => {
-                console.log('Redirecting to editor.html now');
-                window.location.href = 'editor.html?from=sketch';
-            }, 50);
-        }
-    });
+    // E key handler removed - use Edit Prompts button instead
 
-    // Function for the Edit Prompts button
-    function goToEditor() {
-        console.log('Edit Prompts button clicked - redirecting to editor.html');
-        saveCurrentStateToLocalStorage();
-        setTimeout(() => {
-            console.log('Redirecting to editor.html from button');
-            window.location.href = 'editor.html?from=sketch';
-        }, 50);
-    }
-    
     // Listen for theme changes from editor
     window.addEventListener('themeChanged', function(event) {
         console.log('Theme change event received from editor:', event.detail);
@@ -772,7 +754,6 @@ function setup() {
     controlPanelToggle.style('height', '28px');
     controlPanelToggle.style('cursor', 'pointer');
     controlPanelToggle.style('box-shadow', 'inset 1px 1px 0px var(--primary-color), inset -1px -1px 0px var(--primary-color)');
-    controlPanelToggle.style('text-shadow', '1px 1px 0px var(--primary-shadow)');
     controlPanelToggle.style('transition', 'all 0.1s ease');
     
     // Add hover effects
@@ -801,7 +782,6 @@ function setup() {
     controlPanel.style('width', '100px');
     controlPanel.style('box-shadow', 'inset 1px 1px 0px var(--primary-color), inset -1px -1px 0px var(--primary-color), 2px 2px 0px var(--primary-shadow)');
     controlPanel.style('transition', 'all 0.3s ease-in-out');
-    controlPanel.style('text-shadow', '1px 1px 0px var(--primary-shadow)');
     
     // Position control panel and toggle button
     positionControlPanel();
@@ -1009,6 +989,9 @@ function setup() {
             const newName = nameInput.value().trim();
             
             if (newName.length > 0) {
+                // Play beep sound for feedback
+                playSound(SOUND.REVEAL);
+                
                 // Add to allStudents if not already there
                 if (!allStudents.includes(newName)) {
                     allStudents.push(newName);
@@ -1042,6 +1025,9 @@ function setup() {
                 positionNameInputAndButtons();
                 
                 saveCurrentStateToLocalStorage(); // Save to localStorage
+                
+                // Blur the input field so user can immediately press 'A' to run prompts
+                nameInput.elt.blur();
             }
             
             console.log('Name input completed on enter:', studentName);
@@ -1219,32 +1205,7 @@ function setup() {
         resetReportButton.style('color', 'var(--primary-color)');
     });
     
-    // Create Edit Prompts button
-    const editPromptsButton = createButton('EDIT PROMPTS');
-    editPromptsButton.parent(controlPanel);
-    editPromptsButton.mousePressed(goToEditor);
-    editPromptsButton.style('background-color', 'var(--background-color)');
-    editPromptsButton.style('color', 'var(--primary-color)');
-    editPromptsButton.style('font-family', 'VT323, monospace');
-    editPromptsButton.style('font-size', '11px');
-    editPromptsButton.style('width', '100%');
-    editPromptsButton.style('height', '22px');
-    editPromptsButton.style('border', '1px solid var(--primary-color)');
-    editPromptsButton.style('border-radius', '4px');
-    editPromptsButton.style('cursor', 'pointer');
-    editPromptsButton.style('margin-bottom', '4px');
-    editPromptsButton.style('text-align', 'center');
-    editPromptsButton.style('letter-spacing', '0.5px');
-    
-    // Add hover effect for edit prompts button
-    editPromptsButton.mouseOver(() => {
-        editPromptsButton.style('background-color', 'var(--primary-color)');
-        editPromptsButton.style('color', 'var(--background-color)');
-    });
-    editPromptsButton.mouseOut(() => {
-        editPromptsButton.style('background-color', 'var(--background-color)');
-        editPromptsButton.style('color', 'var(--primary-color)');
-    });
+    // Create Edit Prompts button - REMOVED (now using DESIGN PROMPTS button in bottom left)
     
     // Style name input with terminal colors
     nameInput.size(BUTTON_SIZES.WIDTH());
@@ -2136,20 +2097,7 @@ function keyPressed() {
         return;
     }
 
-    if (key === 'e' || key === 'E') {
-        // Prevent default browser behavior
-        console.log('E pressed in p5.js handler - redirecting to editor.html');
-        event.preventDefault();
-        event.stopPropagation();
-        
-        // Save current state and redirect to editor
-        saveCurrentStateToLocalStorage();
-        setTimeout(() => {
-            console.log('Redirecting to editor.html from p5.js handler');
-            window.location.href = 'editor.html?from=sketch';
-        }, 50);
-        return;
-    }
+    // E key handler removed - use Edit Prompts button instead
     
     // Toggle control panel with 'C' key
     if (key === 'c' || key === 'C') {
@@ -2621,6 +2569,16 @@ function startRevealAnimation(finalText, category) {
                     isGenerating = false;
                     
                     isGenerationComplete = true;
+                    
+                    // Focus back on name input field for next student entry
+                    setTimeout(() => {
+                        if (nameInput && nameInput.elt) {
+                            nameInput.elt.focus();
+                            // Play a different beep sound when returning to text field
+                            playSound(SOUND.RETURN_TO_FIELD);
+                            console.log('Focused name input field for next student entry');
+                        }
+                    }, 500); // Small delay to ensure generation is fully complete
                 }
             }, TIMING.PAUSE_BETWEEN);
         }
