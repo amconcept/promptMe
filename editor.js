@@ -634,6 +634,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function saveChanges() {
+        // CRITICAL: Preserve existing class report data from sketch.js
+        const existingData = localStorage.getItem('promptCategories');
+        let preservedData = {};
+        
+        if (existingData) {
+            try {
+                const parsed = JSON.parse(existingData);
+                // Preserve all class report related data
+                preservedData = {
+                    classReport: parsed.classReport || [],
+                    allStudents: parsed.allStudents || [],
+                    drawnStudents: parsed.drawnStudents || [],
+                    manuallyAddedStudents: parsed.manuallyAddedStudents || [],
+                    totalUniqueStudents: parsed.totalUniqueStudents || 0,
+                    classList: parsed.classList || [],
+                    originalClassList: parsed.originalClassList || [],
+                    studentName: parsed.studentName || ''
+                };
+                console.log('DEBUG: Preserved class report data:', preservedData);
+            } catch (error) {
+                console.error('Error parsing existing data for preservation:', error);
+            }
+        }
+        
         const data = {
             objective: document.getElementById('objective-input').value,
             // classList: classList, // Don't save class list to localStorage
@@ -642,7 +666,9 @@ document.addEventListener('DOMContentLoaded', () => {
             criterionLabels: criterionLabels, // Include criterion labels for sketch.js
             activityName: currentLoadedActivity, // Include the loaded activity name
             // promptCount: removed - now handled in sketch.js
-            categories: {}
+            categories: {},
+            // Preserve all class report data
+            ...preservedData
         };
         
         console.log('=== DEBUG: saveChanges called ===');
@@ -1636,6 +1662,30 @@ document.addEventListener('DOMContentLoaded', () => {
         // Clear any loaded activity and start fresh
         currentLoadedActivity = null;
             
+            // CRITICAL: Preserve existing class report data before clearing localStorage
+            const existingData = localStorage.getItem('promptCategories');
+            let preservedData = {};
+            
+            if (existingData) {
+                try {
+                    const parsed = JSON.parse(existingData);
+                    // Preserve all class report related data
+                    preservedData = {
+                        classReport: parsed.classReport || [],
+                        allStudents: parsed.allStudents || [],
+                        drawnStudents: parsed.drawnStudents || [],
+                        manuallyAddedStudents: parsed.manuallyAddedStudents || [],
+                        totalUniqueStudents: parsed.totalUniqueStudents || 0,
+                        classList: parsed.classList || [],
+                        originalClassList: parsed.originalClassList || [],
+                        studentName: parsed.studentName || ''
+                    };
+                    console.log('DEBUG: Preserved class report data:', preservedData);
+                } catch (error) {
+                    console.error('Error parsing existing data for preservation:', error);
+                }
+            }
+            
             // Clear localStorage first to ensure fresh start
             localStorage.removeItem('promptCategories');
             
@@ -1645,7 +1695,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 constraintEnabled: true,
                 prompt1InterestsMode: false,
                 criterionLabels: ['', '', '', ''],
-                categories: {}
+                categories: {},
+                // Preserve all class report data
+                ...preservedData
             };
             localStorage.setItem('promptCategories', JSON.stringify(emptyData));
             
@@ -2070,17 +2122,42 @@ document.addEventListener('DOMContentLoaded', () => {
         lastRunActivity = null;
         localStorage.removeItem('lastRunActivity');
         
+        // CRITICAL: Preserve existing class report data before clearing localStorage
+        const existingData = localStorage.getItem('promptCategories');
+        let preservedData = {};
+        
+        if (existingData) {
+            try {
+                const parsed = JSON.parse(existingData);
+                // Preserve all class report related data
+                preservedData = {
+                    classReport: parsed.classReport || [],
+                    allStudents: parsed.allStudents || [],
+                    drawnStudents: parsed.drawnStudents || [],
+                    manuallyAddedStudents: parsed.manuallyAddedStudents || [],
+                    totalUniqueStudents: parsed.totalUniqueStudents || 0,
+                    classList: parsed.classList || [],
+                    originalClassList: parsed.originalClassList || [],
+                    studentName: parsed.studentName || ''
+                };
+                console.log('DEBUG: Preserved class report data in startNewPromptSet:', preservedData);
+            } catch (error) {
+                console.error('Error parsing existing data for preservation in startNewPromptSet:', error);
+            }
+        }
+        
         // IMPORTANT: Clear the promptCategories localStorage to prevent mixing old data
         localStorage.removeItem('promptCategories');
         
-        // Save fresh empty data to localStorage
         const emptyData = {
             objective: '',
             constraintEnabled: true,
             prompt1InterestsMode: false,
             criterionLabels: ['', '', '', ''],
             activityName: null,
-            categories: {}
+            categories: {},
+            // Preserve all class report data
+            ...preservedData
         };
         localStorage.setItem('promptCategories', JSON.stringify(emptyData));
         
@@ -2557,6 +2634,30 @@ document.addEventListener('DOMContentLoaded', () => {
             // Clear any loaded activity and initialize with 1 default prompt and category
             currentLoadedActivity = null;
             
+            // CRITICAL: Preserve existing class report data before clearing localStorage
+            const existingData = localStorage.getItem('promptCategories');
+            let preservedData = {};
+            
+            if (existingData) {
+                try {
+                    const parsed = JSON.parse(existingData);
+                    // Preserve all class report related data
+                    preservedData = {
+                        classReport: parsed.classReport || [],
+                        allStudents: parsed.allStudents || [],
+                        drawnStudents: parsed.drawnStudents || [],
+                        manuallyAddedStudents: parsed.manuallyAddedStudents || [],
+                        totalUniqueStudents: parsed.totalUniqueStudents || 0,
+                        classList: parsed.classList || [],
+                        originalClassList: parsed.originalClassList || [],
+                        studentName: parsed.studentName || ''
+                    };
+                    console.log('DEBUG: Preserved class report data:', preservedData);
+                } catch (error) {
+                    console.error('Error parsing existing data for preservation:', error);
+                }
+            }
+            
             // Clear localStorage first to ensure fresh start
             localStorage.removeItem('promptCategories');
             
@@ -2566,7 +2667,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 constraintEnabled: true,
                 prompt1InterestsMode: false,
                 criterionLabels: ['', '', '', ''],
-                categories: {}
+                categories: {},
+                // Preserve all class report data
+                ...preservedData
             };
             localStorage.setItem('promptCategories', JSON.stringify(emptyData));
             

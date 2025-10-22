@@ -76,11 +76,25 @@ let addStudentButton; // + button for adding students mid-session
 // Function for navigating to editor - defined at global scope
 function goToEditor() {
     console.log('Design Prompts button clicked - redirecting to editor.html');
+    console.log('DEBUG: Current classReport before saving:', JSON.stringify(classReport, null, 2));
+    console.log('DEBUG: Current allStudents before saving:', allStudents);
+    console.log('DEBUG: Current totalUniqueStudents before saving:', totalUniqueStudents);
+    
+    // Force save current state before navigation
     saveCurrentStateToLocalStorage();
+    
+    // Add a longer delay to ensure save completes
     setTimeout(() => {
+        console.log('DEBUG: Verifying save completed - checking localStorage');
+        const savedData = localStorage.getItem('promptCategories');
+        if (savedData) {
+            const parsed = JSON.parse(savedData);
+            console.log('DEBUG: Saved classReport in localStorage:', JSON.stringify(parsed.classReport, null, 2));
+            console.log('DEBUG: Saved allStudents in localStorage:', parsed.allStudents);
+        }
         console.log('Redirecting to editor.html from button');
         window.location.href = 'editor.html?from=sketch';
-    }, 50);
+    }, 200); // Increased delay to ensure save completes
 }
 
 // Default styling
@@ -729,9 +743,21 @@ function setup() {
     
     // Load and check data with a delay to ensure editor has saved fresh data
     setTimeout(() => {
+        console.log('DEBUG: Loading data after setup - checking for existing class report');
+        const existingData = localStorage.getItem('promptCategories');
+        if (existingData) {
+            const parsed = JSON.parse(existingData);
+            console.log('DEBUG: Existing classReport in localStorage:', JSON.stringify(parsed.classReport, null, 2));
+            console.log('DEBUG: Existing allStudents in localStorage:', parsed.allStudents);
+        }
+        
         loadPromptsFromLocalStorage();
         loadStudentNameFromLocalStorage();
-    checkPromptData();
+        checkPromptData();
+        
+        // Verify data was loaded correctly
+        console.log('DEBUG: After loading - classReport length:', classReport.length);
+        console.log('DEBUG: After loading - allStudents length:', allStudents.length);
     }, 100); // Reduced delay since editor now saves fresh data immediately
     
     // Load initial theme from editor with a small delay to prevent flashing
@@ -3227,6 +3253,16 @@ function saveCurrentStateToLocalStorage() {
         try {
             data = JSON.parse(currentData);
             console.log('DEBUG: Found existing localStorage data, updating it');
+            
+            // CRITICAL: Preserve existing class report data if current is empty
+            if (classReport.length === 0 && data.classReport && data.classReport.length > 0) {
+                console.log('DEBUG: WARNING - classReport is empty but existing data has report, preserving existing data');
+                classReport = data.classReport;
+            }
+            if (allStudents.length === 0 && data.allStudents && data.allStudents.length > 0) {
+                console.log('DEBUG: WARNING - allStudents is empty but existing data has students, preserving existing data');
+                allStudents = data.allStudents;
+            }
         } catch (error) {
             console.error('Error parsing existing localStorage data:', error);
             data = {}; // Create new data structure if parsing fails
@@ -3238,9 +3274,13 @@ function saveCurrentStateToLocalStorage() {
     
     // Update student name
     data.studentName = studentName;
-    // Save class report data for persistence
-    data.classReport = classReport;
-    data.allStudents = allStudents;
+    // Save class report data for persistence - only update if we have data to save
+    if (classReport.length > 0) {
+        data.classReport = classReport;
+    }
+    if (allStudents.length > 0) {
+        data.allStudents = allStudents;
+    }
     data.drawnStudents = drawnStudents;
     data.manuallyAddedStudents = manuallyAddedStudents;
     data.totalUniqueStudents = totalUniqueStudents;
@@ -3252,6 +3292,14 @@ function saveCurrentStateToLocalStorage() {
         localStorage.setItem('promptCategories', JSON.stringify(data));
         console.log('DEBUG: Successfully saved to localStorage');
         console.log('DEBUG: Saved data structure:', JSON.stringify(data, null, 2));
+        
+        // Verify the save worked
+        const verifyData = localStorage.getItem('promptCategories');
+        if (verifyData) {
+            const verifyParsed = JSON.parse(verifyData);
+            console.log('DEBUG: VERIFICATION - Saved classReport length:', verifyParsed.classReport ? verifyParsed.classReport.length : 0);
+            console.log('DEBUG: VERIFICATION - Saved allStudents length:', verifyParsed.allStudents ? verifyParsed.allStudents.length : 0);
+        }
     } catch (error) {
         console.error('Error saving to localStorage:', error);
     }
