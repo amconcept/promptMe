@@ -1,15 +1,23 @@
 PROMPTME APP - CHANGELOG & FEATURES
 =====================================
 
-Version: 2025.1
+Version: 2025.2
 Last Updated: January 2025
 
 OVERVIEW
 --------
 The PromptMe App is a creative prompt generation tool that allows users to create structured prompts with categories and constraints. The app consists of three main components:
-- Editor (editor.html/editor.js): For creating and managing prompts
-- Sketch (sketch.html/sketch.js): For generating and displaying random prompts
+- Editor (editor.html + modular JS): For creating and managing prompts
+- Sketch (sketch.html + modular JS): For generating and displaying random prompts
 - Index (index.html): Landing page
+
+MAJOR REFACTORING UPDATE (Version 2025.2)
+==========================================
+- Refactored entire codebase into modular architecture for better maintainability
+- Split sketch.js (2916 lines) into 6 focused modules (2862 lines total)
+- Split editor.js (2863 lines) into 5 focused modules (2674 lines total)
+- Improved code organization, debugging, and collaboration
+- All functionality preserved with cleaner architecture
 
 MAJOR FEATURES IMPLEMENTED
 ==========================
@@ -716,10 +724,51 @@ FILE STRUCTURE
 PromptMe App_2025/
 ├── assets/ (font files)
 ├── editor.html (prompt editor interface)
-├── editor.js (editor logic)
+├── theme-manager.js (theme & CSS management)
+├── editor-ui-manager.js (UI elements & interactions)
+├── editor-data-manager.js (data persistence & CSV)
+├── editor-settings-manager.js (activity management)
+├── editor-main.js (main orchestrator)
 ├── index.html (landing page)
 ├── sketch.html (prompt generation interface)
-├── sketch.js (generation logic)
-└── README.md (project documentation)
+├── sketch-refactored.js (main orchestrator)
+├── ui-manager.js (UI elements & buttons)
+├── animation-manager.js (animations & sound)
+├── data-manager.js (data persistence)
+├── student-manager.js (student navigation)
+├── prompt-generator.js (prompt generation)
+├── README.md (project documentation)
+└── CHANGELOG.txt (this file)
+
+MODULAR ARCHITECTURE (Version 2025.2)
+=====================================
+Sketch Modules:
+- sketch-refactored.js: Main orchestrator (836 lines)
+- ui-manager.js: UI elements and interactions (671 lines)
+- animation-manager.js: Animations & sound effects (204 lines)
+- data-manager.js: Data persistence (724 lines)
+- student-manager.js: Student navigation (96 lines)
+- prompt-generator.js: Prompt generation logic (331 lines)
+
+Editor Modules:
+- editor-main.js: Main orchestrator (342 lines)
+- theme-manager.js: Theme switching (279 lines)
+- editor-ui-manager.js: UI elements & forms (626 lines)
+- editor-data-manager.js: Data persistence (567 lines)
+- editor-settings-manager.js: Activity management (860 lines)
+
+Benefits:
+- Single Responsibility Principle: Each module has one clear purpose
+- Easier debugging: Locate issues in specific modules
+- Better collaboration: Multiple developers can work simultaneously
+- Improved maintainability: Clear code organization
+- Scalability: Easy to add new features without touching existing code
+
+RECENT UPDATES (Version 2025.2)
+================================
+- Changed 'A' key to UP ARROW for generating prompts in sketch
+- Fixed missing prompts and categories in editor initialization
+- Corrected syntax errors in editor modules
+- Updated file structure to reflect modular architecture
 
 This changelog represents the complete development history and current feature set of the PromptMe App as of January 2025.

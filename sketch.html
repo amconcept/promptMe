@@ -192,11 +192,11 @@
             background-color: var(--primary-color);
         }
 
-        /* DESIGN PROMPTS button section */
+        /* DESIGN PROMPTS button section - Responsive */
         .design-prompts-section {
             position: fixed;
-            bottom: 20px;
-            left: 20px;
+            bottom: max(20px, 3vh);
+            left: max(20px, 3vw);
             z-index: 1000;
         }
         
@@ -205,28 +205,55 @@
             color: var(--background-color);
             border: 2px solid var(--primary-color);
             border-radius: 6px;
-            padding: 12px 20px;
+            font-size: clamp(12px, 2.5vw, 16px);
             font-family: 'VT323', monospace;
-            font-size: 16px;
             font-weight: bold;
+            padding: clamp(8px, 2vw, 12px) clamp(12px, 3vw, 20px);
             cursor: pointer;
             transition: all 0.2s ease;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        /* Mobile Responsive Design */
+        @media (max-width: 768px) {
+            .design-prompts-section {
+                bottom: 10px;
+                left: 10px;
+            }
+            
+            .design-prompts {
+                font-size: clamp(10px, 3vw, 14px);
+                padding: 6px 10px;
+            }
         }
         
         .design-prompts:hover {
             background-color: var(--background-color);
             color: var(--primary-color);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 4px 8px var(--primary-shadow-hover);
+            transform: translateY(-2px);
+        }
+        
+        .design-prompts:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
     </style>
 </head>
 <body>
     <!-- DESIGN PROMPTS button in bottom left -->
     <div class="design-prompts-section">
-        <button class="design-prompts" onclick="goToEditor()">DESIGN PROMPTS</button>
+        <button class="design-prompts" onclick="goToEditor()">EDIT PROMPTS</button>
     </div>
     
-    <script src="sketch.js"></script>
+    <!-- Load modules -->
+    <script src="ui-manager.js"></script>
+    <script src="animation-manager.js"></script>
+    <script src="data-manager.js"></script>
+    <script src="student-manager.js"></script>
+    <script src="prompt-generator.js"></script>
+    <script src="sketch-refactored.js"></script>
 </body>
 </html> 
