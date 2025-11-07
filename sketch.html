@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script>
+        // Apply theme immediately to prevent flashing
+        (function() {
+            const editorTheme = localStorage.getItem('selectedTheme') || 'orangeCRT';
+            const editorBackground = localStorage.getItem('selectedBackground') || 'black';
+            
+            const themes = {
+                orangeCRT: {
+                    '--primary-color': '#FF8800',
+                    '--primary-hover': '#FFAA33',
+                    '--primary-shadow': 'rgba(255, 136, 0, 0.3)',
+                    '--primary-shadow-hover': 'rgba(255, 136, 0, 0.5)',
+                    '--primary-shadow-light': 'rgba(255, 136, 0, 0.1)',
+                    '--accent-color': '#FFAA55',
+                    '--delete-color': '#FF6B6B',
+                    '--frame-color': '#FF8800',
+                    '--frame-border': '#FF8800'
+                },
+                blueCRT: {
+                    '--primary-color': '#00BFFF',
+                    '--primary-hover': '#1E90FF',
+                    '--primary-shadow': 'rgba(0, 191, 255, 0.3)',
+                    '--primary-shadow-hover': 'rgba(0, 191, 255, 0.5)',
+                    '--primary-shadow-light': 'rgba(0, 191, 255, 0.1)',
+                    '--accent-color': '#87CEEB',
+                    '--delete-color': '#FF6B6B',
+                    '--frame-color': '#00BFFF',
+                    '--frame-border': '#00BFFF'
+                },
+                windows: {
+                    '--primary-color': '#FFFFFF',
+                    '--primary-hover': '#E0E0E0',
+                    '--primary-shadow': 'rgba(255, 255, 255, 0.3)',
+                    '--primary-shadow-hover': 'rgba(255, 255, 255, 0.5)',
+                    '--primary-shadow-light': 'rgba(255, 255, 255, 0.1)',
+                    '--accent-color': '#C0C0C0',
+                    '--delete-color': '#FF6B6B',
+                    '--frame-color': '#FFFFFF',
+                    '--frame-border': '#FFFFFF'
+                },
+                greenCRT: {
+                    '--primary-color': '#00FF00',
+                    '--primary-hover': '#33FF33',
+                    '--primary-shadow': 'rgba(0, 255, 0, 0.3)',
+                    '--primary-shadow-hover': 'rgba(0, 255, 0, 0.5)',
+                    '--primary-shadow-light': 'rgba(0, 255, 0, 0.1)',
+                    '--accent-color': '#66FF66',
+                    '--delete-color': '#FF6B6B',
+                    '--frame-color': '#00FF00',
+                    '--frame-border': '#00FF00'
+                },
+                purpleCRT: {
+                    '--primary-color': '#BF00FF',
+                    '--primary-hover': '#DA70D6',
+                    '--primary-shadow': 'rgba(191, 0, 255, 0.3)',
+                    '--primary-shadow-hover': 'rgba(191, 0, 255, 0.5)',
+                    '--primary-shadow-light': 'rgba(191, 0, 255, 0.1)',
+                    '--accent-color': '#DDA0DD',
+                    '--delete-color': '#FF6B6B',
+                    '--frame-color': '#BF00FF',
+                    '--frame-border': '#BF00FF'
+                },
+                pinkCRT: {
+                    '--primary-color': '#FF1493',
+                    '--primary-hover': '#FF69B4',
+                    '--primary-shadow': 'rgba(255, 20, 147, 0.3)',
+                    '--primary-shadow-hover': 'rgba(255, 20, 147, 0.5)',
+                    '--primary-shadow-light': 'rgba(255, 20, 147, 0.1)',
+                    '--accent-color': '#FFB6C1',
+                    '--delete-color': '#FF6B6B',
+                    '--frame-color': '#FF1493',
+                    '--frame-border': '#FF1493'
+                },
+                macintosh: {
+                    '--primary-color': '#000000',
+                    '--primary-hover': '#333333',
+                    '--primary-shadow': 'rgba(0, 0, 0, 0.3)',
+                    '--primary-shadow-hover': 'rgba(0, 0, 0, 0.5)',
+                    '--primary-shadow-light': 'rgba(0, 0, 0, 0.1)',
+                    '--accent-color': '#404040',
+                    '--delete-color': '#FF6B6B',
+                    '--frame-color': '#000000',
+                    '--frame-border': '#000000'
+                },
+                black: {
+                    '--primary-color': '#000000',
+                    '--primary-hover': '#333333',
+                    '--primary-shadow': 'rgba(0, 0, 0, 0.3)',
+                    '--primary-shadow-hover': 'rgba(0, 0, 0, 0.5)',
+                    '--primary-shadow-light': 'rgba(0, 0, 0, 0.1)',
+                    '--accent-color': '#404040',
+                    '--delete-color': '#FF6B6B',
+                    '--frame-color': '#000000',
+                    '--frame-border': '#000000'
+                }
+            };
+            
+            const root = document.documentElement;
+            
+            // Apply background first
+            if (editorBackground === 'grey') {
+                root.style.setProperty('--background-color', '#F5F5F5');
+                root.style.setProperty('--text-color', '#000000');
+                root.style.setProperty('--border-color', '#E0E0E0');
+                root.style.setProperty('--frame-background', '#F5F5F5');
+            } else if (editorBackground === 'blue-black') {
+                root.style.setProperty('--background-color', '#000080');
+                root.style.setProperty('--text-color', '#FFFFFF');
+                root.style.setProperty('--border-color', '#4169E1');
+                root.style.setProperty('--frame-background', '#000080');
+            } else if (editorBackground === 'green-crt') {
+                root.style.setProperty('--background-color', '#001100');
+                root.style.setProperty('--text-color', '#00FF00');
+                root.style.setProperty('--border-color', '#003300');
+                root.style.setProperty('--frame-background', '#001100');
+            } else if (editorBackground === 'orange-crt') {
+                root.style.setProperty('--background-color', '#1A0A00');
+                root.style.setProperty('--text-color', '#FF8800');
+                root.style.setProperty('--border-color', '#331100');
+                root.style.setProperty('--frame-background', '#1A0A00');
+            } else if (editorBackground === 'blue-crt') {
+                root.style.setProperty('--background-color', '#000011');
+                root.style.setProperty('--text-color', '#00BFFF');
+                root.style.setProperty('--border-color', '#001133');
+                root.style.setProperty('--frame-background', '#000011');
+            } else if (editorBackground === 'purple-crt') {
+                root.style.setProperty('--background-color', '#110011');
+                root.style.setProperty('--text-color', '#BF00FF');
+                root.style.setProperty('--border-color', '#220022');
+                root.style.setProperty('--frame-background', '#110011');
+            } else if (editorBackground === 'pink-crt') {
+                root.style.setProperty('--background-color', '#1A000A');
+                root.style.setProperty('--text-color', '#FF1493');
+                root.style.setProperty('--border-color', '#330011');
+                root.style.setProperty('--frame-background', '#1A000A');
+            } else { // black
+                root.style.setProperty('--background-color', '#000000');
+                root.style.setProperty('--text-color', '#FFFFFF');
+                root.style.setProperty('--border-color', '#333');
+                root.style.setProperty('--frame-background', '#000000');
+            }
+            
+            // Apply theme colors
+            const theme = themes[editorTheme];
+            if (theme) {
+                Object.keys(theme).forEach(key => {
+                    root.style.setProperty(key, theme[key]);
+                });
+            }
+            
+            console.log('Theme applied immediately on page load:', editorTheme, editorBackground);
+        })();
+    </script>
+    <style>
+        :root {
+            /* Default theme - will be overridden by editor theme system */
+            --primary-color: #D2691E;
+            --primary-hover: #CD853F;
+            --primary-shadow: rgba(210, 105, 30, 0.3);
+            --primary-shadow-hover: rgba(210, 105, 30, 0.5);
+            --primary-shadow-light: rgba(210, 105, 30, 0.1);
+            --accent-color: #FF7F7F;
+            --background-color: #000000;
+            --text-color: #FFFFFF;
+            --border-color: #333;
+            --delete-color: #FF6B6B;
+            --frame-color: #D2691E;
+            --frame-border: #D2691E;
+            --frame-background: #000000;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'VT323', monospace;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+        canvas {
+            display: block;
+        }
+
+        /* Theme picker CSS removed - now controlled by editor.js */
+
+        /* Retro checkbox styling */
+        .category-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            width: 12px;
+            height: 12px;
+            border: 1px solid var(--primary-color);
+            background-color: var(--background-color);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .category-checkbox:checked {
+            background-color: var(--primary-color);
+        }
+
+        .category-checkbox:checked::after {
+            content: '';
+        }
+
+        #all-categories-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            width: 12px;
+            height: 12px;
+            border: 1px solid var(--primary-color);
+            background-color: var(--background-color);
+            cursor: pointer;
+            position: relative;
+        }
+
+        #all-categories-checkbox:checked {
+            background-color: var(--primary-color);
+        }
+
+        /* DESIGN PROMPTS button section - Responsive */
+        .design-prompts-section {
+            position: fixed;
+            bottom: max(20px, 3vh);
+            left: max(20px, 3vw);
+            z-index: 1000;
+        }
+        
+        .design-prompts {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            font-size: 26px;
+            font-family: 'VT323', monospace;
+            font-weight: normal;
+            padding: 12px 20px;
+            width: auto;
+            min-width: 200px;
+            height: auto;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: none;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-align: center;
+            margin-bottom: 4px;
+        }
+        
+        /* Mobile Responsive Design */
+        @media (max-width: 768px) {
+            .design-prompts-section {
+                bottom: 10px;
+                left: 10px;
+            }
+            
+            .design-prompts {
+                font-size: 26px;
+                padding: 12px 20px;
+                height: auto;
+                min-width: 200px;
+            }
+        }
+        
+        .design-prompts:hover {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <!-- DESIGN PROMPTS button in bottom left -->
+    <div class="design-prompts-section">
+        <button class="design-prompts" onclick="goToEditor()">EDIT PROMPTS</button>
+    </div>
+    
+    <!-- Load modules -->
+    <script src="ui-manager.js"></script>
+    <script src="animation-manager.js"></script>
+    <script src="data-manager.js"></script>
+    <script src="student-manager.js"></script>
+    <script src="prompt-generator.js"></script>
+    <script src="sketch-refactored.js"></script>
+</body>
+</html> 
