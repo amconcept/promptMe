@@ -520,9 +520,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateButtonStates();
         console.log('=== DEBUG: updateButtonStates completed ===');
     } else {
-        // Ensure Sample activity is always in history
-        ensureSampleInHistory();
-        
         // Fresh load - check if we're starting completely fresh (no localStorage data)
         const existingPromptData = localStorage.getItem('promptCategories');
         let hasExistingData = false;
@@ -564,7 +561,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!hasExistingData) {
             console.log('No existing data found, initializing with default empty state (1 prompt, 1 category)');
             // Ensure Sample is in history but don't load it automatically
-            ensureSampleInHistory();
+            // Wait for it to complete before updating the list
+            ensureSampleInHistory().then(() => {
+                // Update settings list after Sample is added
+                if (window.updateSettingsList) {
+                    window.updateSettingsList();
+                }
+            });
             // Initialize with empty default state (1 prompt, 1 category)
             if (window.initializeDefaultState) {
                 window.initializeDefaultState();
@@ -621,7 +624,14 @@ document.addEventListener('DOMContentLoaded', () => {
     updateButtonStates();
     
     // Initialize settings list for history
-    updateSettingsList();
+    // First ensure Sample is in history (async), then update the list
+    ensureSampleInHistory().then(() => {
+        // Update list after Sample is added (if it was added)
+        updateSettingsList();
+    }).catch(() => {
+        // If ensureSampleInHistory fails, still update the list with existing items
+        updateSettingsList();
+    });
     
     // Add click sound to checkbox
     const checkbox = document.getElementById('prompt1-interests-mode');
