@@ -51,21 +51,32 @@ function startGenerationInternal() {
     // Get current student name to track if we're regenerating for same student
     const currentStudent = window.studentName || null;
     
+    // Sync local pendingPrompts with window.pendingPrompts (animation-manager uses window.pendingPrompts)
+    if (window.pendingPrompts && Array.isArray(window.pendingPrompts)) {
+        pendingPrompts = [...window.pendingPrompts]; // Sync local copy
+    } else {
+        pendingPrompts = []; // Ensure it's an array
+    }
+    
     // If regenerating for the same student, unuse previous pending prompts
     if (currentStudent === currentStudentForPrompts && pendingPrompts.length > 0) {
         debugLog('Regenerating for same student - unusing previous pending prompts');
+        debugLog('Pending prompts to unuse:', pendingPrompts);
         pendingPrompts.forEach(pending => {
             if (window.usedPrompts && window.usedPrompts[pending.promptType]) {
-                window.usedPrompts[pending.promptType].delete(pending.prompt);
-                debugLog('Unused pending prompt:', pending.prompt, 'for type:', pending.promptType);
+                const wasRemoved = window.usedPrompts[pending.promptType].delete(pending.prompt);
+                debugLog('Unused pending prompt:', pending.prompt, 'for type:', pending.promptType, 'wasRemoved:', wasRemoved);
             }
             // Also remove from global tracking
             if (window.globalUsedPrompts && pending.selectedCategory) {
                 const globalKey = `${pending.promptType}_${pending.selectedCategory}_${pending.prompt}`;
                 delete window.globalUsedPrompts[globalKey];
+                debugLog('Removed from global tracking:', globalKey);
             }
         });
         pendingPrompts = []; // Clear pending prompts
+        window.pendingPrompts = []; // Also clear window reference
+        debugLog('Cleared pending prompts after unusing');
     }
     
     // Update current student tracking
@@ -79,7 +90,11 @@ function startGenerationInternal() {
     isAnimating = false; // Reset animation flag
     
     // Initialize usedPrompts tracking if not exists (don't reset across generations)
-    if (!usedPrompts || Object.keys(usedPrompts).length === 0) {
+    // CRITICAL: Always sync with window.usedPrompts first (animation-manager modifies window.usedPrompts)
+    if (window.usedPrompts && typeof window.usedPrompts === 'object') {
+        usedPrompts = window.usedPrompts; // Use the same reference
+        debugLog('Synced usedPrompts with window.usedPrompts');
+    } else if (!usedPrompts || Object.keys(usedPrompts).length === 0) {
         usedPrompts = {};
         const promptTypes = Object.keys(categories).filter(cat => cat !== 'objective');
         promptTypes.forEach(promptType => {
@@ -90,6 +105,8 @@ function startGenerationInternal() {
         window.usedPrompts = usedPrompts;
     } else {
         debugLog('Using existing usedPrompts tracking across generations');
+        // Ensure window reference is synced
+        window.usedPrompts = usedPrompts;
     }
     
     // Use prompt types in order (1, 2, 3, 4) - no shuffling
@@ -194,7 +211,8 @@ function generateNextAttribute() {
             return;
         }
         
-        // Apply category cycling constraint if there are more than 2 categories
+        // Apply category cycling constraint - always cycle through categories to avoid repeats
+        // This works for both "All Categories" and individual category selections
         let candidateCategories = [...availableCategories];
         
         if (constraintEnabled && availableCategories.length > 2) {
@@ -204,13 +222,24 @@ function generateNextAttribute() {
                 debugLog('Reset category cycle - all categories have been used');
             }
             
-            // Filter out already used categories
+            // Filter out already used categories to ensure no repeats until all are used
             candidateCategories = availableCategories.filter(cat => !usedCategories.has(cat));
             
             // If constraint eliminated all options, use all available categories
             if (candidateCategories.length === 0) {
                 candidateCategories = [...availableCategories];
                 debugLog('Constraint eliminated all options, using all categories');
+            }
+        } else if (availableCategories.length <= 2) {
+            // If 2 or fewer categories, cycle through them (no need for constraint)
+            // Filter out already used categories
+            candidateCategories = availableCategories.filter(cat => !usedCategories.has(cat));
+            
+            // If all have been used, reset
+            if (candidateCategories.length === 0) {
+                usedCategories.clear();
+                candidateCategories = [...availableCategories];
+                debugLog('Reset category cycle - all categories have been used (2 or fewer categories)');
             }
         }
         
@@ -228,6 +257,8 @@ function generateNextAttribute() {
             debugLog('Selected category for entire generation:', selectedCategory, 'from candidates:', candidateCategories);
         }
         
+        // Always track used categories to ensure cycling through all options
+        // This applies to both "All Categories" and individual category selections
         usedCategories.add(selectedCategory);
         debugLog('Used categories so far:', Array.from(usedCategories));
         console.log('DEBUG: selectedCategory set to:', selectedCategory, '- this will be used for ALL prompts in this generation');
@@ -300,9 +331,16 @@ function generateNextAttribute() {
     debugLog('Constraint is always enabled - preventing repetition');
     
     if (shouldConstrain) {
+        // CRITICAL: Sync with window.usedPrompts before checking (animation-manager modifies window.usedPrompts)
+        if (window.usedPrompts && typeof window.usedPrompts === 'object') {
+            usedPrompts = window.usedPrompts; // Use the same reference
+        }
+        
         // Initialize tracking for this prompt type if needed
         if (!usedPrompts[currentPromptType]) {
             usedPrompts[currentPromptType] = new Set();
+            // Update window reference
+            window.usedPrompts = usedPrompts;
         }
         
         // Get unused items for this prompt type (check if this specific value has been used before)
@@ -311,6 +349,8 @@ function generateNextAttribute() {
         );
         
         debugLog('CONSTRAINT ENABLED - Prompt type:', currentPromptType, 'unused items:', unusedItems.length, 'total items:', promptOptions.length);
+        debugLog('Used prompts for this type:', Array.from(usedPrompts[currentPromptType] || []));
+        debugLog('Available options:', promptOptions);
         
         if (unusedItems.length === 0) {
             // If all items used for this prompt type, clear tracking and start over
@@ -398,17 +438,23 @@ function resetPrompts() {
 // Commit pending prompts to used list (called when student changes)
 function commitPendingPrompts() {
     debugLog('Committing pending prompts to used list');
+    // Sync with window.pendingPrompts first (animation-manager uses window.pendingPrompts)
+    if (window.pendingPrompts && Array.isArray(window.pendingPrompts)) {
+        pendingPrompts = [...window.pendingPrompts];
+    }
+    
     // Pending prompts are already in usedPrompts, just clear the pending list
     // This marks them as permanently used (they stay in usedPrompts)
     if (pendingPrompts && pendingPrompts.length > 0) {
         debugLog('Committed', pendingPrompts.length, 'pending prompts');
-        pendingPrompts = [];
-        // Update window reference
-        if (window.pendingPrompts) {
-            window.pendingPrompts = [];
-        }
+        debugLog('Committed prompts:', pendingPrompts);
+    }
+    pendingPrompts = []; // Always clear
+    if (window.pendingPrompts) {
+        window.pendingPrompts = []; // Also clear window reference
     }
     currentStudentForPrompts = null; // Reset student tracking
+    debugLog('Cleared pending prompts after commit');
 }
 
 // Export functions to window

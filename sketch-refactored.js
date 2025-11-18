@@ -422,16 +422,11 @@ function populateInterestCheckboxes() {
     }
     
     // Get criterion labels from the global variable (loaded in loadPromptsFromLocalStorage)
+    // Note: criterionLabels are no longer required - we use actual category names from data
     const criterionLabels = window.criterionLabels || ['', '', '', ''];
     
     debugLog('Populating interest checkboxes, categories:', Object.keys(categories).length);
-    
-    // Check if any criterion labels have actual content
-    const hasAnyLabels = criterionLabels.some(label => label && label.trim().length > 0);
-    if (!hasAnyLabels) {
-        debugLog('No criterion labels with content found');
-        return;
-    }
+    debugLog('Criterion labels found:', criterionLabels);
     
     // Check which categories have content before creating checkboxes
     // The data structure is: categories[promptType][categoryName] = [items]
