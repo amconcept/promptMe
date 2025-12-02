@@ -260,7 +260,7 @@ function createUI() {
         interestContainer.elt.setAttribute('data-p5-container', 'interest');
     }
     
-    const interestTitle = createDiv('FORCE CATEGORY');
+    const interestTitle = createDiv('STUDENT INTERESTS');
     interestTitle.parent(interestContainer);
     interestTitle.style('color', 'var(--primary-color)');
     interestTitle.style('font-size', '18px');  // Match editor settings-title

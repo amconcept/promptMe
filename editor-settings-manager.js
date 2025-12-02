@@ -839,9 +839,19 @@ async function loadSettingsByName(settingsName) {
         // Set loading flag to prevent clearing activity during loading
         isLoadingActivity = true;
         
+        // CRITICAL: Switch activity reports before loading new activity
+        // This saves the current activity's report and loads the new activity's report
+        if (window.switchActivity) {
+            console.log('Switching activity reports before loading:', settingsName);
+            window.switchActivity(settingsName);
+        }
+        
         // Track the currently loaded activity for auto-updating
         currentLoadedActivity = settingsName;
         console.log('Set currentLoadedActivity to:', currentLoadedActivity);
+        
+        // Also update window reference for sketch.html
+        window.currentLoadedActivity = settingsName;
         
         // Show activity status indicator
         updateActivityStatusIndicator();

@@ -97,14 +97,32 @@ function loadPromptsFromLocalStorage() {
                     originalClassList = [];
                 }
                 
-                // Restore report data for persistence
-                if (parsedData.classReport && Array.isArray(parsedData.classReport)) {
-                    classReport = parsedData.classReport;
-                    console.log('DEBUG: Restored class report with', classReport.length, 'entries');
-                    console.log('DEBUG: Restored classReport:', JSON.stringify(classReport, null, 2));
+                // Load activity-specific report if activity name exists
+                const activityName = parsedData.activityName;
+                if (activityName) {
+                    console.log('DEBUG: Loading report for activity:', activityName);
+                    const reportLoaded = loadActivityReport(activityName);
+                    if (!reportLoaded) {
+                        // No activity-specific report found, try legacy report data
+                        if (parsedData.classReport && Array.isArray(parsedData.classReport)) {
+                            classReport = parsedData.classReport;
+                            console.log('DEBUG: Restored legacy class report with', classReport.length, 'entries');
+                            // Save to activity-specific storage
+                            saveActivityReport(activityName);
+                        } else {
+                            classReport = [];
+                            console.log('DEBUG: No class report found, starting fresh');
+                        }
+                    }
                 } else {
-                    classReport = [];
-                    console.log('DEBUG: No class report found, starting fresh');
+                    // No activity name - use legacy report data if available
+                    if (parsedData.classReport && Array.isArray(parsedData.classReport)) {
+                        classReport = parsedData.classReport;
+                        console.log('DEBUG: Restored legacy class report with', classReport.length, 'entries');
+                    } else {
+                        classReport = [];
+                        console.log('DEBUG: No class report found, starting fresh');
+                    }
                 }
                 
                 if (parsedData.allStudents && Array.isArray(parsedData.allStudents)) {
@@ -308,6 +326,115 @@ function saveCurrentStateToLocalStorage() {
     console.log('=== DEBUG: saveCurrentStateToLocalStorage END ===');
 }
 
+// Get current activity name
+function getCurrentActivityName() {
+    // Try to get from window (set by editor)
+    if (window.currentLoadedActivity) {
+        return window.currentLoadedActivity;
+    }
+    // Fallback to localStorage
+    try {
+        const promptData = localStorage.getItem('promptCategories');
+        if (promptData) {
+            const parsed = JSON.parse(promptData);
+            return parsed.activityName || 'Untitled Activity';
+        }
+    } catch (e) {
+        console.error('Error getting activity name:', e);
+    }
+    return 'Untitled Activity';
+}
+
+// Load report data for a specific activity
+function loadActivityReport(activityName) {
+    console.log('Loading report for activity:', activityName);
+    try {
+        const activityReports = JSON.parse(localStorage.getItem('activityReports') || '{}');
+        const activityData = activityReports[activityName];
+        
+        if (activityData) {
+            classReport = activityData.classReport || [];
+            allStudents = activityData.allStudents || [];
+            drawnStudents = activityData.drawnStudents || [];
+            manuallyAddedStudents = activityData.manuallyAddedStudents || [];
+            classList = activityData.classList || [];
+            originalClassList = activityData.originalClassList || [];
+            totalUniqueStudents = activityData.totalUniqueStudents || 0;
+            console.log('Loaded report for activity:', activityName, 'with', classReport.length, 'students');
+            return true;
+        } else {
+            // No existing report for this activity - start fresh
+            console.log('No existing report for activity:', activityName, '- starting fresh');
+            classReport = [];
+            allStudents = [];
+            drawnStudents = [];
+            manuallyAddedStudents = [];
+            classList = [];
+            originalClassList = [];
+            totalUniqueStudents = 0;
+            return false;
+        }
+    } catch (e) {
+        console.error('Error loading activity report:', e);
+        return false;
+    }
+}
+
+// Save report data for current activity
+function saveActivityReport(activityName) {
+    console.log('Saving report for activity:', activityName);
+    try {
+        const activityReports = JSON.parse(localStorage.getItem('activityReports') || '{}');
+        activityReports[activityName] = {
+            classReport: [...classReport],
+            allStudents: [...allStudents],
+            drawnStudents: [...drawnStudents],
+            manuallyAddedStudents: [...manuallyAddedStudents],
+            classList: [...classList],
+            originalClassList: [...originalClassList],
+            totalUniqueStudents: totalUniqueStudents
+        };
+        localStorage.setItem('activityReports', JSON.stringify(activityReports));
+        console.log('Saved report for activity:', activityName);
+    } catch (e) {
+        console.error('Error saving activity report:', e);
+    }
+}
+
+// Switch to a different activity and load its report
+// This should be called when switching activities in the editor
+function switchActivity(activityName) {
+    console.log('Switching to activity:', activityName);
+    // Save current activity's report before switching
+    const currentActivity = getCurrentActivityName();
+    if (currentActivity && currentActivity !== activityName) {
+        saveActivityReport(currentActivity);
+    }
+    // Load the new activity's report
+    loadActivityReport(activityName);
+    // Update current activity name
+    const currentData = localStorage.getItem('promptCategories');
+    if (currentData) {
+        try {
+            const data = JSON.parse(currentData);
+            data.activityName = activityName;
+            localStorage.setItem('promptCategories', JSON.stringify(data));
+        } catch (e) {
+            console.error('Error updating activity name:', e);
+        }
+    }
+    // Also update window reference
+    if (window.currentLoadedActivity !== undefined) {
+        window.currentLoadedActivity = activityName;
+    }
+}
+
+// Export functions for use in other modules
+window.getCurrentActivityName = getCurrentActivityName;
+window.loadActivityReport = loadActivityReport;
+window.saveActivityReport = saveActivityReport;
+window.switchActivity = switchActivity;
+
 // Collect prompt data for class report
 function collectPromptData() {
     console.log('=== DEBUG: collectPromptData START ===');
@@ -323,9 +450,28 @@ function collectPromptData() {
     
     // Get the current student's prompts
     const studentPrompts = [];
+    
+    // Check if prompt1InterestsMode is enabled - if so, skip the first prompt
+    const prompt1InterestsMode = categories.prompt1InterestsMode || false;
+    const allHeaders = Object.keys(categories).filter(cat => cat !== 'objective' && cat !== 'prompt1InterestsMode');
+    const firstHeader = prompt1InterestsMode && allHeaders.length > 0 ? allHeaders[0] : null;
+    
     Object.keys(categories).forEach(header => {
         console.log('DEBUG: Checking header:', header);
-        if (header !== 'objective' && header !== 'prompt1InterestsMode' && currentPrompts[header]) {
+        
+        // Skip objective, prompt1InterestsMode, and first header if prompt1InterestsMode is enabled
+        if (header === 'objective' || header === 'prompt1InterestsMode') {
+            console.log('DEBUG: Skipping header:', header, 'reason: special field');
+            return;
+        }
+        
+        // Skip first prompt if prompt1InterestsMode is enabled
+        if (prompt1InterestsMode && header === firstHeader) {
+            console.log('DEBUG: Skipping header:', header, 'reason: first prompt skipped in prompt1InterestsMode');
+            return;
+        }
+        
+        if (currentPrompts[header]) {
             const promptValue = typeof currentPrompts[header] === 'object' 
                 ? currentPrompts[header].revealed 
                 : currentPrompts[header];
@@ -338,10 +484,7 @@ function collectPromptData() {
                 console.log('DEBUG: Added prompt:', header, '=', promptValue);
             }
         } else {
-            console.log('DEBUG: Skipping header:', header, 'reason:', 
-                header === 'objective' ? 'objective' : 
-                header === 'prompt1InterestsMode' ? 'prompt1InterestsMode' : 
-                'no currentPrompts[header]');
+            console.log('DEBUG: Skipping header:', header, 'reason: no currentPrompts[header]');
         }
     });
     
@@ -379,11 +522,17 @@ function collectPromptData() {
     console.log('DEBUG: drawnStudents:', drawnStudents);
     console.log('=== DEBUG: collectPromptData END ===');
     console.log('Collected prompt data for:', studentName, studentPrompts);
+    
+    // Save report for current activity
+    const currentActivity = getCurrentActivityName();
+    saveActivityReport(currentActivity);
 }
 
 // Download class report
 function downloadClassReport() {
     console.log('DEBUG: downloadClassReport called');
+    const currentActivity = getCurrentActivityName();
+    console.log('DEBUG: Current activity:', currentActivity);
     console.log('DEBUG: classReport length:', classReport.length);
     console.log('DEBUG: classReport:', classReport);
     console.log('DEBUG: classList length:', classList.length);
@@ -404,6 +553,7 @@ function downloadClassReport() {
     const timeString = now.toLocaleTimeString();
     
     let reportText = `CLASS REPORT - ${dateString} at ${timeString}\n`;
+    reportText += `ACTIVITY: ${currentActivity}\n`;
     reportText += '================================\n\n';
     
     // Add objective if available
@@ -451,13 +601,15 @@ function downloadClassReport() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ClassReport_${new Date().toISOString().slice(0, 10)}.txt`;
+    // Include activity name in filename
+    const safeActivityName = currentActivity.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    a.download = `ClassReport_${safeActivityName}_${new Date().toISOString().slice(0, 10)}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    console.log('Class report downloaded with all students');
+    console.log('Class report downloaded for activity:', currentActivity);
 }
 
 // Reset class report
@@ -482,6 +634,10 @@ function resetClassReport() {
     if (nameInput) {
         nameInput.value('');
     }
+    
+    // Clear report for current activity
+    const currentActivity = getCurrentActivityName();
+    saveActivityReport(currentActivity);
     
     // IMPORTANT: Preserve prompt data (categories, objective, etc.) when clearing report
     // Only clear class report related data, not the prompt structure
@@ -540,7 +696,7 @@ function resetClassReport() {
         window.clearInterestRefreshTimeout = null;
     }, 150);
     
-    console.log('Class report reset - all data cleared');
+    console.log('Class report reset - all data cleared for activity:', currentActivity);
     alert('Class report has been reset.');
 }
 
@@ -650,6 +806,27 @@ function handleClassReportUpload(event) {
                     return;
                 }
                 
+                // If report contains an activity name, restore that activity
+                if (parsedData.activityName) {
+                    console.log('DEBUG: Report contains activity name:', parsedData.activityName);
+                    // Set the activity name in localStorage so it can be loaded
+                    const currentData = localStorage.getItem('promptCategories');
+                    if (currentData) {
+                        try {
+                            const data = JSON.parse(currentData);
+                            data.activityName = parsedData.activityName;
+                            localStorage.setItem('promptCategories', JSON.stringify(data));
+                            // Also set in window for editor
+                            if (window.currentLoadedActivity !== undefined) {
+                                window.currentLoadedActivity = parsedData.activityName;
+                            }
+                            console.log('DEBUG: Set activity name to:', parsedData.activityName);
+                        } catch (e) {
+                            console.error('Error updating activity name:', e);
+                        }
+                    }
+                }
+                
                 // Clear existing data
                 classReport = [];
                 allStudents = [];
@@ -665,6 +842,11 @@ function handleClassReportUpload(event) {
                 classList = parsedData.studentNames;
                 originalClassList = [...parsedData.studentNames];
                 totalUniqueStudents = parsedData.studentNames.length;
+                
+                // Save report for the activity (use parsed activity name or current activity)
+                const activityName = parsedData.activityName || getCurrentActivityName();
+                saveActivityReport(activityName);
+                console.log('DEBUG: Saved report for activity:', activityName);
                 
                 // Update current student to first in list
                 if (allStudents.length > 0) {
@@ -695,10 +877,12 @@ function handleClassReportUpload(event) {
                 console.log('Class report uploaded and restored:', {
                     students: classReport.length,
                     totalStudents: totalUniqueStudents,
-                    firstStudent: studentName
+                    firstStudent: studentName,
+                    activityName: activityName
                 });
                 
-                alert(`Project resumed successfully! ${classReport.length} students with their prompts restored.`);
+                const activityMsg = activityName ? ` for activity "${activityName}"` : '';
+                alert(`Project resumed successfully! ${classReport.length} students with their prompts restored${activityMsg}.`);
                 
             } catch (error) {
                 console.error('Error parsing class report:', error);
@@ -716,12 +900,19 @@ function parseClassReport(reportText) {
     const lines = reportText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     const students = [];
     const studentNames = [];
+    let activityName = null;
     
     let currentStudent = null;
     let inStudentSection = false;
     
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
+        
+        // Extract activity name from report header
+        if (line.startsWith('ACTIVITY: ')) {
+            activityName = line.replace('ACTIVITY: ', '').trim();
+            console.log('DEBUG: Found activity name in report:', activityName);
+        }
         
         // Check if we're in the students section
         if (line.includes('STUDENTS WITH GENERATED PROMPTS') || line.includes('=== STUDENTS WITH GENERATED PROMPTS ===')) {
@@ -771,9 +962,11 @@ function parseClassReport(reportText) {
     
     console.log('DEBUG: Parsed students:', students);
     console.log('DEBUG: Student names:', studentNames);
+    console.log('DEBUG: Activity name:', activityName);
     
     return {
         students: students,
-        studentNames: studentNames
+        studentNames: studentNames,
+        activityName: activityName
     };
 }

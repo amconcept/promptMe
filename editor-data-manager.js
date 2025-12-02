@@ -3,29 +3,15 @@
 
 // Save changes to localStorage
 function saveChanges() {
-    // CRITICAL: Preserve existing class report data from sketch.js
-    const existingData = localStorage.getItem('promptCategories');
-    let preservedData = {};
-    
-    if (existingData) {
-        try {
-            const parsed = JSON.parse(existingData);
-            // Preserve all class report related data
-            preservedData = {
-                classReport: parsed.classReport || [],
-                allStudents: parsed.allStudents || [],
-                drawnStudents: parsed.drawnStudents || [],
-                manuallyAddedStudents: parsed.manuallyAddedStudents || [],
-                totalUniqueStudents: parsed.totalUniqueStudents || 0,
-                classList: parsed.classList || [],
-                originalClassList: parsed.originalClassList || [],
-                studentName: parsed.studentName || ''
-            };
-            console.log('DEBUG: Preserved class report data:', preservedData);
-        } catch (error) {
-            console.error('Error parsing existing data for preservation:', error);
-        }
+    // CRITICAL: Save current activity's report before saving changes
+    // This ensures the report is saved when navigating from editor to sketch
+    if (currentLoadedActivity && window.saveActivityReport) {
+        console.log('Saving report for current activity before saveChanges:', currentLoadedActivity);
+        window.saveActivityReport(currentLoadedActivity);
     }
+    
+    // NOTE: We do NOT preserve report data here - activity-specific reports are handled separately
+    // Report data is stored in activityReports localStorage key, not in promptCategories
     
     const data = {
         objective: document.getElementById('objective-input').value,
@@ -33,9 +19,8 @@ function saveChanges() {
         prompt1InterestsMode: document.getElementById('prompt1-interests-mode').checked,
         criterionLabels: criterionLabels, // Include criterion labels for sketch.js
         activityName: currentLoadedActivity, // Include the loaded activity name
-        categories: {},
-        // Preserve all class report data
-        ...preservedData
+        categories: {}
+        // Report data is NOT included here - it's stored separately in activityReports
     };
     
     console.log('=== DEBUG: saveChanges called ===');

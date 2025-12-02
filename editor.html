@@ -533,8 +533,9 @@
             display: grid;
             grid-template-columns: var(--column-width) var(--column-width) var(--column-width) var(--column-width) var(--column-width);
             gap: var(--grid-gap);
-            margin: 40px auto;
-            max-width: 1200px;
+            margin: 40px 20px;
+            width: calc(100% - 40px); /* Fill available width minus margins */
+            max-width: none; /* Remove width constraint to allow stretching */
             justify-content: start;
         }
 
