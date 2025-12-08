@@ -1057,6 +1057,15 @@ async function loadSettingsByName(settingsName) {
         // Use the existing saveChanges function to ensure proper data conversion
         saveChanges();
         console.log('=== DEBUG: saveChanges completed from loadSettingsByName ===');
+        
+        // Attach event listeners to all textareas and auto-resize after loading
+        setTimeout(() => {
+            if (window.attachTextareaEventListeners) {
+                window.attachTextareaEventListeners();
+            } else if (window.autoResizeTextareasInRows) {
+                window.autoResizeTextareasInRows();
+            }
+        }, 200);
     }
 
 // New button functions

@@ -193,7 +193,11 @@ function startScrambleAnimation(finalText, category, promptType, selectedCategor
             scrambledText += rotatingChars[Math.floor(Math.random() * rotatingChars.length)];
         }
         
-        currentPrompts[category] = {
+        // Access currentPrompts from window (defined in sketch-refactored.js)
+        if (!window.currentPrompts) {
+            window.currentPrompts = {};
+        }
+        window.currentPrompts[category] = {
             revealed: '',
             rotating: scrambledText
         };
@@ -232,7 +236,11 @@ function startRevealAnimation(finalText, category, promptType, selectedCategory)
                 rotating += rotatingChars[Math.floor(Math.random() * rotatingChars.length)];
             }
             
-            currentPrompts[category] = {
+            // Access currentPrompts from window (defined in sketch-refactored.js)
+            if (!window.currentPrompts) {
+                window.currentPrompts = {};
+            }
+            window.currentPrompts[category] = {
                 revealed: revealed,
                 rotating: rotating
             };
@@ -303,6 +311,18 @@ function startRevealAnimation(finalText, category, promptType, selectedCategory)
                         console.log('Marked student as processed:', studentName, 'Total processed:', uniqueStudentsProcessed.size);
                     }
                     
+                    // Track this student in the prompted order list (for left arrow navigation)
+                    if (studentName && window.promptedStudentsOrder) {
+                        // Remove if already in list (to avoid duplicates)
+                        const index = window.promptedStudentsOrder.indexOf(studentName);
+                        if (index > -1) {
+                            window.promptedStudentsOrder.splice(index, 1);
+                        }
+                        // Add to end of list (most recent)
+                        window.promptedStudentsOrder.push(studentName);
+                        console.log('Added to prompted order:', studentName, 'Order:', window.promptedStudentsOrder);
+                    }
+                    
                     // No auto-advance - user must use navigation buttons
                     
                     // Check if we've processed all unique students
@@ -311,6 +331,14 @@ function startRevealAnimation(finalText, category, promptType, selectedCategory)
                     isGenerating = false;
                     
                     isGenerationComplete = true;
+                    
+                    // Take automatic screenshot if enabled
+                    if (window.automaticScreenshotsEnabled && window.takeScreenshot) {
+                        // Small delay to ensure all prompts are fully displayed
+                        setTimeout(() => {
+                            window.takeScreenshot();
+                        }, 500);
+                    }
                     
                     // Save current name as previous name, then clear input field
                     previousName = studentName;

@@ -183,6 +183,12 @@ function loadSavedData() {
         // Update prompt count displays AFTER UI is built
         setTimeout(() => {
             updatePromptCounts();
+            // Attach event listeners to all textareas and auto-resize
+            if (window.attachTextareaEventListeners) {
+                window.attachTextareaEventListeners();
+            } else if (window.autoResizeTextareasInRows) {
+                window.autoResizeTextareasInRows();
+            }
         }, 200);
                 
                 console.log('Successfully loaded saved data');

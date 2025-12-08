@@ -8,6 +8,10 @@ let manuallyAddedStudents = []; // Track manually added students for report
 let originalClassList = []; // Track original uploaded class list separately
 let totalUniqueStudents = 0; // Total number of unique students (original class list only)
 let uniqueStudentsProcessed = new Set(); // Track which students have been processed
+let promptedStudentsOrder = []; // Track the order of students who have been prompted (for left arrow navigation)
+
+// Export to window for use in other modules
+window.promptedStudentsOrder = promptedStudentsOrder;
 
 // Clean up any corrupted data in localStorage
 function cleanupCorruptedData() {
@@ -360,6 +364,8 @@ function loadActivityReport(activityName) {
             classList = activityData.classList || [];
             originalClassList = activityData.originalClassList || [];
             totalUniqueStudents = activityData.totalUniqueStudents || 0;
+            // Sync to window for batch screenshot and other functions
+            window.classReport = classReport;
             console.log('Loaded report for activity:', activityName, 'with', classReport.length, 'students');
             return true;
         } else {
@@ -395,6 +401,8 @@ function saveActivityReport(activityName) {
             totalUniqueStudents: totalUniqueStudents
         };
         localStorage.setItem('activityReports', JSON.stringify(activityReports));
+        // Sync to window for batch screenshot and other functions
+        window.classReport = classReport;
         console.log('Saved report for activity:', activityName);
     } catch (e) {
         console.error('Error saving activity report:', e);
@@ -523,6 +531,9 @@ function collectPromptData() {
     console.log('=== DEBUG: collectPromptData END ===');
     console.log('Collected prompt data for:', studentName, studentPrompts);
     
+    // Sync to window for batch screenshot and other functions
+    window.classReport = classReport;
+    
     // Save report for current activity
     const currentActivity = getCurrentActivityName();
     saveActivityReport(currentActivity);
@@ -620,7 +631,8 @@ function resetClassReport() {
     drawnStudents = [];
     currentStudentIndex = 0;
     studentName = '';
-    currentPrompts = {};
+    window.currentPrompts = {};
+    currentPrompts = window.currentPrompts; // Keep local reference in sync
     isGenerationComplete = false;
     generationStep = 0;
     isGenerating = false;
@@ -629,15 +641,40 @@ function resetClassReport() {
     manuallyAddedStudents = [];
     classList = [];
     originalClassList = [];
+    // Clear prompted students order (memory for left arrow navigation)
+    if (window.promptedStudentsOrder) {
+        window.promptedStudentsOrder = [];
+    }
     
     // Clear input field
     if (nameInput) {
         nameInput.value('');
     }
     
-    // Clear report for current activity
+    // Clear report for current activity from activityReports
     const currentActivity = getCurrentActivityName();
-    saveActivityReport(currentActivity);
+    try {
+        const activityReports = JSON.parse(localStorage.getItem('activityReports') || '{}');
+        if (activityReports[currentActivity]) {
+            // Clear the report data but keep the activity entry
+            activityReports[currentActivity] = {
+                classReport: [],
+                allStudents: [],
+                drawnStudents: [],
+                manuallyAddedStudents: [],
+                classList: [],
+                originalClassList: [],
+                totalUniqueStudents: 0
+            };
+            localStorage.setItem('activityReports', JSON.stringify(activityReports));
+            console.log('Cleared activity report for:', currentActivity);
+        }
+    } catch (e) {
+        console.error('Error clearing activity report:', e);
+    }
+    
+    // Sync window.classReport
+    window.classReport = [];
     
     // IMPORTANT: Preserve prompt data (categories, objective, etc.) when clearing report
     // Only clear class report related data, not the prompt structure

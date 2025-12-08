@@ -85,7 +85,9 @@ function startGenerationInternal() {
     isGenerating = true;
     shouldStop = false;
     generationStep = 0;  // Double-check generation step is 0
-    currentPrompts = {};
+    // Clear prompts - use window.currentPrompts as source of truth
+    window.currentPrompts = {};
+    currentPrompts = window.currentPrompts; // Keep local reference in sync
     selectedCategory = null; // Reset selected category for new generation
     isAnimating = false; // Reset animation flag
     
@@ -383,7 +385,13 @@ function generateNextAttribute() {
     
     debugLog('Selected prompt:', selectedPrompt, 'from prompt type', currentPromptType, 'category', selectedCategory);
     // Pass prompt type and selected prompt to animation so it can mark as used when complete
-    startScrambleAnimation(selectedPrompt, currentPromptType, currentPromptType, selectedCategory);
+    if (window.startScrambleAnimation) {
+        window.startScrambleAnimation(selectedPrompt, currentPromptType, currentPromptType, selectedCategory);
+    } else {
+        console.error('startScrambleAnimation is not available on window object');
+        // Fallback: set prompt directly without animation
+        currentPrompts[currentPromptType] = selectedPrompt;
+    }
 }
 
 // Reset generator state
@@ -391,7 +399,9 @@ function resetGeneratorState() {
     generationStep = 0;
     shouldStop = false;
     isGenerationComplete = false;
-    currentPrompts = {};
+    // Clear prompts - use window.currentPrompts as source of truth
+    window.currentPrompts = {};
+    currentPrompts = window.currentPrompts; // Keep local reference in sync
     selectedCategory = null;
     isAnimating = false; // Reset animation flag
     
@@ -429,7 +439,9 @@ function resetGeneratorState() {
 
 // Reset prompts display
 function resetPrompts() {
-    currentPrompts = {};
+    // Clear prompts - use window.currentPrompts as source of truth
+    window.currentPrompts = {};
+    currentPrompts = window.currentPrompts; // Keep local reference in sync
     Object.keys(categories).forEach(category => {
         currentPrompts[category] = '';
     });

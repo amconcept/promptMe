@@ -398,14 +398,238 @@ function createUI() {
         classListUploadButton.style('color', 'var(--primary-color)');
     });
     
-    // Create screenshot button
-    recordButton = createButton('SCREENSHOT');
+    // Show custom dialog before batch screenshot - define before button handler
+    function showBatchScreenshotDialog(studentsWithPrompts) {
+        return new Promise((resolve) => {
+            // Create overlay
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.85);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 10000;
+                font-family: 'VT323', monospace;
+            `;
+            
+            // Create dialog
+            const dialog = document.createElement('div');
+            dialog.style.cssText = `
+                background-color: var(--background-color);
+                border: 2px solid var(--primary-color);
+                border-radius: 8px;
+                padding: 30px;
+                color: var(--primary-color);
+                max-width: 500px;
+                width: 90%;
+                box-shadow: 0 0 20px var(--primary-shadow);
+            `;
+            
+            // Add title
+            const title = document.createElement('div');
+            title.textContent = 'BATCH SCREENSHOT';
+            title.style.cssText = `
+                font-size: 24px;
+                font-weight: bold;
+                text-align: center;
+                margin-bottom: 20px;
+                color: var(--primary-color);
+                text-transform: uppercase;
+                letter-spacing: 2px;
+            `;
+            
+            // Add message
+            const message = document.createElement('div');
+            message.innerHTML = `
+                <div style="margin-bottom: 15px; font-size: 18px; line-height: 1.6;">
+                    This will take screenshots of all ${studentsWithPrompts} students who have generated prompts.
+                </div>
+                <div style="margin-bottom: 20px; font-size: 16px; line-height: 1.6; color: var(--primary-hover); padding: 15px; background-color: rgba(0, 255, 0, 0.1); border: 1px solid var(--primary-color); border-radius: 4px;">
+                    Select a folder where all screenshots will be saved. The system will automatically cycle through each student and save their screenshot.
+                </div>
+            `;
+            message.style.cssText = `
+                margin-bottom: 20px;
+                color: var(--primary-color);
+                text-align: center;
+            `;
+            
+            // Add button container
+            const buttonContainer = document.createElement('div');
+            buttonContainer.style.cssText = `
+                display: flex;
+                gap: 10px;
+                justify-content: center;
+            `;
+            
+            // Add Continue button
+            const continueBtn = document.createElement('button');
+            continueBtn.textContent = 'SELECT FOLDER';
+            continueBtn.style.cssText = `
+                background-color: var(--primary-color);
+                color: var(--background-color);
+                border: 1px solid var(--primary-color);
+                padding: 12px 24px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-family: 'VT323', monospace;
+                font-size: 18px;
+                font-weight: bold;
+                transition: all 0.3s ease;
+            `;
+            continueBtn.onmouseover = () => {
+                continueBtn.style.backgroundColor = 'var(--primary-hover)';
+            };
+            continueBtn.onmouseout = () => {
+                continueBtn.style.backgroundColor = 'var(--primary-color)';
+            };
+            continueBtn.onclick = () => {
+                if (window.playClickSound) {
+                    window.playClickSound();
+                }
+                document.body.removeChild(overlay);
+                resolve(true);
+            };
+            
+            // Add Cancel button
+            const cancelBtn = document.createElement('button');
+            cancelBtn.textContent = 'CANCEL';
+            cancelBtn.style.cssText = `
+                background-color: var(--background-color);
+                color: var(--primary-color);
+                border: 1px solid var(--primary-color);
+                padding: 12px 24px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-family: 'VT323', monospace;
+                font-size: 18px;
+                transition: all 0.3s ease;
+            `;
+            cancelBtn.onmouseover = () => {
+                cancelBtn.style.backgroundColor = 'var(--primary-color)';
+                cancelBtn.style.color = 'var(--background-color)';
+            };
+            cancelBtn.onmouseout = () => {
+                cancelBtn.style.backgroundColor = 'var(--background-color)';
+                cancelBtn.style.color = 'var(--primary-color)';
+            };
+            cancelBtn.onclick = () => {
+                if (window.playClickSound) {
+                    window.playClickSound();
+                }
+                document.body.removeChild(overlay);
+                resolve(false);
+            };
+            
+            // Close on overlay click (outside dialog)
+            overlay.onclick = (e) => {
+                if (e.target === overlay) {
+                    if (window.playClickSound) {
+                        window.playClickSound();
+                    }
+                    document.body.removeChild(overlay);
+                    resolve(false);
+                }
+            };
+            
+            // Assemble dialog
+            buttonContainer.appendChild(continueBtn);
+            buttonContainer.appendChild(cancelBtn);
+            dialog.appendChild(title);
+            dialog.appendChild(message);
+            dialog.appendChild(buttonContainer);
+            overlay.appendChild(dialog);
+            
+            // Add to page
+            document.body.appendChild(overlay);
+        });
+    }
+    
+    // Create batch screenshot button
+    recordButton = createButton('BATCH SCREENSHOT');
     recordButton.parent(controlPanel);
-    recordButton.mousePressed(() => {
+    
+    recordButton.mousePressed(async () => {
         // Play Mac SE-style click sound
         playClickSound();
-        takeScreenshot();
+        
+        console.log('BATCH SCREENSHOT button clicked');
+        
+        // Check if File System Access API is available
+        if (!('showDirectoryPicker' in window)) {
+            alert('Batch screenshots require a modern browser (Chrome, Edge, or Opera) with File System Access API support.');
+            return;
+        }
+        
+        // Get classReport - try multiple sources
+        let classReport = window.classReport;
+        if (!classReport || classReport.length === 0) {
+            // Try to get from localStorage
+            console.log('window.classReport not found, checking localStorage...');
+            const promptData = localStorage.getItem('promptCategories');
+            if (promptData) {
+                try {
+                    const parsed = JSON.parse(promptData);
+                    classReport = parsed.classReport || [];
+                    console.log('Found classReport in localStorage:', classReport.length, 'students');
+                } catch (e) {
+                    console.error('Error parsing localStorage:', e);
+                }
+            }
+            
+            // Also try activity reports
+            if ((!classReport || classReport.length === 0) && window.getCurrentActivityName) {
+                const activityName = window.getCurrentActivityName();
+                if (activityName && window.loadActivityReport) {
+                    const loaded = window.loadActivityReport(activityName);
+                    if (loaded) {
+                        classReport = window.classReport || [];
+                    }
+                }
+            }
+        }
+        
+        const studentsWithPrompts = classReport ? classReport.length : 0;
+        console.log('Students with prompts:', studentsWithPrompts);
+        
+        if (studentsWithPrompts === 0) {
+            alert('No students with prompts found. Generate prompts for students first.');
+            return;
+        }
+        
+        // Show info dialog
+        const proceed = await showBatchScreenshotDialog(studentsWithPrompts);
+        if (!proceed) {
+            console.log('User cancelled batch screenshot dialog');
+            return;
+        }
+        
+        // Select folder
+        console.log('Selecting screenshot folder...');
+        const folderSelected = await window.selectScreenshotFolder();
+        if (!folderSelected) {
+            console.log('User cancelled folder selection');
+            return;
+        }
+        
+        console.log('Starting batch screenshot process...');
+        // Run batch screenshot process
+        try {
+            await window.runBatchScreenshots();
+        } catch (error) {
+            console.error('Error in batch screenshot process:', error);
+            alert('Error during batch screenshot: ' + error.message);
+        }
     });
+    
+    // Export button globally for batch screenshot function
+    window.recordButton = recordButton;
+    
     recordButton.style('background-color', 'var(--background-color)');
     recordButton.style('color', 'var(--primary-color)');
     recordButton.style('font-family', 'VT323, monospace');
@@ -510,7 +734,7 @@ function createUI() {
     });
     
     // Create reset report button
-    resetReportButton = createButton('CLEAR');
+    resetReportButton = createButton('CLEAR MEMORY');
     resetReportButton.parent(controlPanel);
     resetReportButton.mousePressed(() => {
         // Play Mac SE-style click sound
@@ -567,7 +791,8 @@ function createUI() {
         // This ensures prompts disappear as soon as user begins entering a new name
         if (wasEmpty && newName.length > 0) {
             console.log('First character entered - clearing prompts');
-            currentPrompts = {};
+            window.currentPrompts = {};
+            currentPrompts = window.currentPrompts; // Keep local reference in sync
             isGenerationComplete = false;
             generationStep = 0;
             isGenerating = false;
@@ -613,7 +838,8 @@ function createUI() {
             
             if (!hasResults) {
                 // No previous results - clear prompts for new generation
-                currentPrompts = {};
+                window.currentPrompts = {};
+                currentPrompts = window.currentPrompts; // Keep local reference in sync
                 isGenerationComplete = false;
                 generationStep = 0;
                 isGenerating = false;
@@ -671,7 +897,8 @@ function createUI() {
                 
                 if (!hasResults) {
                     // No previous results - clear prompts for new generation
-                    currentPrompts = {};
+                    window.currentPrompts = {};
+                    currentPrompts = window.currentPrompts; // Keep local reference in sync
                     isGenerationComplete = false;
                     generationStep = 0;
                     isGenerating = false;
@@ -704,50 +931,231 @@ function createUI() {
     const startX = (currentWidth - totalWidth) / 2;
     
     // Create previous student button (<)
-    prevStudentButton = createButton('<');
-    prevStudentButton.style('display', 'block'); // Ensure button is visible
-    const bottomMargin = BUTTON_SIZES.BOTTOM_MARGIN();
-    const elementHeight = BUTTON_SIZES.HEIGHT();
-    const elementSpacing = BUTTON_SIZES.ELEMENT_SPACING();
-    const verticalOffset = 80; // Match positionNameInputAndButtons
-    prevStudentButton.position(
-        startX, 
-        currentHeight - bottomMargin - (elementHeight * 2) - elementSpacing - verticalOffset
-    );
-    prevStudentButton.mousePressed(prevStudent);
+    try {
+        prevStudentButton = createButton('<');
+        if (!prevStudentButton) {
+            console.error('Failed to create prevStudentButton');
+            prevStudentButton = null;
+        } else {
+            prevStudentButton.style('display', 'block'); // Ensure button is visible
+            const bottomMargin = BUTTON_SIZES.BOTTOM_MARGIN();
+            const elementHeight = BUTTON_SIZES.HEIGHT();
+            const elementSpacing = BUTTON_SIZES.ELEMENT_SPACING();
+            const verticalOffset = 80; // Match positionNameInputAndButtons
+            prevStudentButton.position(
+                startX, 
+                currentHeight - bottomMargin - (elementHeight * 2) - elementSpacing - verticalOffset
+            );
+            prevStudentButton.mousePressed(prevStudent);
+        }
+    } catch (error) {
+        console.error('Error creating prevStudentButton:', error);
+        prevStudentButton = null;
+    }
     
     // Create next student button (>)
-    nextStudentButton = createButton('>');
-    nextStudentButton.style('display', 'block'); // Ensure button is visible
-    nextStudentButton.position(
-        startX + arrowWidth + 10 + nameFieldWidth + 10, 
-        currentHeight - bottomMargin - (elementHeight * 2) - elementSpacing - verticalOffset
-    );
+    try {
+        nextStudentButton = createButton('>');
+        if (!nextStudentButton) {
+            console.error('Failed to create nextStudentButton');
+            nextStudentButton = null;
+        } else {
+            nextStudentButton.style('display', 'block'); // Ensure button is visible
+            const bottomMargin = BUTTON_SIZES.BOTTOM_MARGIN();
+            const elementHeight = BUTTON_SIZES.HEIGHT();
+            const elementSpacing = BUTTON_SIZES.ELEMENT_SPACING();
+            const verticalOffset = 80; // Match positionNameInputAndButtons
+            nextStudentButton.position(
+                startX + arrowWidth + 10 + nameFieldWidth + 10, 
+                currentHeight - bottomMargin - (elementHeight * 2) - elementSpacing - verticalOffset
+            );
+            nextStudentButton.mousePressed(nextStudent);
+        }
+    } catch (error) {
+        console.error('Error creating nextStudentButton:', error);
+        nextStudentButton = null;
+    }
     
-    nextStudentButton.mousePressed(nextStudent);
+    // Show custom dialog before folder selection for automatic screenshots
+    window.showScreenshotFolderDialog = function() {
+        return new Promise((resolve) => {
+            // Create overlay
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.85);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 10000;
+                font-family: 'VT323', monospace;
+            `;
+            
+            // Create dialog
+            const dialog = document.createElement('div');
+            dialog.style.cssText = `
+                background-color: var(--background-color);
+                border: 2px solid var(--primary-color);
+                border-radius: 8px;
+                padding: 30px;
+                color: var(--primary-color);
+                max-width: 500px;
+                width: 90%;
+                box-shadow: 0 0 20px var(--primary-shadow);
+            `;
+            
+            // Add title
+            const title = document.createElement('div');
+            title.textContent = 'AUTOMATIC SCREENSHOTS';
+            title.style.cssText = `
+                font-size: 24px;
+                font-weight: bold;
+                text-align: center;
+                margin-bottom: 20px;
+                color: var(--primary-color);
+                text-transform: uppercase;
+                letter-spacing: 2px;
+            `;
+            
+            // Add message
+            const message = document.createElement('div');
+            message.innerHTML = `
+                <div style="margin-bottom: 15px; font-size: 18px; line-height: 1.6;">
+                    Please select a folder where screenshots will be saved automatically.
+                </div>
+                <div style="margin-bottom: 20px; font-size: 16px; line-height: 1.6; color: var(--primary-hover); padding: 15px; background-color: rgba(0, 255, 0, 0.1); border: 1px solid var(--primary-color); border-radius: 4px;">
+                    <strong>Note:</strong> Enabling this feature will save screenshots automatically after every prompt generation, without any popups or dialogs.
+                </div>
+            `;
+            message.style.cssText = `
+                margin-bottom: 20px;
+                color: var(--primary-color);
+                text-align: center;
+            `;
+            
+            // Add button container
+            const buttonContainer = document.createElement('div');
+            buttonContainer.style.cssText = `
+                display: flex;
+                gap: 10px;
+                justify-content: center;
+            `;
+            
+            // Add Continue button
+            const continueBtn = document.createElement('button');
+            continueBtn.textContent = 'SELECT FOLDER';
+            continueBtn.style.cssText = `
+                background-color: var(--primary-color);
+                color: var(--background-color);
+                border: 1px solid var(--primary-color);
+                padding: 12px 24px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-family: 'VT323', monospace;
+                font-size: 18px;
+                font-weight: bold;
+                transition: all 0.3s ease;
+            `;
+            continueBtn.onmouseover = () => {
+                continueBtn.style.backgroundColor = 'var(--primary-hover)';
+            };
+            continueBtn.onmouseout = () => {
+                continueBtn.style.backgroundColor = 'var(--primary-color)';
+            };
+            continueBtn.onclick = () => {
+                if (window.playClickSound) {
+                    window.playClickSound();
+                }
+                document.body.removeChild(overlay);
+                resolve(true);
+            };
+            
+            // Add Cancel button
+            const cancelBtn = document.createElement('button');
+            cancelBtn.textContent = 'CANCEL';
+            cancelBtn.style.cssText = `
+                background-color: var(--background-color);
+                color: var(--primary-color);
+                border: 1px solid var(--primary-color);
+                padding: 12px 24px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-family: 'VT323', monospace;
+                font-size: 18px;
+                transition: all 0.3s ease;
+            `;
+            cancelBtn.onmouseover = () => {
+                cancelBtn.style.backgroundColor = 'var(--primary-color)';
+                cancelBtn.style.color = 'var(--background-color)';
+            };
+            cancelBtn.onmouseout = () => {
+                cancelBtn.style.backgroundColor = 'var(--background-color)';
+                cancelBtn.style.color = 'var(--primary-color)';
+            };
+            cancelBtn.onclick = () => {
+                if (window.playClickSound) {
+                    window.playClickSound();
+                }
+                document.body.removeChild(overlay);
+                resolve(false);
+            };
+            
+            // Close on overlay click (outside dialog)
+            overlay.onclick = (e) => {
+                if (e.target === overlay) {
+                    if (window.playClickSound) {
+                        window.playClickSound();
+                    }
+                    document.body.removeChild(overlay);
+                    resolve(false);
+                }
+            };
+            
+            // Assemble dialog
+            buttonContainer.appendChild(continueBtn);
+            buttonContainer.appendChild(cancelBtn);
+            dialog.appendChild(title);
+            dialog.appendChild(message);
+            dialog.appendChild(buttonContainer);
+            overlay.appendChild(dialog);
+            
+            // Add to page
+            document.body.appendChild(overlay);
+        });
+    }
     
     // Style navigation buttons
-    [prevStudentButton, nextStudentButton].forEach(button => {
-        button.style('background-color', 'var(--background-color)');
-        button.style('color', 'var(--primary-color)');
-        button.style('font-family', 'VT323, monospace');
-        button.style('font-size', FONT_SIZES.INPUT() + 'px');
-        button.style('width', '30px');
-        button.style('height', BUTTON_SIZES.HEIGHT() + 'px');
-        button.style('border', '1px solid var(--primary-color)');
-        button.style('border-radius', '4px');
-        button.style('cursor', 'pointer');
-        
-        // Add hover effects
-        button.mouseOver(() => {
-            button.style('background-color', 'var(--primary-color)');
-            button.style('color', 'var(--background-color)');
+    if (prevStudentButton && nextStudentButton) {
+        [prevStudentButton, nextStudentButton].forEach(button => {
+            if (button) {
+                button.style('background-color', 'var(--background-color)');
+                button.style('color', 'var(--primary-color)');
+                button.style('font-family', 'VT323, monospace');
+                button.style('font-size', FONT_SIZES.INPUT() + 'px');
+                button.style('width', '30px');
+                button.style('height', BUTTON_SIZES.HEIGHT() + 'px');
+                button.style('border', '1px solid var(--primary-color)');
+                button.style('border-radius', '4px');
+                button.style('cursor', 'pointer');
+                
+                // Add hover effects
+                button.mouseOver(() => {
+                    button.style('background-color', 'var(--primary-color)');
+                    button.style('color', 'var(--background-color)');
+                });
+                button.mouseOut(() => {
+                    button.style('background-color', 'var(--background-color)');
+                    button.style('color', 'var(--primary-color)');
+                });
+            }
         });
-        button.mouseOut(() => {
-            button.style('background-color', 'var(--background-color)');
-            button.style('color', 'var(--primary-color)');
-        });
-    });
+    } else {
+        console.error('Navigation buttons not created:', { prevStudentButton, nextStudentButton });
+    }
     
     // Show/hide navigation buttons based on student list
     if (allStudents.length === 0) {
@@ -771,6 +1179,32 @@ function createUI() {
     nameInput.style('padding', '5px 10px');
     nameInput.style('box-sizing', 'border-box');
     nameInput.attribute('placeholder', 'Enter student name here');
+    // Style placeholder text - apply directly to element
+    nameInput.elt.style.setProperty('--placeholder-color', 'var(--primary-color)');
+    // Add global style for placeholder if not already added
+    if (!document.getElementById('nameInputPlaceholderStyle')) {
+        const style = document.createElement('style');
+        style.id = 'nameInputPlaceholderStyle';
+        style.textContent = `
+            input::placeholder {
+                color: var(--primary-color) !important;
+                opacity: 0.7 !important;
+            }
+            input::-webkit-input-placeholder {
+                color: var(--primary-color) !important;
+                opacity: 0.7 !important;
+            }
+            input::-moz-placeholder {
+                color: var(--primary-color) !important;
+                opacity: 0.7 !important;
+            }
+            input:-ms-input-placeholder {
+                color: var(--primary-color) !important;
+                opacity: 0.7 !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
     
     // Position name input after data is loaded
     positionNameInputAndButtons();
@@ -798,7 +1232,7 @@ function updateUIOnResize() {
     nameInput.style('font-size', inputFontSize);
     
     nameInput.style('font-family', 'VT323, monospace');
-    nameInput.style('color', 'var(--text-color)');
+    nameInput.style('color', 'var(--primary-color)');
     nameInput.style('background-color', 'var(--background-color)');
     nameInput.style('border', '1px solid var(--primary-color)');
     nameInput.style('padding', '5px 10px');

@@ -42,8 +42,58 @@ function nextStudent() {
     }
 }
 
-// Navigate to previous student
+// Navigate to previous student (or last prompted student if available)
 function prevStudent() {
+    // First, try to go to the last prompted student
+    if (window.promptedStudentsOrder && window.promptedStudentsOrder.length > 0) {
+        // Get the current student's position in the prompted order
+        const currentIndex = window.promptedStudentsOrder.indexOf(studentName);
+        
+        if (currentIndex > 0) {
+            // Go to the previous student in the prompted order (last prompted)
+            const lastPromptedStudent = window.promptedStudentsOrder[currentIndex - 1];
+            
+            // Commit pending prompts from previous student before switching
+            if (window.commitPendingPrompts) {
+                window.commitPendingPrompts();
+            }
+            
+            // Find this student in allStudents list and update index
+            const newIndex = allStudents.indexOf(lastPromptedStudent);
+            if (newIndex !== -1) {
+                currentStudentIndex = newIndex;
+                studentName = lastPromptedStudent;
+                
+                // Update input field to show current student name
+                if (nameInput) {
+                    nameInput.value(studentName);
+                }
+                isManualNameEntry = false; // Mark as programmatic change
+                
+                // Try to recall previous results for this student
+                const hasResults = recallStudentResults(studentName);
+                
+                if (!hasResults) {
+                    // No previous results - clear prompts for new generation
+                    window.currentPrompts = {};
+                    currentPrompts = window.currentPrompts; // Keep local reference in sync
+                    isGenerationComplete = false;
+                    generationStep = 0;
+                    isGenerating = false;
+                    isAnimating = false;
+                }
+                
+                // Clear any running intervals
+                clearAnimations();
+                
+                saveCurrentStateToLocalStorage();
+                console.log('Switched to last prompted student:', studentName, '(', currentStudentIndex + 1, 'of', allStudents.length, ')');
+                return;
+            }
+        }
+    }
+    
+    // Fallback: if no prompted students or at the beginning, use regular list navigation
     if (allStudents.length > 0) {
         // Commit pending prompts from previous student before switching
         if (window.commitPendingPrompts) {
@@ -65,7 +115,8 @@ function prevStudent() {
         
         if (!hasResults) {
             // No previous results - clear prompts for new generation
-            currentPrompts = {};
+            window.currentPrompts = {};
+            currentPrompts = window.currentPrompts; // Keep local reference in sync
             isGenerationComplete = false;
             generationStep = 0;
             isGenerating = false;
@@ -76,7 +127,7 @@ function prevStudent() {
         clearAnimations();
         
         saveCurrentStateToLocalStorage();
-        console.log('Switched to student:', studentName, '(', currentStudentIndex + 1, 'of', allStudents.length, ')');
+        console.log('Switched to previous student:', studentName, '(', currentStudentIndex + 1, 'of', allStudents.length, ')');
     }
 }
 
@@ -92,10 +143,12 @@ function recallStudentResults(studentName) {
         isAnimating = false;
         
         // Restore the prompts to currentPrompts
-        currentPrompts = {};
+        window.currentPrompts = {};
+        currentPrompts = window.currentPrompts; // Keep local reference in sync
         studentData.prompts.forEach(prompt => {
-            currentPrompts[prompt.label] = prompt.value;
+            window.currentPrompts[prompt.label] = prompt.value;
         });
+        currentPrompts = window.currentPrompts; // Keep local reference in sync
         
         // Mark as generation complete since we're showing existing results
         isGenerationComplete = true;

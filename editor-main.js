@@ -14,6 +14,12 @@ function quickTest() {
     // CRITICAL: Save current state to promptCategories so sketch.js can load it
     saveChanges();
     
+    // If an activity is loaded, save it to preserve all changes
+    if (currentLoadedActivity && window.saveCurrentActivity) {
+        console.log('Saving current activity before navigating to sketch:', currentLoadedActivity);
+        window.saveCurrentActivity();
+    }
+    
     // Save current activity as the last run activity (after saveChanges to get fresh data)
     saveCurrentActivityAsLastRun();
     
@@ -403,6 +409,13 @@ function populateDefaultActivity(data) {
                 const textarea = document.createElement('textarea');
                 textarea.placeholder = 'Enter prompts (one per line)';
                 
+                // Add event listeners for auto-resizing
+                textarea.addEventListener('input', () => {
+                    if (window.autoResizeTextareasInRows) {
+                        setTimeout(window.autoResizeTextareasInRows, 10);
+                    }
+                });
+                
                 // Set textarea value from data
                 const categoryData = data.categories[headerName];
                 if (categoryData && categoryData[label]) {
@@ -673,8 +686,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const hasData = checkIfHasData();
             if (hasData) {
                 console.log('P pressed in editor - going to sketch to test');
-                // Save current state first, then save as last run activity
+                // Save current state first
                 saveChanges();
+                
+                // If an activity is loaded, save it to preserve all changes
+                if (currentLoadedActivity && window.saveCurrentActivity) {
+                    console.log('Saving current activity before navigating to sketch:', currentLoadedActivity);
+                    window.saveCurrentActivity();
+                }
+                
+                // Save as last run activity
                 saveCurrentActivityAsLastRun();
                 window.location.href = 'sketch.html';
             } else {

@@ -10,6 +10,47 @@ const MAX_PROMPTS = 4;
 // Criterion labels for student interests
 let criterionLabels = ['', '', '', '']; // Start with empty labels - no hardcoded defaults
 
+// Auto-resize textareas in each row to match the tallest one
+function autoResizeTextareasInRows() {
+    const textareas = document.querySelectorAll('.textarea-container textarea');
+    const promptCount = document.querySelectorAll('.header-input').length;
+    
+    if (textareas.length === 0 || promptCount === 0) {
+        return;
+    }
+    
+    // Calculate number of rows (categories)
+    const rowCount = Math.ceil(textareas.length / promptCount);
+    
+    // For each row, find the tallest textarea and set all in that row to match
+    for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+        let maxHeight = 100; // Minimum height
+        
+        // First pass: find the maximum scrollHeight needed
+        for (let colIndex = 0; colIndex < promptCount; colIndex++) {
+            const textareaIndex = rowIndex * promptCount + colIndex;
+            const textarea = textareas[textareaIndex];
+            
+            if (textarea) {
+                // Temporarily set height to auto to get accurate scrollHeight
+                textarea.style.height = 'auto';
+                const scrollHeight = textarea.scrollHeight;
+                maxHeight = Math.max(maxHeight, scrollHeight);
+            }
+        }
+        
+        // Second pass: set all textareas in this row to the max height
+        for (let colIndex = 0; colIndex < promptCount; colIndex++) {
+            const textareaIndex = rowIndex * promptCount + colIndex;
+            const textarea = textareas[textareaIndex];
+            
+            if (textarea) {
+                textarea.style.height = maxHeight + 'px';
+            }
+        }
+    }
+}
+
 // Function to update criterion label
 function updateCriterionLabel(index, value) {
     criterionLabels[index] = value.trim() || `criterion-${index + 1}`;
@@ -172,6 +213,12 @@ function addPromptToExistingCategories() {
         
         const textarea = document.createElement('textarea');
         textarea.placeholder = 'Enter prompts (one per line)';
+        
+        // Add event listeners for auto-resizing
+        textarea.addEventListener('input', () => {
+            setTimeout(autoResizeTextareasInRows, 10);
+        });
+        
         textareaContainer.appendChild(textarea);
         
         // Insert the new textarea after the last one in this row
@@ -185,6 +232,8 @@ function addPromptToExistingCategories() {
         }
     });
     
+    // Auto-resize after adding new prompt
+    setTimeout(autoResizeTextareasInRows, 10);
 }
 
 // Add new category row
@@ -260,6 +309,12 @@ function addNewCategory() {
         
         const textarea = document.createElement('textarea');
         textarea.placeholder = 'Enter prompts (one per line)';
+        
+        // Add event listeners for auto-resizing
+        textarea.addEventListener('input', () => {
+            setTimeout(autoResizeTextareasInRows, 10);
+        });
+        
         textareaContainer.appendChild(textarea);
         
         // Add textarea directly to grid (columns 2, 3, 4, etc.)
@@ -269,6 +324,9 @@ function addNewCategory() {
     console.log('Added category elements to grid');
     
     updateCategoryRows();
+    
+    // Auto-resize after adding new category
+    setTimeout(autoResizeTextareasInRows, 10);
     
     // Update prompt count displays
     updatePromptCounts();
@@ -370,6 +428,9 @@ function deletePrompt(button) {
         addButton.style.display = 'flex';
     }
     
+    // Auto-resize textareas after deleting prompt
+    setTimeout(autoResizeTextareasInRows, 10);
+    
     console.log(`Successfully deleted prompt column at index ${promptIndex}`);
 }
 
@@ -413,6 +474,9 @@ function deleteCategory(button) {
     // Update prompt count displays
     updatePromptCounts();
     updateColumnCounts();
+    
+    // Auto-resize textareas after deleting category
+    setTimeout(autoResizeTextareasInRows, 10);
 }
 
 // Update prompt count displays
@@ -1140,3 +1204,24 @@ window.updatePromptCounts = updatePromptCounts;
 window.updateColumnCounts = updateColumnCounts;
 window.createAddButtons = createAddButtons;
 window.initializeDefaultState = initializeDefaultState;
+window.autoResizeTextareasInRows = autoResizeTextareasInRows;
+
+// Attach event listeners to all existing textareas
+function attachTextareaEventListeners() {
+    const textareas = document.querySelectorAll('.textarea-container textarea');
+    textareas.forEach(textarea => {
+        // Remove existing listeners to avoid duplicates
+        const newTextarea = textarea.cloneNode(true);
+        textarea.parentNode.replaceChild(newTextarea, textarea);
+        
+        // Add event listener for auto-resizing
+        newTextarea.addEventListener('input', () => {
+            setTimeout(autoResizeTextareasInRows, 10);
+        });
+    });
+    
+    // Initial resize after attaching listeners
+    setTimeout(autoResizeTextareasInRows, 10);
+}
+
+window.attachTextareaEventListeners = attachTextareaEventListeners;

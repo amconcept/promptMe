@@ -12,8 +12,16 @@ let audioCtx;
 let shouldStop = false;
 let isGenerationComplete = false;
 let showInstructions = true;
+let hideStudentCount = false; // Flag to hide student count during screenshots
 let categories = {};
-let currentPrompts = {};
+// Use window.currentPrompts as the single source of truth
+// Initialize it if it doesn't exist
+if (!window.currentPrompts) {
+    window.currentPrompts = {};
+}
+// Keep local reference for convenience
+let currentPrompts = window.currentPrompts;
+
 let fieldClearedForNextStudent = false; // Track if field was cleared after name entry
 
 // Define arrow key constants (not automatically available in p5.js)
@@ -829,8 +837,38 @@ function shuffleArray(array) {
     return array;
 }
 
-// Screenshot function
-function takeScreenshot() {
+// Global variable to store the selected folder handle
+let screenshotFolderHandle = null;
+
+// Function to select folder for screenshots (using File System Access API)
+async function selectScreenshotFolder() {
+    try {
+        // Check if File System Access API is available
+        if ('showDirectoryPicker' in window) {
+            const handle = await window.showDirectoryPicker({
+                mode: 'readwrite' // Request read-write access
+            });
+            screenshotFolderHandle = handle;
+            // Store permission in localStorage (we can't store the handle itself, but we can remember the permission)
+            localStorage.setItem('screenshotFolderSelected', 'true');
+            // Make handle accessible globally
+            window.screenshotFolderHandle = handle;
+            console.log('Screenshot folder selected:', handle.name);
+            return true;
+        } else {
+            console.log('File System Access API not available in this browser');
+            return false;
+        }
+    } catch (error) {
+        if (error.name !== 'AbortError') {
+            console.error('Error selecting folder:', error);
+        }
+        return false;
+    }
+}
+
+// Screenshot function with automatic folder saving
+async function takeScreenshot() {
     // IMPORTANT: This function should NOT clear prompts - they should remain visible
     // Prompts are only cleared when:
     // 1. A new prompt generation starts (in startGeneration/resetGeneratorState)
@@ -844,21 +882,117 @@ function takeScreenshot() {
     
     // Allow screenshots regardless of name field state
     showInstructions = false;  // Hide instructions temporarily for screenshot
-    draw();  // Redraw once without instructions (prompts remain in currentPrompts)
+    hideStudentCount = true;   // Hide student count during screenshot
+    draw();  // Redraw once without instructions and student count (prompts remain in currentPrompts)
+    
+    // Ensure canvas is fully rendered before taking screenshot
+    // Small delay to let browser finish rendering
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     // Use studentName, previousName, or a generic name for filename
     const nameToUse = studentName || previousName || 'Student';
     const sanitizedStudentName = nameToUse.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '');
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const filename = `${sanitizedStudentName}_${timestamp}`;
+    const filename = `${sanitizedStudentName}_${timestamp}.png`;
     
-    // Save canvas at full window size - ensures consistent aspect ratio
-    saveCanvas(filename, 'png');
+    // Try to save to selected folder if available (silently in background)
+    const folderHandle = screenshotFolderHandle || window.screenshotFolderHandle;
+    if (folderHandle) {
+        try {
+            // Get canvas element right before use - try multiple methods
+            let canvasElement = null;
+            
+            // Method 1: Try p5.js global canvas
+            if (typeof canvas !== 'undefined' && canvas) {
+                if (canvas.elt) {
+                    canvasElement = canvas.elt;
+                    console.log('Using p5.js canvas.elt');
+                } else if (canvas.canvas) {
+                    canvasElement = canvas.canvas;
+                    console.log('Using p5.js canvas.canvas');
+                }
+            }
+            
+            // Method 2: Try DOM query if p5.js canvas not available
+            if (!canvasElement) {
+                const canvasEl = document.querySelector('canvas');
+                if (canvasEl) {
+                    canvasElement = canvasEl;
+                    console.log('Using DOM canvas element');
+                }
+            }
+            
+            // Method 3: Try getting from p5 instance if available
+            if (!canvasElement && typeof window !== 'undefined') {
+                // Try to find canvas in window or global scope
+                const canvases = document.querySelectorAll('canvas');
+                if (canvases.length > 0) {
+                    canvasElement = canvases[0];
+                    console.log('Using first canvas from DOM query');
+                }
+            }
+            
+            // Final verification
+            if (!canvasElement) {
+                throw new Error('Canvas element not found - tried p5.js canvas, canvas.elt, canvas.canvas, and DOM query');
+            }
+            
+            if (typeof canvasElement.toBlob !== 'function') {
+                console.error('Canvas element type:', typeof canvasElement);
+                console.error('Canvas element:', canvasElement);
+                throw new Error('Canvas element does not have toBlob method');
+            }
+            
+            console.log('Canvas element found and verified, calling toBlob...');
+            
+            // Convert canvas to blob and save silently - wrap in Promise to properly await
+            await new Promise((resolve, reject) => {
+                if (!canvasElement || typeof canvasElement.toBlob !== 'function') {
+                    reject(new Error('Canvas element invalid when calling toBlob'));
+                    return;
+                }
+                canvasElement.toBlob(async (blob) => {
+                    if (!blob) {
+                        reject(new Error('Failed to create blob from canvas'));
+                        return;
+                    }
+                    try {
+                        // Create a file handle in the selected folder
+                        const fileHandle = await folderHandle.getFileHandle(filename, { create: true });
+                        const writable = await fileHandle.createWritable();
+                        await writable.write(blob);
+                        await writable.close();
+                        console.log('Screenshot saved:', filename);
+                        resolve();
+                    } catch (error) {
+                        console.error('Error saving screenshot:', error);
+                        reject(error);
+                    }
+                }, 'image/png');
+            });
+        } catch (error) {
+            // Log error but don't show popups
+            console.error('Error accessing folder:', error);
+            throw error; // Re-throw so batch function knows it failed
+        }
+    } else {
+        // No folder selected, use regular download (but try to make it silent)
+        // Note: Without File System Access API, browser may show download notification
+        // but we'll try to make it as silent as possible
+        try {
+            saveCanvas(filename.replace('.png', ''), 'png');
+            console.log('Screenshot saved (download):', filename);
+        } catch (error) {
+            console.error('Error saving screenshot:', error);
+            throw error;
+        }
+    }
     
-    // Restore instructions and redraw - prompts should still be visible
+    // Restore instructions and student count, then redraw - prompts should still be visible
     showInstructions = true;   // Show instructions again
-    draw();  // Redraw with instructions (prompts still in currentPrompts, so they display)
-    console.log('Screenshot taken for:', nameToUse, 'at size:', windowWidth, 'x', windowHeight);
+    hideStudentCount = false;  // Show student count again
+    draw();  // Redraw with instructions and student count (prompts still in currentPrompts, so they display)
+    // Silent save - no console logs or popups
     // Note: currentPrompts is NOT modified - prompts remain on screen
 }
 
@@ -1107,7 +1241,8 @@ function draw() {
                 min(primaryRgb.b * promptBrightness, 255)
             );
             textAlign(LEFT, CENTER);
-            const prompt = currentPrompts[header];
+            // Always use window.currentPrompts as the single source of truth
+            const prompt = window.currentPrompts[header];
             
             // Use consistent text size for all prompts (both animated and recalled)
             // Don't enlarge text when navigating with left/right arrows
@@ -1125,8 +1260,8 @@ function draw() {
         }
     });
     
-    // Draw student count below name input field
-    if (allStudents.length > 1 && nameInput) {
+    // Draw student count below name input field (hide during screenshots)
+    if (allStudents.length > 1 && nameInput && !hideStudentCount) {
         const currentPosition = currentStudentIndex + 1;
         const totalStudents = allStudents.length;
         
@@ -1419,3 +1554,222 @@ function mousePressed() {
 function windowResized() {
     updateUIOnResize();
 }
+
+// Batch screenshot function - cycles through all students with prompts and takes screenshots
+async function runBatchScreenshots() {
+    console.log('runBatchScreenshots called');
+    
+    // CRITICAL: Always load the activity-specific report first
+    // This ensures we get all memorized prompts from the current activity
+    // AND syncs the global classReport variable that recallStudentResults uses
+    let classReport = [];
+    let activityName = null;
+    
+    // First, try to get current activity name and load its report
+    // This is CRITICAL because recallStudentResults uses the global classReport
+    // which is set by loadActivityReport
+    if (window.getCurrentActivityName) {
+        activityName = window.getCurrentActivityName();
+        console.log('Current activity name:', activityName);
+        
+        if (activityName && window.loadActivityReport) {
+            const loaded = window.loadActivityReport(activityName);
+            if (loaded) {
+                // After loading, get classReport from the global variable
+                // loadActivityReport sets the global classReport in data-manager.js
+                // which is what recallStudentResults uses
+                classReport = window.classReport || [];
+                console.log('Loaded activity report for:', activityName, 'with', classReport.length, 'students');
+                console.log('Global classReport synced for recallStudentResults');
+            } else {
+                console.log('No activity report found for:', activityName);
+            }
+        }
+    }
+    
+    // If still no report, try window.classReport (might be in memory)
+    if (!classReport || classReport.length === 0) {
+        classReport = window.classReport || [];
+        console.log('Using window.classReport:', classReport.length, 'students');
+    }
+    
+    // If still no report, try loading from activityReports directly
+    if (!classReport || classReport.length === 0) {
+        try {
+            const activityReports = JSON.parse(localStorage.getItem('activityReports') || '{}');
+            if (activityName && activityReports[activityName]) {
+                classReport = activityReports[activityName].classReport || [];
+                console.log('Loaded from activityReports directly:', classReport.length, 'students');
+                // CRITICAL: Sync the global classReport by calling loadActivityReport
+                // This ensures recallStudentResults can find the students
+                if (window.loadActivityReport) {
+                    window.loadActivityReport(activityName);
+                    console.log('Synced global classReport via loadActivityReport');
+                }
+            } else {
+                // Try to find any activity with a report
+                const activityNames = Object.keys(activityReports);
+                for (const name of activityNames) {
+                    const report = activityReports[name].classReport || [];
+                    if (report.length > 0) {
+                        classReport = report;
+                        activityName = name;
+                        console.log('Found report in activity:', name, 'with', classReport.length, 'students');
+                        // CRITICAL: Sync the global classReport by calling loadActivityReport
+                        if (window.loadActivityReport) {
+                            window.loadActivityReport(activityName);
+                            console.log('Synced global classReport via loadActivityReport');
+                        }
+                        break;
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Error loading from activityReports:', e);
+        }
+    }
+    
+    // CRITICAL: Sync both window.classReport AND the global classReport variable
+    // recallStudentResults uses the global classReport from data-manager.js
+    if (classReport && classReport.length > 0) {
+        window.classReport = classReport;
+        // Also sync the global classReport variable that recallStudentResults uses
+        // This is declared in data-manager.js and needs to be accessible
+        if (typeof window.syncClassReport === 'function') {
+            window.syncClassReport(classReport);
+        } else {
+            // Fallback: try to access the global directly if it exists
+            // We'll need to ensure data-manager.js exports a way to set it
+            console.log('Warning: Could not sync global classReport, using window.classReport');
+        }
+    }
+    
+    console.log('Final classReport:', classReport);
+    console.log('Final classReport length:', classReport ? classReport.length : 0);
+    
+    if (!classReport || classReport.length === 0) {
+        alert('No students with prompts found. Generate prompts for students first.');
+        return;
+    }
+    
+    // CRITICAL: Make sure recallStudentResults can find students
+    // Update the global classReport in data-manager.js scope
+    // We need to ensure the loaded classReport is accessible to recallStudentResults
+    // Since recallStudentResults uses the global classReport variable,
+    // we need to make sure it's updated. Let's reload the activity report
+    // which will sync the global classReport variable.
+    if (activityName && window.loadActivityReport) {
+        console.log('Reloading activity report to sync global classReport for recallStudentResults');
+        window.loadActivityReport(activityName);
+    }
+    
+    const folderHandle = screenshotFolderHandle || window.screenshotFolderHandle;
+    console.log('folderHandle:', folderHandle);
+    if (!folderHandle) {
+        alert('No folder selected. Please select a folder first.');
+        return;
+    }
+    
+    // Update button to show progress
+    const recordButton = window.recordButton;
+    if (recordButton) {
+        recordButton.html('PROCESSING...');
+        recordButton.style('background-color', 'var(--primary-hover)');
+    }
+    
+    const students = classReport;
+    let completed = 0;
+    
+    // Process each student
+    for (let i = 0; i < students.length; i++) {
+        const student = students[i];
+        const studentNameForRecall = student.name;
+        
+        console.log(`Processing student ${i + 1}/${students.length}:`, studentNameForRecall);
+        
+        // Update student name in input field first
+        if (nameInput) {
+            nameInput.value(studentNameForRecall);
+        }
+        studentName = studentNameForRecall;
+        previousName = studentNameForRecall; // Set previousName so screenshot uses correct name
+        
+        // Recall this student's prompts
+        let hasResults = false;
+        if (window.recallStudentResults) {
+            hasResults = window.recallStudentResults(studentNameForRecall);
+            console.log('Recalled results for', studentNameForRecall, ':', hasResults);
+            if (!hasResults) {
+                // Skip students without prompts
+                console.log('Skipping student without prompts:', studentNameForRecall);
+                continue;
+            }
+        } else {
+            console.error('recallStudentResults function not available');
+            continue;
+        }
+        
+        // Force a redraw to ensure prompts are displayed
+        if (typeof draw === 'function') {
+            draw();
+        }
+        
+        // Wait for prompts to display and canvas to update
+        // Give extra time for canvas to be fully rendered
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Force another redraw right before screenshot to ensure everything is up to date
+        if (typeof draw === 'function') {
+            draw();
+        }
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Take screenshot - now properly awaited
+        console.log('Taking screenshot for:', studentNameForRecall);
+        let screenshotSuccess = false;
+        try {
+            if (window.takeScreenshot) {
+                await window.takeScreenshot();
+                console.log('Screenshot taken successfully for:', studentNameForRecall);
+                screenshotSuccess = true;
+            } else {
+                console.error('takeScreenshot function not available');
+            }
+        } catch (error) {
+            console.error('Error taking screenshot for', studentNameForRecall, ':', error);
+            screenshotSuccess = false;
+        }
+        
+        // Only increment completed if screenshot was successful
+        if (screenshotSuccess) {
+            completed++;
+            console.log(`Screenshot saved for ${studentNameForRecall}. Total completed: ${completed}/${students.length}`);
+        } else {
+            console.log(`Screenshot failed for ${studentNameForRecall}. Skipping increment.`);
+        }
+        
+        // Update button progress
+        if (recordButton) {
+            recordButton.html(`PROCESSING... ${completed}/${students.length}`);
+        }
+        
+        // Wait before next student
+        await new Promise(resolve => setTimeout(resolve, 400));
+    }
+    
+    // Reset button
+    if (recordButton) {
+        recordButton.html('BATCH SCREENSHOT');
+        recordButton.style('background-color', 'var(--background-color)');
+    }
+    
+    // Show completion message
+    alert(`Batch screenshot complete! ${completed} screenshots saved.`);
+}
+
+// Export functions to window for use in other modules
+window.takeScreenshot = takeScreenshot;
+window.selectScreenshotFolder = selectScreenshotFolder;
+window.runBatchScreenshots = runBatchScreenshots;
+// Make folder handle accessible globally
+window.screenshotFolderHandle = screenshotFolderHandle;
