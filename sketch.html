@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="theme-manager.js"></script>
+    <style>
+        :root {
+            /* Default theme - will be overridden by editor theme system */
+            --primary-color: #D2691E;
+            --primary-hover: #CD853F;
+            --primary-shadow: rgba(210, 105, 30, 0.3);
+            --primary-shadow-hover: rgba(210, 105, 30, 0.5);
+            --primary-shadow-light: rgba(210, 105, 30, 0.1);
+            --accent-color: #FF7F7F;
+            --background-color: #000000;
+            --text-color: #FFFFFF;
+            --border-color: #333;
+            --delete-color: #FF6B6B;
+            --frame-color: #D2691E;
+            --frame-border: #D2691E;
+            --frame-background: #000000;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'VT323', monospace;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+        canvas {
+            display: block;
+        }
+
+        /* Theme picker CSS removed - now controlled by editor */
+
+        /* Retro checkbox styling */
+        .category-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            width: 12px;
+            height: 12px;
+            border: 1px solid var(--primary-color);
+            background-color: var(--background-color);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .category-checkbox:checked {
+            background-color: var(--primary-color);
+        }
+
+        .category-checkbox:checked::after {
+            content: '';
+        }
+
+        #all-categories-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            width: 12px;
+            height: 12px;
+            border: 1px solid var(--primary-color);
+            background-color: var(--background-color);
+            cursor: pointer;
+            position: relative;
+        }
+
+        #all-categories-checkbox:checked {
+            background-color: var(--primary-color);
+        }
+
+        /* >EDITOR link: bottom-right (wireframe) */
+        .design-prompts-section {
+            position: fixed;
+            bottom: max(20px, 3vh);
+            right: max(20px, 3vw);
+            left: auto;
+            z-index: 1000;
+        }
+
+        .design-prompts {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            font-size: 26px;
+            font-family: 'VT323', monospace;
+            font-weight: normal;
+            padding: 12px 20px;
+            width: auto;
+            min-width: 200px;
+            height: auto;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: none;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-align: center;
+            margin-bottom: 4px;
+        }
+        
+        /* Mobile Responsive Design */
+        @media (max-width: 768px) {
+            .design-prompts-section {
+                bottom: 10px;
+                right: 10px;
+                left: auto;
+            }
+            
+            .design-prompts {
+                font-size: 26px;
+                padding: 12px 20px;
+                height: auto;
+                min-width: 200px;
+            }
+        }
+        
+        .design-prompts:hover {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+        }
+    </style>
+    <script>
+        if (typeof applyThemeFromStorage === 'function') applyThemeFromStorage();
+    </script>
+</head>
+<body>
+    <!-- >EDITOR link bottom-right (wireframe) -->
+    <div class="design-prompts-section">
+        <button class="design-prompts" onclick="goToEditor()">&gt;EDITOR</button>
+    </div>
+    
+    <!-- Load modules (theme-manager already in <head>) -->
+    <script src="ui-manager.js?v=20260725a"></script>
+    <script src="animation-manager.js?v=20260725a"></script>
+    <script src="data-manager.js?v=20260725a"></script>
+    <script src="student-manager.js?v=20260725a"></script>
+    <script src="prompt-generator.js?v=20260725a"></script>
+    <script src="sketch-refactored.js?v=20260725a"></script>
+    <script>console.log('PromptMe sketch build 20260725a');</script>
+</body>
+</html> 

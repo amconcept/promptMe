@@ -1,0 +1,45 @@
+═══════════════════════════════════════════════════════
+  ⚙️ ONE PLACE TO EDIT ALL COLUMN WIDTHS ⚙️
+═══════════════════════════════════════════════════════
+
+File: editor.html
+Location: Lines 24-26
+
+EDIT THESE TWO LINES ONLY:
+─────────────────────────────────────────────────────
+
+:root {
+    ...
+    /* ⚙️ SINGLE SOURCE OF TRUTH FOR COLUMN WIDTH */
+    --column-width: 200px;    ← Change this value
+    --grid-gap: 30px;          ← Change this value
+}
+
+
+═══════════════════════════════════════════════════════
+EXAMPLES:
+═══════════════════════════════════════════════════════
+
+WIDER COLUMNS:
+    --column-width: 250px;  (was 200px)
+    --grid-gap: 35px;       (was 30px)
+
+NARROWER COLUMNS:
+    --column-width: 150px;  (was 200px)
+    --grid-gap: 20px;       (was 30px)
+
+MORE SPACING:
+    --column-width: 200px;  (same)
+    --grid-gap: 40px;       (was 30px)
+
+═══════════════════════════════════════════════════════
+THAT'S IT! ✨
+═══════════════════════════════════════════════════════
+
+Every column width, textarea, and prompt header will
+automatically update from these two variables.
+
+No need to edit any other files or lines!
+
+═══════════════════════════════════════════════════════
+

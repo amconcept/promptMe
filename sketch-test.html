@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sketch test (minimal)</title>
+    <script>console.log('sketch-test: HEAD_FIRST');</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script>console.log('sketch-test: AFTER_P5');</script>
+    <style>
+        body { margin: 0; background: #111; color: #eee; font-family: sans-serif; padding: 10px; }
+        a { color: #8af; }
+    </style>
+</head>
+<body>
+    <script>console.log('sketch-test: BODY_FIRST');</script>
+    <p>Minimal sketch test. If you see this and a circle below, p5 and localhost are OK.</p>
+    <p><a href="sketch.html">Open full sketch</a> · <a href="editor.html">Editor</a></p>
+    <script>
+        console.log('sketch-test: BEFORE_P5_SKETCH');
+        function setup() {
+            console.log('sketch-test: setup()');
+            createCanvas(400, 200);
+            background(20);
+            fill(100, 200, 255);
+            ellipse(200, 100, 80, 80);
+        }
+        function draw() {
+            // static
+        }
+        console.log('sketch-test: AFTER_P5_SKETCH');
+    </script>
+    <script>console.log('sketch-test: DONE');</script>
+</body>
+</html>

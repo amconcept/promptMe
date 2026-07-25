@@ -1,0 +1,1831 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Prompt Designer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <!-- 
+    ═══════════════════════════════════════════════════════════════
+      ⚙️ TO CHANGE COLUMN WIDTHS: EDIT --column-width IN :root BELOW ⚙️
+    ═══════════════════════════════════════════════════════════════
+    -->
+    <style>
+        /* CSS Variables for Theme Colors */
+        /* Default to Windows when no theme saved */
+        :root {
+            --primary-color: #00FF00;
+            --primary-hover: #33FF33;
+            --primary-shadow: rgba(0, 255, 0, 0.3);
+            --primary-shadow-hover: rgba(0, 255, 0, 0.5);
+            --primary-shadow-light: rgba(0, 255, 0, 0.1);
+            --accent-color: #66FF66;
+            --background-color: #001100;
+            --text-color: #00FF00;
+            --border-color: #003300;
+            --delete-color: var(--primary-color); /* Use theme color - matches primary color */
+            --frame-color: #00FF00;
+            --frame-border: #00FF00;
+            --frame-background: #001100;
+            
+            /* ⚙️ SINGLE SOURCE OF TRUTH FOR COLUMN WIDTH - EDIT THIS ONE LINE */
+            --column-width: 200px;
+            --grid-gap: 40px;
+        }
+
+        /* Terminal-style base styles */
+        body {
+            font-family: 'VT323', monospace;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 40px;
+            font-size: 32px;
+            letter-spacing: 2px;
+        }
+
+        /* Objective section */
+        .objective-section {
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .objective-label {
+            color: var(--primary-color);
+            font-weight: bold;
+            font-size: 20px;
+            min-width: 10px;
+        }
+
+        .objective-input {
+            flex-grow: 1;
+            max-width: 600px;
+            padding: 12px;
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            font-size: clamp(16px, 2.5vw, 20px);
+            font-family: 'VT323', monospace;
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            box-shadow: inset 0 0 3px var(--primary-shadow-light);
+        }
+
+        .objective-input:focus {
+            outline: none;
+            border-color: var(--primary-hover);
+            box-shadow: 0 0 5px var(--primary-shadow), inset 0 0 3px var(--primary-shadow-light);
+        }
+
+        /* Settings section */
+        .settings-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: none;
+            border-radius: 6px 6px 0px 0px; /* Only round top corners */
+            background-color: transparent;
+            padding-left: 20px; /* Align with criterion label fields */
+            border-bottom: 1px solid var(--primary-color);
+        }
+        
+        /* Mobile-friendly header */
+        .mobile-header {
+            margin-bottom: 20px;
+        }
+        
+        /* START PROMPTING button section */
+        .start-prompting-section {
+            position: fixed;
+            top: 20px;
+            left: 35px;
+            z-index: 1000;
+        }
+        
+        .start-prompting {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            font-size: 26px;
+            font-family: 'VT323', monospace;
+            font-weight: normal;
+            padding: 12px 20px;
+            width: auto;
+            min-width: 200px;
+            height: auto;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: none;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-align: center;
+        }
+        
+        .start-prompting:hover {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+        }
+
+        .settings-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .settings-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .settings-buttons button {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            padding: 8px 16px;
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .settings-buttons .settings-action-btn {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            padding: 8px 16px;
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .settings-buttons button:hover,
+        .settings-buttons .settings-action-btn:hover {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            box-shadow: 0 0 8px var(--primary-shadow);
+        }
+
+        .settings-buttons .new {
+            background-color: var(--background-color);
+            color: var(--accent-color);
+            border: 1px solid var(--accent-color);
+        }
+
+        .settings-buttons .new:hover {
+            background-color: var(--accent-color);
+            color: var(--background-color);
+            box-shadow: 0 0 8px rgba(255, 127, 127, 0.3);
+        }
+
+        .settings-buttons .save-as {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+        }
+
+        .settings-buttons .save-as:hover {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            box-shadow: 0 0 8px var(--primary-shadow);
+        }
+
+        .settings-buttons .share {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+        }
+
+        .settings-buttons .share:hover {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            box-shadow: 0 0 8px var(--primary-shadow);
+        }
+
+        .settings-buttons .load {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+        }
+
+        .settings-buttons .load:hover {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            box-shadow: 0 0 8px var(--primary-shadow);
+        }
+
+        .settings-buttons .restore {
+            background-color: var(--background-color);
+            color: var(--accent-color);
+            border: 1px solid var(--accent-color);
+        }
+
+        .settings-buttons .restore:hover {
+            background-color: var(--accent-color);
+            color: var(--background-color);
+            box-shadow: 0 0 8px rgba(255, 127, 127, 0.3);
+        }
+
+        .settings-checkbox-input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            border: 2px solid var(--primary-color);
+            background-color: var(--background-color);
+            border-radius: 3px;
+            position: relative;
+        }
+
+        .settings-checkbox-input:checked {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .settings-checkbox-input:hover {
+            border-color: var(--primary-hover);
+        }
+
+        .settings-checkbox-input:checked:hover {
+            background-color: var(--primary-hover);
+            border-color: var(--primary-hover);
+        }
+
+        .settings-checkbox-label {
+            color: var(--primary-color);
+            font-family: 'VT323', monospace;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .settings-help-button:hover {
+            background-color: var(--primary-color) !important;
+            color: var(--background-color) !important;
+            box-shadow: 0 0 8px var(--primary-shadow-hover);
+        }
+
+
+
+
+
+
+
+        /* Teacher guidance section */
+        .teacher-guidance {
+            margin: 20px 0;
+            font-family: 'VT323', monospace;
+        }
+
+        .teacher-guidance h3 {
+            color: var(--primary-color);
+            margin-top: 0;
+            font-size: 20px;
+        }
+
+        .teacher-guidance ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .teacher-guidance li {
+            margin: 8px 0;
+            color: var(--primary-color);
+            line-height: 1.4;
+        }
+
+        .teacher-guidance strong {
+            color: var(--primary-hover);
+        }
+
+        /* Centered Add Buttons */
+        .add-buttons-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .add-prompt-button, .add-category-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border-radius: 4px;
+            border: 1px solid var(--primary-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 12px 16px;
+            margin: 0;
+            width: auto;
+            height: 44px;
+            font-family: 'VT323', monospace;
+            font-size: 20px;
+            color: var(--primary-color);
+        }
+
+        .add-prompt-button:hover, .add-category-button:hover {
+            transform: scale(1.05);
+            filter: brightness(1.3);
+            background-color: var(--primary-color);
+            color: var(--background-color);
+        }
+
+        .add-prompt-button svg {
+            width: 24px;
+            height: 24px;
+        }
+        
+        .add-category-button svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Connection explanation */
+        .connection-explanation {
+            text-align: center;
+            color: var(--primary-color);
+            font-family: 'VT323', monospace;
+            font-size: 20px;
+            margin: 20px 0 60px 0; /* Increased bottom margin from 40px to 60px */
+        }
+
+        /* Prompt section */
+        .prompt-container {
+            margin-bottom: 20px;
+        }
+
+        /* Bootstrap-like grid system - perfect alignment like reference image */
+        .prompt-grid {
+            display: grid;
+            grid-template-columns: var(--column-width) var(--column-width) var(--column-width) var(--column-width) var(--column-width);
+            gap: var(--grid-gap);
+            margin: 40px 20px;
+            width: calc(100% - 40px); /* Fill available width minus margins */
+            max-width: none; /* Remove width constraint to allow stretching */
+            justify-content: start;
+        }
+
+        /* Grid rows structure */
+        .grid-label {
+            grid-column: 1;
+        }
+
+        .prompt-headers {
+            display: contents; /* Children participate in grid */
+        }
+
+        #categories-container {
+            display: contents; /* Children participate in grid */
+        }
+
+        .column-counts-container {
+            display: contents; /* Children participate in grid */
+        }
+
+        .prompt-column {
+            position: relative;
+            min-width: var(--column-width);
+            max-width: var(--column-width);
+        }
+        
+        .criterion-label-container {
+            position: relative;
+            grid-column: 1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: var(--column-width);
+            max-width: var(--column-width);
+        }
+
+        .textarea-container {
+            min-width: var(--column-width);
+            max-width: var(--column-width);
+        }
+
+        .prompt-count-display {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-family: 'VT323', monospace;
+            font-weight: bold;
+            margin-top: 10px;
+            min-width: 20px;
+            text-align: center;
+            box-shadow: 0 0 3px var(--primary-shadow);
+            align-self: center;
+        }
+
+        .header-input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            text-align: center;
+            background-color: var(--frame-background);
+            color: var(--frame-color);
+            border: 1px solid var(--frame-border);
+            border-radius: 4px;
+            box-shadow: inset 0 0 3px var(--primary-shadow-light);
+        }
+
+        .header-input:focus {
+            outline: none;
+            border-color: var(--primary-hover);
+            box-shadow: 0 0 5px var(--primary-shadow), inset 0 0 3px var(--primary-shadow-light);
+        }
+
+        /* Category section - uses grid system above */
+        
+        /* Align delete button with criterion input */
+        .delete-category {
+            position: absolute;
+            top: -30px;
+            right: 0;
+            z-index: 1;
+            white-space: nowrap;
+            width: 40px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Invisible delete button for first category */
+        .invisible-delete {
+            color: var(--background-color) !important; /* Same as background */
+            cursor: default !important; /* No click cursor */
+            pointer-events: none; /* Not clickable */
+            width: 40px; /* Same width as visible delete button */
+            height: 20px; /* Same height as visible delete button */
+            display: flex; /* Ensure it takes up space */
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .criterion-label-input {
+            width: 100%;
+            padding: 8px;
+            background-color: var(--background-color);
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            color: var(--text-color);
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            height: 40px; /* Match textarea height */
+            box-sizing: border-box;
+        }
+        
+        /* Categories container handled by grid display:contents above */
+
+        /* Category letters removed - only criterion labels remain */
+
+        /* Delete buttons */
+        .delete-category, .delete-prompt {
+            background: transparent;
+            color: var(--primary-color); /* Use theme color instead of red */
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            display: inline;
+            font-family: 'VT323', monospace;
+        }
+
+        .delete-prompt {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1;
+        }
+
+        /* Textarea styling */
+        /* Column counts container */
+        .column-counts-container {
+            display: contents; /* Makes children participate in grid */
+        }
+
+        .column-count-item {
+            min-width: var(--column-width);
+            max-width: var(--column-width);
+            width: var(--column-width);
+            text-align: center;
+            padding: 10px;
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            font-family: 'VT323', monospace;
+            font-size: 14px;
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            box-sizing: border-box;
+        }
+
+        .grid-label {
+            color: var(--primary-color);
+            font-weight: bold;
+            font-size: 18px;
+            font-family: 'VT323', monospace;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            background-color: var(--background-color);
+        }
+
+        .grid-placeholder {
+            min-width: var(--column-width);
+            max-width: var(--column-width);
+        }
+
+        .header-placeholder {
+            /* Invisible placeholder - keeps grid alignment but shows nothing */
+            visibility: hidden;
+            height: 0;
+            padding: 0;
+            margin: 0;
+            border: none;
+        }
+
+        /* Settings / overflow menu panel (opened by ... top-right) */
+        .settings-panel {
+            position: fixed;
+            top: 68px;
+            right: 16px;
+            width: min(280px, calc(100vw - 32px));
+            max-width: 320px;
+            min-width: 200px;
+            max-height: calc(100vh - 90px);
+            overflow-y: auto;
+            background-color: var(--background-color);
+            border: 2px solid var(--primary-color);
+            border-radius: 0;
+            padding: 10px;
+            font-family: 'VT323', monospace;
+            color: var(--text-color);
+            font-size: clamp(16px, 2.5vw, 20px);
+            box-shadow: 0 0 12px var(--primary-shadow);
+            transition: none;
+            z-index: 1001;
+            display: none;
+        }
+        
+        /* Overflow menu (...) — no persistent side gutter */
+        body {
+            margin-right: 0;
+        }
+        
+        /* Main content container for better centering */
+        .main-content {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 20px 100px;
+        }
+
+        /* Top-right overflow menu trigger */
+        .settings-panel-toggle {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            width: 44px;
+            height: 44px;
+            background-color: var(--background-color);
+            border: 2px solid var(--primary-color);
+            border-radius: 0;
+            color: var(--primary-color);
+            font-family: 'VT323', monospace;
+            font-size: 28px;
+            font-weight: bold;
+            line-height: 1;
+            letter-spacing: 1px;
+            cursor: pointer;
+            box-shadow: none;
+            transition: all 0.1s ease;
+            z-index: 1002;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 0 6px 0;
+        }
+
+        .settings-panel-toggle:hover,
+        .settings-panel-toggle.panel-open {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+        }
+
+        /* Overflow panel opens under ... */
+        .settings-panel {
+            display: none;
+            top: 68px;
+            right: 16px;
+            width: min(280px, calc(100vw - 32px));
+            max-height: calc(100vh - 90px);
+            overflow-y: auto;
+        }
+
+        .settings-panel.open {
+            display: block;
+        }
+
+        /* Mobile Responsive Design */
+        @media (max-width: 768px) {
+            /* Base mobile styles */
+            body {
+                padding: 10px;
+                font-size: clamp(12px, 4vw, 16px);
+                margin-right: 0 !important; /* Remove right margin on mobile */
+            }
+            
+            h1 {
+                font-size: clamp(18px, 6vw, 24px);
+                margin: 10px 0;
+                text-align: center;
+            }
+            
+            /* Header buttons - stack vertically */
+            .start-prompting-section {
+            position: relative;
+                left: auto;
+                top: auto;
+                margin-bottom: 10px;
+                text-align: center;
+            }
+            
+            .start-prompting {
+                font-size: 26px;
+                padding: 12px 20px;
+                height: auto;
+                min-width: 200px;
+            }
+            
+            /* Function buttons - responsive grid */
+            .settings-section {
+                margin-bottom: 15px;
+                padding: 10px;
+            }
+            
+            .settings-buttons {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                gap: 8px;
+            width: 100%;
+            }
+            
+            /* Add theme/background controls to mobile interface */
+            .mobile-settings {
+                display: block !important; /* Show on mobile */
+                margin-bottom: 15px;
+                padding: 10px;
+                background-color: rgba(210, 105, 30, 0.1);
+                border-radius: 6px;
+            }
+            
+            .mobile-settings-row {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 10px;
+                align-items: center;
+            }
+            
+            .mobile-settings label {
+                font-size: clamp(12px, 3vw, 14px);
+                color: var(--primary-color);
+                min-width: 80px;
+            }
+            
+            .mobile-settings select {
+                flex: 1;
+            padding: 8px;
+                font-size: clamp(12px, 3vw, 14px);
+                background-color: var(--background-color);
+                color: var(--primary-color);
+                border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            font-family: 'VT323', monospace;
+                /* Remove Safari's default 3D/bubble appearance */
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                appearance: none;
+                /* Remove default shadows and gradients */
+                box-shadow: none;
+                background-image: none;
+            }
+            
+            .function-btn {
+                font-size: clamp(10px, 3vw, 14px);
+                padding: 10px 8px;
+                min-height: 44px; /* Touch-friendly */
+            }
+            
+            /* Objective section - full width */
+            .objective-section {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+                margin-bottom: 15px;
+                justify-content: center;
+            }
+            
+            .objective-label {
+                font-size: clamp(14px, 4vw, 18px);
+                text-align: left;
+            }
+            
+            .objective-input {
+                max-width: 100%;
+                font-size: clamp(14px, 4vw, 18px);
+                padding: 12px;
+                min-height: 44px; /* Touch-friendly */
+            }
+            
+            /* Checkbox section */
+            .settings-checkbox {
+                margin-bottom: 15px;
+                padding: 10px;
+                background-color: rgba(210, 105, 30, 0.1);
+                border-radius: 6px;
+            }
+            
+            .settings-checkbox-label {
+                font-size: clamp(12px, 3.5vw, 16px);
+                line-height: 1.4;
+            }
+            
+            /* Add buttons container - mobile responsive */
+            .add-buttons-container {
+                flex-direction: column;
+                gap: 10px;
+                margin: 20px 0;
+            }
+            
+            .add-prompt-button, .add-category-button {
+                width: 100%;
+                max-width: 200px;
+                margin: 0 auto;
+            }
+            
+            /* Prompt headers - responsive */
+            .prompt-headers {
+                flex-direction: column;
+                gap: 10px;
+                margin-bottom: 15px;
+            }
+            
+            .prompt-header {
+                width: 100%;
+                font-size: clamp(14px, 4vw, 18px);
+                padding: 12px;
+                min-height: 44px; /* Touch-friendly */
+            }
+            
+            /* Category rows - responsive */
+            .category-row {
+                flex-direction: column;
+                gap: 10px;
+                margin-bottom: 15px;
+                padding: 15px;
+                border-radius: 8px;
+            }
+            
+            .category-label {
+                font-size: clamp(14px, 4vw, 18px);
+                margin-bottom: 8px;
+            }
+            
+            .category-input {
+                font-size: clamp(12px, 3.5vw, 16px);
+                padding: 10px;
+                min-height: 40px; /* Touch-friendly */
+            }
+            
+            .criterion-label-input {
+                font-size: clamp(12px, 3.5vw, 16px);
+                padding: 10px;
+                min-height: 40px; /* Touch-friendly */
+            }
+            
+            /* Delete buttons - larger for touch */
+            .delete-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 18px;
+                min-width: 44px; /* Touch-friendly */
+                min-height: 44px;
+            }
+            
+            /* Overflow ... menu stays available on mobile */
+            .settings-panel-toggle {
+                display: flex !important;
+            }
+
+            .settings-panel:not(.open) {
+                display: none !important;
+            }
+
+            .settings-panel.open {
+                display: block !important;
+            }
+
+            /* Legacy mobile Theme row replaced by ... menu */
+            .mobile-settings {
+                display: none !important;
+            }
+
+            .add-buttons-container {
+                display: none !important;
+            }
+            
+            /* Activity history - mobile friendly */
+            .activity-history {
+                max-height: 50vh;
+                overflow-y: auto;
+            }
+            
+            .activity-item {
+                padding: 12px;
+                font-size: clamp(12px, 3vw, 16px);
+                margin-bottom: 8px;
+            }
+            
+            /* Instructions */
+            .instructions {
+                font-size: clamp(12px, 3vw, 16px);
+                margin: 15px 0;
+                padding: 0 10px;
+            }
+        }
+        
+        /* Extra small screens (phones in portrait) */
+        @media (max-width: 480px) {
+            .settings-buttons {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .action-button {
+                max-width: 200px;
+            }
+            
+            .prompt-headers {
+                gap: 8px;
+            }
+            
+            .category-row {
+                padding: 10px;
+            }
+        }
+        
+        /* Landscape mobile */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .settings-panel {
+                max-height: 60vh;
+            }
+            
+            .activity-history {
+                max-height: 40vh;
+            }
+        }
+        
+        /* Touch-friendly improvements */
+        @media (hover: none) and (pointer: coarse) {
+            /* Larger touch targets */
+            button, input, select, .activity-item {
+                min-height: 44px;
+                min-width: 44px;
+            }
+            
+            /* Better spacing for touch */
+            .settings-buttons {
+                gap: 12px;
+            }
+            
+            .action-buttons {
+                gap: 24px;
+            }
+            
+            /* Prevent zoom on input focus */
+            input, select, textarea {
+                font-size: 16px;
+            }
+        }
+        
+        /* High DPI displays */
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+            .circle-button, .delete-btn {
+                border-width: 1px;
+            }
+        }
+        
+        /* Mobile Floating Action Button */
+        .mobile-fab {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            border: 2px solid var(--primary-color);
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 1001;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'VT323', monospace;
+        }
+        
+        .mobile-fab:hover {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            transform: scale(1.1);
+        }
+        
+        .fab-icon {
+            font-size: 20px;
+            line-height: 1;
+        }
+        
+        .fab-label {
+            font-size: 10px;
+            font-weight: bold;
+            margin-top: 2px;
+        }
+        
+        /* Show FAB only on mobile */
+        @media (max-width: 768px) {
+            .mobile-fab {
+                display: flex;
+            }
+            
+            .start-prompting-section {
+                display: none;
+            }
+        }
+        
+        /* Activity status indicator removed */
+
+        .settings-title {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: var(--primary-color);
+            font-size: 18px;
+            letter-spacing: 1px;
+        }
+
+        .theme-picker {
+            margin-bottom: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            position: relative;
+        }
+
+        .theme-picker label {
+            font-size: 18px;
+            color: var(--primary-color);
+            font-weight: bold;
+            text-align: center;
+            letter-spacing: 0.5px;
+        }
+
+        .theme-picker select {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            padding: 8px 30px 8px 6px; /* Extra padding on right for arrow, increased vertical padding for consistent height */
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            cursor: pointer;
+            width: 100%;
+            height: 36px; /* Fixed height to match other elements */
+            box-sizing: border-box;
+            text-align: center;
+            /* Remove Safari's default 3D/bubble appearance */
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            /* Remove default shadows and gradients */
+            box-shadow: none;
+            background-image: none;
+            /* Ensure flat appearance */
+            outline: none;
+        }
+        
+        /* Custom dropdown arrow: use CSS escape for "v" so encoding never produces odd characters */
+        .theme-picker::after {
+            content: "\76";
+            position: absolute;
+            right: 10px;
+            bottom: 8px; /* Position relative to select element */
+            pointer-events: none;
+            color: var(--primary-color);
+            font-size: 12px;
+            line-height: 1;
+            font-family: sans-serif;
+        }
+
+        .theme-picker select:focus {
+            outline: none;
+            border-color: var(--primary-hover);
+        }
+
+        /* Custom themed dropdown (File menu) — OS <select> popups cannot use theme colors */
+        .themed-dropdown {
+            width: 100%;
+        }
+
+        .themed-dropdown-trigger {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            padding: 8px 30px 8px 6px;
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            cursor: pointer;
+            width: 100%;
+            height: 36px;
+            box-sizing: border-box;
+            text-align: center;
+            box-shadow: none;
+            outline: none;
+            display: block;
+        }
+
+        .themed-dropdown-trigger:focus,
+        .themed-dropdown.open .themed-dropdown-trigger {
+            border-color: var(--primary-hover);
+        }
+
+        .themed-dropdown-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 2px);
+            left: 0;
+            right: 0;
+            z-index: 200;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            max-height: 260px;
+            overflow-y: auto;
+            box-shadow: 0 0 8px var(--primary-shadow);
+        }
+
+        .themed-dropdown.open .themed-dropdown-menu {
+            display: block;
+        }
+
+        .themed-dropdown-menu li {
+            padding: 8px 6px;
+            text-align: center;
+            cursor: pointer;
+            border-bottom: 1px solid var(--primary-color);
+            height: 36px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .themed-dropdown-menu li:last-child {
+            border-bottom: none;
+        }
+
+        .themed-dropdown-menu li:hover:not(.disabled),
+        .themed-dropdown-menu li:focus:not(.disabled) {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            outline: none;
+        }
+
+        .themed-dropdown-menu li.disabled {
+            opacity: 0.35;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        /* File / Theme pickers have no label — keep chevron aligned to the trigger */
+        .file-menu-picker.theme-picker::after,
+        .theme-menu-picker.theme-picker::after {
+            bottom: 12px;
+        }
+
+        /* Hidden native select kept in sync for legacy themeSelect.value reads/writes */
+        .themed-dropdown-native-sync {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .themed-dropdown-menu li.selected {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+        }
+
+        .settings-list {
+            margin-bottom: 8px;
+        }
+
+        .settings-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+            height: 36px; /* Fixed height to match other elements */
+            box-sizing: border-box;
+            cursor: pointer;
+            border-bottom: 1px solid var(--primary-color);
+            transition: all 0.1s ease;
+            font-size: 18px;
+        }
+
+        .settings-item:last-child {
+            border-bottom: none;
+        }
+
+        .settings-item:hover {
+            background-color: var(--primary-shadow-light);
+            padding-left: 4px;
+        }
+
+        .settings-item.selected {
+            background-color: var(--primary-shadow);
+            color: var(--primary-hover);
+        }
+
+        .settings-item-content {
+            display: flex;
+            align-items: center;
+            flex-grow: 1;
+        }
+
+        .settings-item::before {
+            content: "\003E"; /* ">" via hex so encoding never produces odd characters */
+            margin-right: 6px;
+            color: var(--primary-color);
+            font-weight: bold;
+            font-size: 10px;
+        }
+
+        .settings-item.selected::before {
+            color: var(--primary-hover);
+        }
+
+        .settings-item-delete {
+            color: var(--primary-color); /* Use theme color instead of red */
+            font-weight: bold;
+            font-size: 10px;
+            padding: 2px 4px;
+            margin-left: 6px;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: all 0.1s ease;
+        }
+
+        .settings-item-delete:hover {
+            background-color: var(--primary-color); /* Use theme color instead of red */
+            color: var(--background-color);
+        }
+
+        .settings-divider {
+            height: 1px;
+            background-color: var(--primary-color);
+            margin: 8px 0;
+        }
+
+        .settings-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .settings-action-btn {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            padding: 8px 6px;
+            height: 36px; /* Fixed height to match other elements */
+            box-sizing: border-box;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'VT323', monospace;
+            font-size: 18px; /* Increased to match other elements */
+            transition: all 0.1s ease;
+            text-align: center;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .settings-action-btn:hover {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 12px;
+            border: 1px solid var(--frame-border);
+            border-radius: 4px;
+            resize: none; /* Disable manual resize - auto-sizing handles it */
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            background-color: var(--frame-background);
+            color: var(--frame-color);
+            box-shadow: inset 0 0 3px var(--primary-shadow-light);
+            overflow-y: auto; /* Show scrollbar if content exceeds height */
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary-hover);
+            box-shadow: 0 0 5px var(--primary-shadow), inset 0 0 3px var(--primary-shadow-light);
+        }
+
+        /* Connection arrows */
+        .horizontal-arrow {
+            position: absolute;
+            right: -50px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--accent-color);
+            font-size: 20px;
+            pointer-events: none;
+            font-family: 'VT323', monospace;
+            display: flex;
+            align-items: center;
+            opacity: 0.8;
+            z-index: 2;
+        }
+
+        .vertical-arrow {
+            position: absolute;
+            left: 50%;
+            bottom: -25px;
+            color: var(--accent-color);
+            font-size: 24px;
+            pointer-events: none;
+            font-family: 'VT323', monospace;
+            display: flex;
+            align-items: center;
+            opacity: 0.8;
+            transform: translateX(-50%);
+            z-index: 2;
+        }
+
+        /* Bottom buttons */
+        .buttons {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .buttons button {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            font-size: 18px;
+            padding: 15px 30px;
+            border: 2px solid var(--primary-color);
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'VT323', monospace;
+            width: auto;
+            margin: 10px;
+            text-transform: uppercase;
+            box-shadow: 0 0 5px var(--primary-shadow);
+            transition: all 0.3s ease;
+        }
+
+        .buttons button:hover {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            box-shadow: 0 0 8px var(--primary-shadow-hover);
+            transform: translateY(-2px);
+        }
+
+        .buttons .test {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .buttons .test:hover {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+        }
+
+        /* Instructions */
+        .instructions {
+            text-align: center;
+            margin: 20px 0;
+            color: var(--primary-color);
+            font-family: 'VT323', monospace;
+            font-size: 16px;
+        }
+
+        /* Animation */
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+
+        .horizontal-arrow, .vertical-arrow {
+            animation: pulse 2s infinite;
+        }
+        /* Activity Title Display */
+        .activity-title-display {
+            margin: 20px 0;
+            padding: 12px 20px;
+            background-color: var(--background-color);
+            border: 2px solid var(--primary-color);
+            border-radius: 4px;
+            font-family: 'VT323', monospace;
+            font-size: 20px;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        .activity-label {
+            color: var(--primary-color);
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .activity-name {
+            color: var(--primary-color);
+            text-transform: uppercase;
+        }
+
+        /* Hidden data grid — cube is the editor surface */
+        .prompt-grid {
+            position: absolute !important;
+            width: 1px !important;
+            height: 1px !important;
+            padding: 0 !important;
+            margin: -1px !important;
+            overflow: hidden !important;
+            clip: rect(0, 0, 0, 0) !important;
+            white-space: nowrap !important;
+            border: 0 !important;
+            pointer-events: none !important;
+        }
+
+        .add-buttons-container {
+            display: none;
+        }
+
+        /* Central prompt cube */
+        .prompt-cube-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 10px auto 30px;
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .prompt-cube {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            max-height: min(72vh, 420px);
+            border: 2px solid var(--primary-color);
+            background: var(--background-color);
+            box-shadow: inset 0 0 24px var(--primary-shadow-light);
+            display: flex;
+            flex-direction: column;
+            padding: 14px;
+            box-sizing: border-box;
+            touch-action: pan-y;
+            user-select: none;
+            -webkit-user-select: none;
+            position: relative;
+        }
+
+        .prompt-cube.cube-flash {
+            animation: cubeFlash 180ms ease-out;
+        }
+
+        @keyframes cubeFlash {
+            from { box-shadow: 0 0 0 2px var(--primary-color), inset 0 0 24px var(--primary-shadow); }
+            to { box-shadow: inset 0 0 24px var(--primary-shadow-light); }
+        }
+
+        .cube-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .cube-letter {
+            font-size: 22px;
+            font-weight: bold;
+            color: var(--primary-color);
+            min-width: 28px;
+            flex-shrink: 0;
+        }
+
+        .cube-criterion-input,
+        .cube-prompt-header {
+            flex: 1;
+            min-width: 0;
+            padding: 8px 10px;
+            border: 1px solid var(--primary-color);
+            border-radius: 0;
+            background: var(--background-color);
+            color: var(--primary-color);
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            box-sizing: border-box;
+            user-select: text;
+            -webkit-user-select: text;
+        }
+
+        .cube-criterion-input:focus,
+        .cube-prompt-header:focus,
+        .cube-prompts:focus {
+            outline: none;
+            border-color: var(--primary-hover);
+            box-shadow: 0 0 6px var(--primary-shadow);
+        }
+
+        .cube-nav-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 8px;
+            color: var(--primary-color);
+            font-size: 14px;
+            letter-spacing: 1px;
+        }
+
+        .cube-nav-btn {
+            background: transparent;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            width: 36px;
+            height: 32px;
+            cursor: pointer;
+            padding: 0;
+            flex-shrink: 0;
+        }
+
+        .cube-nav-btn:hover {
+            background: var(--primary-color);
+            color: var(--background-color);
+        }
+
+        .cube-pos {
+            flex: 1;
+            text-align: center;
+            opacity: 0.9;
+        }
+
+        .cube-prompts {
+            flex: 1;
+            width: 100%;
+            min-height: 0;
+            resize: none;
+            border: 1px solid var(--primary-color);
+            background: var(--frame-background);
+            color: var(--frame-color);
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            padding: 12px;
+            box-sizing: border-box;
+            margin-bottom: 8px;
+            user-select: text;
+            -webkit-user-select: text;
+            touch-action: pan-y;
+        }
+
+        .cube-hint {
+            text-align: center;
+            font-size: 13px;
+            color: var(--primary-color);
+            opacity: 0.65;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .cube-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 12px;
+            width: 100%;
+        }
+
+        .cube-actions .cube-delete[hidden] {
+            display: none !important;
+        }
+
+        .cube-actions button {
+            background: var(--background-color);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            font-family: 'VT323', monospace;
+            font-size: 16px;
+            padding: 8px 12px;
+            cursor: pointer;
+            min-height: 40px;
+        }
+
+        .cube-actions button:hover {
+            background: var(--primary-color);
+            color: var(--background-color);
+        }
+
+        .cube-actions .cube-delete {
+            opacity: 0.85;
+        }
+
+        @media (max-width: 768px) {
+            .prompt-cube-wrap {
+                max-width: 100%;
+            }
+
+            .prompt-cube {
+                max-height: min(70vh, 480px);
+                aspect-ratio: auto;
+                min-height: 340px;
+            }
+
+            h1 {
+                margin-top: 8px;
+                padding-right: 48px; /* clear ... button */
+            }
+        }
+    </style>
+    <script src="theme-manager.js"></script>
+    <script>
+        if (typeof applyThemeFromStorage === 'function') applyThemeFromStorage();
+    </script>
+</head>
+<body>
+
+    <div class="main-content">
+    <h1>Prompt Designer</h1>
+    
+    <!-- Activity Title Display -->
+    <div class="activity-title-display" id="activity-title-display" style="display: none;">
+        <span class="activity-label">ACTIVE:</span>
+        <span class="activity-name" id="current-activity-name">Untitled Activity</span>
+    </div>
+    
+    <!-- Mobile-friendly header with main action -->
+    <div class="mobile-header">
+        <div class="start-prompting-section">
+            <button class="start-prompting" onclick="quickTest()">START PROMPTING</button>
+        </div>
+    </div>
+    
+    <!-- Function buttons live in settings panel File menu -->
+
+    <!-- OBJECTIVE -->
+    <div class="objective-section">
+        <div class="objective-label">OBJECTIVE:</div>
+        <input type="text" id="objective-input" class="objective-input" 
+               placeholder="Enter the objective for this prompt set"
+               autocomplete="off">
+    </div>
+
+    <!-- Legacy mobile theme select (kept for JS sync; UI lives in ... menu) -->
+    <div class="mobile-settings" style="display: none !important;" aria-hidden="true">
+        <select id="mobile-theme-select" onchange="changeTheme(this.value)" tabindex="-1">
+            <option value="windows">Windows</option>
+            <option value="macintosh">Macintosh</option>
+            <option value="greenCRT">Green CRT</option>
+            <option value="orangeCRT">Orange CRT</option>
+            <option value="blueCRT">Blue CRT</option>
+            <option value="purpleCRT">Purple CRT</option>
+            <option value="pinkCRT">Pink CRT</option>
+            <option value="black">Black</option>
+        </select>
+    </div>
+    
+    <!-- Make criterion selectable -->
+    <div class="settings-checkbox" style="margin-top: 10px; margin-bottom: 12px; justify-content: center;">
+        <input type="checkbox" id="prompt1-interests-mode" class="settings-checkbox-input">
+        <label for="prompt1-interests-mode" class="settings-checkbox-label">
+            Make criteria selectable
+        </label>
+    </div>
+
+    <!-- Central prompt cube: swipe right = prompts, swipe down = criteria -->
+    <div class="prompt-cube-wrap">
+        <div id="prompt-cube" class="prompt-cube" tabindex="0" aria-label="Prompt editor cube">
+            <div class="cube-row">
+                <span class="cube-letter" id="cube-criterion-letter">A:</span>
+                <input type="text" id="cube-criterion-label" class="cube-criterion-input" placeholder="Enter criterion label" autocomplete="off">
+            </div>
+
+            <div class="cube-nav-row">
+                <button type="button" class="cube-nav-btn" onclick="navigatePromptCube(-1, 0)" aria-label="Previous prompt">‹</button>
+                <span class="cube-pos" id="cube-prompt-pos">PROMPT 1 / 1</span>
+                <button type="button" class="cube-nav-btn" onclick="navigatePromptCube(1, 0)" aria-label="Next prompt">›</button>
+            </div>
+
+            <input type="text" id="cube-prompt-header" class="cube-prompt-header" placeholder="Prompt 1 name" autocomplete="off" style="margin-bottom: 8px; width: 100%;">
+
+            <textarea id="cube-prompts" class="cube-prompts" placeholder="Enter prompts (one per line)"></textarea>
+
+            <div class="cube-hint">swipe → prompts · swipe ↓ criteria</div>
+
+            <div class="cube-nav-row" style="margin-bottom: 0;">
+                <button type="button" class="cube-nav-btn" onclick="navigatePromptCube(0, -1)" aria-label="Previous criterion">▲</button>
+                <span class="cube-pos" id="cube-criterion-pos">CRITERION A / 1</span>
+                <button type="button" class="cube-nav-btn" onclick="navigatePromptCube(0, 1)" aria-label="Next criterion">▼</button>
+            </div>
+        </div>
+
+        <div class="cube-actions">
+            <button type="button" class="cube-add-prompt" onclick="cubeAddPrompt()">+ Prompt</button>
+            <button type="button" class="cube-add-category" onclick="cubeAddCategory()">+ Category</button>
+            <button type="button" class="cube-delete" id="cube-delete-prompt" onclick="cubeDeletePrompt()" hidden>Delete Prompt</button>
+            <button type="button" class="cube-delete" id="cube-delete-criterion" onclick="cubeDeleteCriterion()" hidden>Delete Category</button>
+        </div>
+    </div>
+
+    <!-- Hidden legacy add buttons (kept for scripts that query them) -->
+    <div class="add-buttons-container" aria-hidden="true">
+        <button class="add-prompt-button" onclick="addNewPrompt()" type="button">Add Prompt</button>
+        <button class="add-category-button" onclick="addNewCategory()" type="button">Add Category</button>
+    </div>
+    
+        <div class="prompt-grid" aria-hidden="true">
+            <!-- Empty placeholder for first column (replaces "Criterion" label) -->
+            <div class="grid-placeholder header-placeholder"></div>
+            <!-- Prompt headers -->
+        <div class="prompt-headers" id="prompt-headers">
+            <!-- Prompt headers will be added here -->
+    </div>
+    
+            <!-- Category Rows (filled by JavaScript) -->
+    <div id="categories-container">
+        <!-- Category rows will be added here -->
+    </div>
+    
+            <!-- Footer Row - Counts (removed for cleaner layout) -->
+    </div>
+
+    </div>
+
+    <!-- Overflow menu (...) top-right -->
+    <button type="button" id="settings-panel-toggle" class="settings-panel-toggle" aria-label="Menu" aria-haspopup="true" aria-expanded="false">...</button>
+    
+    <!-- Mobile Floating Action Button -->
+    <div class="mobile-fab" onclick="quickTest()">
+        <span class="fab-icon">▶</span>
+        <span class="fab-label">START</span>
+    </div>
+
+    <!-- Settings Control Panel -->
+    <div id="settings-panel" class="settings-panel">
+        <!-- Activity Status Indicator removed -->
+        
+        <!-- Theme menu: custom themed dropdown (closed label "Theme", no "Theme:" label) -->
+        <div class="theme-picker theme-menu-picker themed-dropdown" id="theme-menu-dropdown">
+            <button type="button" class="themed-dropdown-trigger" id="theme-menu-trigger" aria-label="Theme" aria-haspopup="listbox" aria-expanded="false">Theme</button>
+            <ul class="themed-dropdown-menu" id="theme-menu-list" role="listbox" aria-label="Theme options">
+                <li role="option" data-value="windows" tabindex="-1">Windows</li>
+                <li role="option" data-value="macintosh" tabindex="-1">Macintosh</li>
+                <li role="option" data-value="greenCRT" tabindex="-1">Green CRT</li>
+                <li role="option" data-value="orangeCRT" tabindex="-1">Orange CRT</li>
+                <li role="option" data-value="blueCRT" tabindex="-1">Blue CRT</li>
+                <li role="option" data-value="purpleCRT" tabindex="-1">Purple CRT</li>
+                <li role="option" data-value="pinkCRT" tabindex="-1">Pink CRT</li>
+                <li role="option" data-value="black" tabindex="-1">Black</li>
+            </ul>
+            <select id="theme-select" class="themed-dropdown-native-sync" aria-hidden="true" tabindex="-1">
+                <option value="windows">Windows</option>
+                <option value="macintosh">Macintosh</option>
+                <option value="greenCRT">Green CRT</option>
+                <option value="orangeCRT">Orange CRT</option>
+                <option value="blueCRT">Blue CRT</option>
+                <option value="purpleCRT">Purple CRT</option>
+                <option value="pinkCRT">Pink CRT</option>
+                <option value="black">Black</option>
+            </select>
+        </div>
+        
+        <!-- Divider line -->
+        <div class="settings-divider"></div>
+
+        <!-- File menu: custom themed dropdown (native select popup cannot match CRT theme) -->
+        <div class="theme-picker file-menu-picker themed-dropdown" id="file-menu-dropdown">
+            <button type="button" class="themed-dropdown-trigger" id="file-menu-trigger" aria-label="File" aria-haspopup="listbox" aria-expanded="false">File</button>
+            <ul class="themed-dropdown-menu" id="file-menu-list" role="listbox" aria-label="File actions">
+                <li role="option" data-value="new" tabindex="-1">New</li>
+                <li role="option" data-value="save" id="file-menu-save" class="disabled" aria-disabled="true" tabindex="-1">Save</li>
+                <li role="option" data-value="save-as" id="file-menu-save-as" tabindex="-1">Save As</li>
+                <li role="option" data-value="share" tabindex="-1">Share</li>
+                <li role="option" data-value="load" tabindex="-1">Load</li>
+                <li role="option" data-value="restore" id="file-menu-restore" class="disabled" aria-disabled="true" tabindex="-1">Restore Last Run</li>
+            </ul>
+        </div>
+        
+        <!-- Divider line -->
+        <div class="settings-divider"></div>
+        
+        <!-- Help Button -->
+        <button class="settings-help-button" onclick="showInstructionsPopup()" style="
+            width: 100%;
+            padding: 8px;
+            height: 36px;
+            box-sizing: border-box;
+            margin: 10px 0;
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            font-weight: bold;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        ">Help & Instructions</button>
+        
+        <!-- Divider line -->
+        <div class="settings-divider"></div>
+        
+        <div class="settings-title">Activity History</div>
+        
+        <div class="settings-list" id="settings-list">
+            <!-- Settings will be populated here -->
+        </div>
+        
+        <div class="settings-divider"></div>
+        
+        <div class="settings-actions">
+            <!-- Download/Upload buttons moved to main settings section -->
+        </div>
+    </div>
+
+    <script src="editor-ui-manager.js"></script>
+    <script src="editor-prompt-cube.js"></script>
+    <script src="editor-data-manager.js"></script>
+    <script src="editor-settings-manager.js"></script>
+    <script src="editor-main.js"></script>
+</body>
+</html>

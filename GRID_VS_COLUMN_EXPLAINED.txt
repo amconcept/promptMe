@@ -1,0 +1,95 @@
+═══════════════════════════════════════════════════════
+GRID SETTINGS (1) vs COLUMN SETTINGS (2)
+═══════════════════════════════════════════════════════
+
+THE CRITICAL DIFFERENCE:
+─────────────────────────────────────────────────────────
+
+1️⃣  GRID SETTINGS (Line 341) - DEFINITIVE WIDTH
+    ════════════════════════════════════════════════
+    
+    grid-template-columns: 200px 200px 200px 200px 200px;
+    
+    ✅ THIS IS THE MASTER CONTROL
+    ✅ Defines the ACTUAL column widths in the grid
+    ✅ Overrides everything else
+    ✅ Set this FIRST, it always wins
+    
+    What it does:
+    - Creates 5 columns of exactly 200px each
+    - Defines the overall grid structure
+    - Controls the layout of the entire page
+    
+    
+2️⃣  COLUMN SETTINGS (Lines 357-480) - FALLBACK ONLY
+    ════════════════════════════════════════════════
+    
+    .prompt-column {
+        min-width: 200px;
+        max-width: 200px;
+    }
+    
+    .criterion-label-container {
+        min-width: 200px;
+        max-width: 200px;
+    }
+    
+    .textarea-container {
+        min-width: 200px;
+        max-width: 200px;
+    }
+    
+    ⚠️  THESE ARE REDUNDANT (but kept for compatibility)
+    ⚠️  Grid settings (1) already control these
+    ⚠️  These only matter if grid-template-columns is removed
+    
+═══════════════════════════════════════════════════════
+PRIORITY HIERARCHY:
+═══════════════════════════════════════════════════════
+
+FIRST:  grid-template-columns ← Always wins
+SECOND: min-width / max-width  ← Only if grid removed
+
+
+═══════════════════════════════════════════════════════
+WHICH ONE TO EDIT?
+═══════════════════════════════════════════════════════
+
+✅ EDIT THIS (Line 341):
+   grid-template-columns: 200px 200px 200px 200px 200px;
+   
+   Change to: 250px 250px 250px 250px 250px
+   Result: All columns become 250px
+
+
+⛔ IGNORE THESE (they're redundant):
+   .prompt-column min-width/max-width
+   .criterion-label-container min-width/max-width
+   .textarea-container min-width/max-width
+   
+   (Keep them for compatibility, but they don't do anything)
+   
+
+═══════════════════════════════════════════════════════
+EXAMPLE: CHANGING COLUMN WIDTHS
+═══════════════════════════════════════════════════════
+
+❌ WRONG WAY (editing individual classes):
+   .prompt-column { max-width: 300px; }
+   → Does nothing, grid-template-columns overrides it
+   
+✅ RIGHT WAY (editing grid-template-columns):
+   grid-template-columns: 300px 300px 300px 300px 300px;
+   → Changes all columns to 300px immediately
+
+
+═══════════════════════════════════════════════════════
+RECOMMENDATION:
+═══════════════════════════════════════════════════════
+
+✅ Edit: Line 341 (grid-template-columns)
+❌ Ignore: Lines 357-480 (min-width/max-width)
+
+These are kept for backwards compatibility but don't actually
+control anything when the grid system is active.
+═══════════════════════════════════════════════════════

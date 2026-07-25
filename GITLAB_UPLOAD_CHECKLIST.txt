@@ -1,0 +1,66 @@
+GITLAB UPLOAD CHECKLIST - Required Files for PromptMe App
+==========================================================
+
+CRITICAL FILES (Must be uploaded for app to work):
+---------------------------------------------------
+
+For sketch.html (Prompting Interface):
+1. sketch.html (main HTML file)
+2. sketch-refactored.js (main orchestrator - keyboard events, setup)
+3. animation-manager.js (CRITICAL - animations and sounds)
+4. ui-manager.js (UI elements, control panel)
+5. data-manager.js (data persistence)
+6. student-manager.js (student navigation)
+7. prompt-generator.js (prompt generation logic)
+
+For editor.html (Editor Interface):
+1. editor.html (main HTML file)
+2. editor-main.js (main orchestrator)
+3. editor-ui-manager.js (UI elements)
+4. editor-data-manager.js (data persistence)
+5. editor-settings-manager.js (activity management)
+6. theme-manager.js (theme switching)
+
+Shared Files:
+1. Sample-activity-2025-10-27.csv (sample activity data)
+2. index.html (landing page)
+
+Assets Folder:
+- All font files (Helvetica variants)
+- Any SVG/PNG files (if used)
+
+EXTERNAL DEPENDENCIES (loaded from CDN):
+----------------------------------------
+- p5.js library: https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js
+- VT323 font: https://fonts.googleapis.com/css2?family=VT323&display=swap
+
+VERIFICATION STEPS:
+-------------------
+1. Open browser console (F12) on GitLab-hosted page
+2. Check for 404 errors (missing files)
+3. Check for JavaScript errors
+4. Verify p5.js loads: Check console for "p5.js" messages
+5. Verify animation-manager.js loads: Check if window.playSound exists
+
+COMMON ISSUES:
+--------------
+- Case sensitivity: GitLab is case-sensitive, ensure exact filenames match
+- File paths: All files should be in root directory (same level as HTML files)
+- Script order: Must load in order shown in HTML (dependencies first)
+- CORS issues: If hosting on GitLab Pages, ensure proper CORS headers
+
+SCRIPT LOADING ORDER (sketch.html):
+-----------------------------------
+1. p5.js (CDN)
+2. ui-manager.js
+3. animation-manager.js (CRITICAL - exports window.playSound)
+4. data-manager.js
+5. student-manager.js
+6. prompt-generator.js
+7. sketch-refactored.js (last - uses all above)
+
+If animations/keyboard not working, most likely missing:
+- animation-manager.js (animations won't work)
+- sketch-refactored.js (keyboard events won't work)
+- p5.js CDN blocked (nothing will work)
+
