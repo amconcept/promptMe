@@ -593,44 +593,6 @@ function importSettings() {
         document.body.removeChild(fileInput);
     }
 
-// Download settings as JSON
-function downloadSettings() {
-    const savedData = localStorage.getItem('promptCategories');
-    if (savedData) {
-        const blob = new Blob([savedData], {
-            type: 'application/json'
-        });
-        
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'prompt_settings.json';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }
-}
-
-// Handle file upload
-function handleFileUpload(event) {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const settings = JSON.parse(e.target.result);
-                localStorage.setItem('promptCategories', JSON.stringify(settings));
-                loadSavedData(); // Refresh the interface with new data
-                alert('Settings uploaded successfully!');
-            } catch (error) {
-                alert('Error parsing settings file: ' + error.message);
-            }
-        };
-        reader.readAsText(file);
-    }
-}
-
 // Make functions globally available
 window.saveChanges = saveChanges;
 window.autoSaveToLocalStorage = autoSaveToLocalStorage;
@@ -638,5 +600,3 @@ window.copyWorkingReportToActivityReports = copyWorkingReportToActivityReports;
 window.loadSavedData = loadSavedData;
 window.exportSettings = exportSettings;
 window.importSettings = importSettings;
-window.downloadSettings = downloadSettings;
-window.handleFileUpload = handleFileUpload;

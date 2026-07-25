@@ -553,32 +553,6 @@ function updateColumnCounts() {
     });
 }
 
-// Create and position add buttons
-function createAddButtons() {
-    // Remove any floating add buttons that might exist from old code
-    const existingFloatingPrompt = document.querySelector('.add-prompt-button');
-    const existingFloatingCategory = document.querySelector('.add-category-button');
-    
-    // Only remove if they're floating (not in the container)
-    if (existingFloatingPrompt && !existingFloatingPrompt.closest('.add-buttons-container')) {
-        existingFloatingPrompt.remove();
-        console.log('DEBUG: Removed existing floating add prompt button');
-    }
-    if (existingFloatingCategory && !existingFloatingCategory.closest('.add-buttons-container')) {
-        existingFloatingCategory.remove();
-        console.log('DEBUG: Removed existing floating add category button');
-    }
-    
-    // The buttons are now static in the HTML, so we don't need to create them
-    console.log('DEBUG: Add buttons are now static in HTML - no need to create floating buttons');
-}
-
-// Update add button positions when prompts/categories change
-function updateAddButtonPositions() {
-    // No longer needed since buttons are static in HTML
-    console.log('DEBUG: Add buttons are static - no position updates needed');
-}
-
 // Initialize default state
 function initializeDefaultState() {
     // Clear existing state
@@ -733,20 +707,6 @@ function initializeDefaultContent() {
     console.log('DEBUG: initializeDefaultContent completed successfully');
 }
 
-// Toggle prompting tips dropdown
-function togglePromptingTips() {
-    const tipsList = document.getElementById('prompting-tips-list');
-    const toggle = document.getElementById('tips-toggle');
-    
-    if (tipsList.style.display === 'none') {
-        tipsList.style.display = 'block';
-        toggle.textContent = '▲';
-    } else {
-        tipsList.style.display = 'none';
-        toggle.textContent = '▼';
-    }
-}
-
 // Show instructions popup
 function showInstructionsPopup() {
     // Play click sound
@@ -890,195 +850,6 @@ function showInstructionsPopup() {
                 <li style="margin: 8px 0;"><strong>SHARE</strong> : Export activity as CSV file</li>
                 <li style="margin: 8px 0;"><strong>LOAD</strong> : Import activity from CSV file</li>
             </ul>
-        </div>
-    `;
-    
-    // Create close button
-    const closeButton = document.createElement('button');
-    closeButton.textContent = 'CLOSE';
-    closeButton.style.cssText = `
-        margin: 20px;
-        padding: 12px 24px;
-        background-color: var(--background-color);
-        color: var(--primary-color);
-        border: 2px solid var(--primary-color);
-        border-radius: 4px;
-        cursor: pointer;
-        font-family: 'VT323', monospace;
-        font-size: 18px;
-        font-weight: bold;
-        text-transform: uppercase;
-        transition: all 0.3s ease;
-        align-self: center;
-    `;
-    closeButton.onmouseover = () => {
-        closeButton.style.backgroundColor = 'var(--primary-color)';
-        closeButton.style.color = 'var(--background-color)';
-    };
-    closeButton.onmouseout = () => {
-        closeButton.style.backgroundColor = 'var(--background-color)';
-        closeButton.style.color = 'var(--primary-color)';
-    };
-    closeButton.onclick = () => {
-        playClickSound();
-        document.body.removeChild(overlay);
-        document.head.removeChild(style);
-    };
-    
-    // Close on overlay click (outside dialog)
-    overlay.onclick = (e) => {
-        if (e.target === overlay) {
-            document.body.removeChild(overlay);
-            document.head.removeChild(style);
-        }
-    };
-    
-    // Assemble dialog
-    dialog.appendChild(header);
-    dialog.appendChild(content);
-    dialog.appendChild(closeButton);
-    overlay.appendChild(dialog);
-    
-    // Add to page
-    document.body.appendChild(overlay);
-}
-
-// Show copyright popup
-function showCopyrightPopup() {
-    // Play click sound
-    playClickSound();
-    // Remove any existing popup
-    const existingPopup = document.getElementById('copyright-popup');
-    if (existingPopup) {
-        existingPopup.remove();
-    }
-    
-    // Create overlay
-    const overlay = document.createElement('div');
-    overlay.id = 'copyright-popup';
-    overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.85);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 10000;
-        font-family: 'VT323', monospace;
-    `;
-    
-    // Create dialog
-    const dialog = document.createElement('div');
-    dialog.style.cssText = `
-        background-color: var(--background-color);
-        border: 3px solid var(--primary-color);
-        border-radius: 8px;
-        padding: 0;
-        color: var(--primary-color);
-        max-width: 700px;
-        max-height: 80vh;
-        width: 90%;
-        box-shadow: 0 0 30px var(--primary-shadow);
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    `;
-    
-    // Create header
-    const header = document.createElement('div');
-    header.style.cssText = `
-        padding: 20px;
-        border-bottom: 2px solid var(--primary-color);
-        font-size: 24px;
-        font-weight: bold;
-        text-align: center;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        color: var(--primary-color);
-    `;
-    header.textContent = 'Copyright & Attribution';
-    
-    // Create scrollable content area
-    const content = document.createElement('div');
-    content.style.cssText = `
-        padding: 20px;
-        overflow-y: auto;
-        overflow-x: hidden;
-        flex: 1;
-        font-size: 16px;
-        line-height: 1.8;
-    `;
-    
-    // Add scrollbar styling
-    const style = document.createElement('style');
-    style.textContent = `
-        #copyright-popup-content::-webkit-scrollbar {
-            width: 10px;
-        }
-        #copyright-popup-content::-webkit-scrollbar-track {
-            background: var(--background-color);
-        }
-        #copyright-popup-content::-webkit-scrollbar-thumb {
-            background: var(--primary-color);
-            border-radius: 5px;
-        }
-        #copyright-popup-content::-webkit-scrollbar-thumb:hover {
-            background: var(--primary-hover);
-        }
-    `;
-    content.id = 'copyright-popup-content';
-    document.head.appendChild(style);
-    
-    // Add content
-    content.innerHTML = `
-        <div style="margin-bottom: 25px;">
-            <strong style="color: var(--primary-hover); font-size: 18px;">PromptMe App</strong>
-            <p style="margin-top: 10px;">Copyright © 2025 by <strong>Alec Mathewson</strong></p>
-            <p>This work is licensed under a <a href="http://creativecommons.org/licenses/by/4.0/" target="_blank" style="color: var(--primary-color);">Creative Commons Attribution 4.0 International License</a>.</p>
-            <p style="margin-top: 10px;">You are free to share and adapt this work, with appropriate attribution.</p>
-        </div>
-        
-        <div style="margin-bottom: 25px;">
-            <strong style="color: var(--primary-hover); font-size: 18px;">Third-Party Components</strong>
-            
-            <div style="margin: 15px 0; padding: 15px; background-color: rgba(76, 175, 80, 0.1); border-left: 4px solid var(--primary-color);">
-                <strong>VT323 Font (Retro Terminal Font)</strong><br>
-                Source: Google Fonts | Designer: Peter Hull<br>
-                License: SIL Open Font License (OFL)<br>
-                <a href="https://fonts.google.com/specimen/VT323" target="_blank" style="color: var(--primary-color);">https://fonts.google.com/specimen/VT323</a><br><br>
-                <em>Provides the distinctive retro computer terminal aesthetic throughout the application.</em>
-            </div>
-            
-            <div style="margin: 15px 0; padding: 15px; background-color: rgba(76, 175, 80, 0.1); border-left: 4px solid var(--primary-color);">
-                <strong>p5.js Library (Animation & Graphics)</strong><br>
-                Source: p5.js Foundation | Version: 1.4.0<br>
-                License: LGPL 2.1<br>
-                <a href="https://p5js.org/" target="_blank" style="color: var(--primary-color);">https://p5js.org/</a><br><br>
-                Attribution: This application uses p5.js, a JavaScript library for creative coding, developed by the p5.js Foundation and community.<br><br>
-                <em>The scrambling and revealing animations in the prompting interface are powered by p5.js.</em>
-            </div>
-            
-            <div style="margin: 15px 0; padding: 15px; background-color: rgba(76, 175, 80, 0.1); border-left: 4px solid var(--primary-color);">
-                <strong>Helvetica Font Family</strong><br>
-                Source: Adobe Systems / Linotype<br>
-                License: Proprietary (Commercial License Required)<br><br>
-                <em>Note: Helvetica fonts in assets folder are proprietary. Commercial use requires proper licensing.</em>
-            </div>
-        </div>
-        
-        <div style="margin-bottom: 25px;">
-            <strong style="color: var(--primary-hover); font-size: 18px;">Retro Design & Animation Style</strong>
-            <p style="margin-top: 10px;">The retro terminal aesthetic, including:</p>
-            <ul style="margin: 10px 0; padding-left: 25px;">
-                <li>Terminal-style green-on-black color scheme</li>
-                <li>Scrambling and revealing text animations</li>
-                <li>Monospace font styling (VT323)</li>
-                <li>Retro computer interface design elements</li>
-            </ul>
-            <p style="margin-top: 10px;">These design elements are part of the PromptMe App by Alec Mathewson and are licensed under Creative Commons Attribution 4.0 International License.</p>
         </div>
     `;
     
@@ -1285,9 +1056,7 @@ window.deletePromptAt = deletePromptAt;
 window.deleteCategory = deleteCategory;
 window.deleteCategoryAt = deleteCategoryAt;
 window.closeSettingsPanel = closeSettingsPanel;
-window.togglePromptingTips = togglePromptingTips;
 window.showInstructionsPopup = showInstructionsPopup;
-window.showCopyrightPopup = showCopyrightPopup;
 window.toggleSettingsPanel = toggleSettingsPanel;
 window.updateSettingsToggleIcon = updateSettingsToggleIcon;
 window.updateGridColumns = updateGridColumns;
@@ -1298,7 +1067,6 @@ window.clearAllFields = clearAllFields;
 window.updateCategoryRows = updateCategoryRows;
 window.updatePromptCounts = updatePromptCounts;
 window.updateColumnCounts = updateColumnCounts;
-window.createAddButtons = createAddButtons;
 window.initializeDefaultState = initializeDefaultState;
 window.autoResizeTextareasInRows = autoResizeTextareasInRows;
 

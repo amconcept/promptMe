@@ -674,15 +674,6 @@ function hexToRgb(hex) {
     return { r, g, b };
 }
 
-// Helper function to shuffle arrays
-function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
-}
-
 // Screenshot function
 function takeScreenshot() {
     // IMPORTANT: This function should NOT clear prompts - they should remain visible
@@ -777,37 +768,6 @@ function showThemedMessage(message) {
         popup.style.animation = 'sketchMessageFadeOut 0.3s ease-out';
         setTimeout(() => popup.remove(), 300);
     }, 2500);
-}
-
-let nameInputErrorInterval = null;
-function highlightNameInputError() {
-    const inputEl = (window.getResultNameFieldElement && window.getResultNameFieldElement()) || null;
-    if (!inputEl) return;
-
-    if (nameInputErrorInterval) {
-        clearInterval(nameInputErrorInterval);
-        nameInputErrorInterval = null;
-    }
-
-    const computed = window.getComputedStyle(inputEl);
-    const defaultBorder = `${computed.borderWidth} ${computed.borderStyle} ${computed.borderColor}`;
-    const thickBlinkBorder = `3px solid var(--primary-color)`;
-
-    inputEl.style.transition = 'border 0.16s ease';
-    inputEl.focus();
-
-    let toggles = 0;
-    const maxToggles = 6; // ON/OFF x3 blinks
-    nameInputErrorInterval = setInterval(() => {
-        const isOn = toggles % 2 === 0;
-        inputEl.style.border = isOn ? thickBlinkBorder : defaultBorder;
-        toggles += 1;
-        if (toggles >= maxToggles) {
-            clearInterval(nameInputErrorInterval);
-            nameInputErrorInterval = null;
-            inputEl.style.border = defaultBorder;
-        }
-    }, 180);
 }
 
 function getAutoRunName() {

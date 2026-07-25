@@ -260,11 +260,6 @@ Under the following terms:
 - Used for creative coding, graphics rendering, and animation effects in the prompting interface
 - Attribution: This application uses p5.js, a JavaScript library for creative coding, developed by the p5.js Foundation and community. The scrambling and revealing animations are powered by p5.js.
 
-**Helvetica Font Family**
-- Source: Adobe Systems / Linotype
-- License: Proprietary (Commercial License Required)
-- Note: Helvetica fonts in the assets folder are proprietary. Commercial use requires proper licensing.
-
 ### Application Copyright
 
 PromptMe App © 2025 by Alec Mathewson
