@@ -1077,6 +1077,104 @@ function closeSettingsPanel() {
 window.playClickSound = playClickSound;
 window.initEditorAudio = initEditorAudio;
 
+/** Phone/cube: objective is one line the width of the window — no more chars past the edge */
+function isPhoneObjectiveLayout() {
+    return document.body.classList.contains('editor-cube-layout')
+        || (typeof window.matchMedia === 'function'
+            && (window.matchMedia('(max-width: 640px)').matches
+                || window.matchMedia('(max-width: 900px) and (max-aspect-ratio: 3/4)').matches));
+}
+
+/** True if text fits on one line inside the objective input (uses real rendered font). */
+function objectiveTextFits(input, text) {
+    const prev = input.value;
+    const selStart = input.selectionStart;
+    const selEnd = input.selectionEnd;
+    input.value = text == null ? '' : String(text);
+    // +1 tolerates subpixel scrollWidth quirks
+    const fits = input.scrollWidth <= input.clientWidth + 1;
+    input.value = prev;
+    if (typeof selStart === 'number' && typeof selEnd === 'number') {
+        try { input.setSelectionRange(selStart, selEnd); } catch (e) { /* ignore */ }
+    }
+    return fits;
+}
+
+function fitObjectiveToWidth(value, input) {
+    if (!input.clientWidth) return value;
+    let v = value || '';
+    if (objectiveTextFits(input, v)) return v;
+    let lo = 0;
+    let hi = v.length;
+    while (lo < hi) {
+        const mid = Math.ceil((lo + hi) / 2);
+        if (objectiveTextFits(input, v.slice(0, mid))) lo = mid;
+        else hi = mid - 1;
+    }
+    return v.slice(0, lo);
+}
+
+function enforceObjectiveWidthLimit() {
+    const input = document.getElementById('objective-input');
+    if (!input) return;
+    if (!isPhoneObjectiveLayout()) return;
+    const fitted = fitObjectiveToWidth(input.value, input);
+    if (fitted !== input.value) {
+        const start = input.selectionStart;
+        input.value = fitted;
+        if (typeof start === 'number') {
+            const pos = Math.min(start, fitted.length);
+            try { input.setSelectionRange(pos, pos); } catch (e) { /* ignore */ }
+        }
+    }
+}
+
+function bindObjectiveWidthLimit() {
+    const input = document.getElementById('objective-input');
+    if (!input || input.dataset.widthLimitBound === '1') return;
+    input.dataset.widthLimitBound = '1';
+
+    input.addEventListener('beforeinput', (e) => {
+        if (!isPhoneObjectiveLayout()) return;
+        if (e.inputType && e.inputType.startsWith('delete')) return;
+        const data = e.data;
+        if (data == null) return;
+        const start = input.selectionStart ?? input.value.length;
+        const end = input.selectionEnd ?? start;
+        const next = input.value.slice(0, start) + data + input.value.slice(end);
+        if (!objectiveTextFits(input, next)) {
+            e.preventDefault();
+        }
+    });
+
+    input.addEventListener('keydown', (e) => {
+        if (!isPhoneObjectiveLayout()) return;
+        // Block printable keys that would overflow (covers browsers weak on beforeinput)
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        if (e.key.length !== 1) return;
+        const start = input.selectionStart ?? input.value.length;
+        const end = input.selectionEnd ?? start;
+        const next = input.value.slice(0, start) + e.key + input.value.slice(end);
+        if (!objectiveTextFits(input, next)) {
+            e.preventDefault();
+        }
+    });
+
+    input.addEventListener('input', () => {
+        enforceObjectiveWidthLimit();
+    });
+
+    input.addEventListener('paste', () => {
+        setTimeout(enforceObjectiveWidthLimit, 0);
+    });
+
+    window.addEventListener('resize', () => {
+        enforceObjectiveWidthLimit();
+    });
+
+    setTimeout(enforceObjectiveWidthLimit, 0);
+}
+
 // Make functions globally available
 window.addNewPrompt = addNewPrompt;
 window.addNewCategory = addNewCategory;
@@ -1098,12 +1196,18 @@ window.updatePromptCounts = updatePromptCounts;
 window.updateColumnCounts = updateColumnCounts;
 window.initializeDefaultState = initializeDefaultState;
 window.autoResizeTextareasInRows = autoResizeTextareasInRows;
+window.enforceObjectiveWidthLimit = enforceObjectiveWidthLimit;
+window.bindObjectiveWidthLimit = bindObjectiveWidthLimit;
 
 // Set toggle icon on load (same as sketch: button text, so it renders correctly)
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', updateSettingsToggleIcon);
-} else {
+function onEditorUiReady() {
     updateSettingsToggleIcon();
+    bindObjectiveWidthLimit();
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', onEditorUiReady);
+} else {
+    onEditorUiReady();
 }
 
 // Attach event listeners to all existing textareas

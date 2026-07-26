@@ -358,6 +358,7 @@ function populateDefaultActivity(data) {
     const objectiveInput = document.getElementById('objective-input');
     if (objectiveInput) {
         objectiveInput.value = data.objective || '';
+        if (window.enforceObjectiveWidthLimit) setTimeout(window.enforceObjectiveWidthLimit, 0);
     }
     
     // Criteria-selectable UI removed — keep off until feature is ready
@@ -644,6 +645,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (objectiveInput && window.autoSaveToLocalStorage) {
         objectiveInput.addEventListener('input', window.autoSaveToLocalStorage);
     }
+    if (window.bindObjectiveWidthLimit) window.bindObjectiveWidthLimit();
+    if (window.enforceObjectiveWidthLimit) window.enforceObjectiveWidthLimit();
 
     // When editor tab becomes visible again, refresh UI from working state (promptCategories)
     document.addEventListener('visibilitychange', () => {

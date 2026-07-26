@@ -126,6 +126,7 @@ function loadSavedData() {
             const objectiveInput = document.getElementById('objective-input');
             if (objectiveInput) {
                 objectiveInput.value = data.objective || '';
+                if (window.enforceObjectiveWidthLimit) setTimeout(window.enforceObjectiveWidthLimit, 0);
             }
 
             // Criteria-selectable UI removed — keep off until feature is ready
@@ -479,6 +480,7 @@ function importSettings() {
                         const objectiveInput = document.getElementById('objective-input');
                         if (objectiveInput) {
                             objectiveInput.value = objective;
+                            if (window.enforceObjectiveWidthLimit) setTimeout(window.enforceObjectiveWidthLimit, 0);
                         }
                         
                         // Clear existing prompts and categories

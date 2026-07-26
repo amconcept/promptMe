@@ -1479,16 +1479,23 @@
 
             .activity-title-display {
                 margin-top: 8px;
-                padding-right: 48px;
+                /* Keep ACTIVE box clear of fixed ... menu (not under it) */
+                margin-right: 60px;
+                padding-right: 12px;
+                box-sizing: border-box;
             }
 
-            /* A1-led objective: not a boxed field */
+            /* A1-led objective: full window width, single line */
             .objective-section {
+                flex-direction: column;
+                align-items: stretch;
                 justify-content: flex-start;
-                align-items: baseline;
-                gap: 8px;
-                margin: 8px 4px 16px;
-                padding-right: 48px; /* clear ... */
+                gap: 6px;
+                margin: 8px 0 16px;
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
+                padding: 0 4px;
             }
 
             .objective-label {
@@ -1499,8 +1506,14 @@
                 border: none;
                 box-shadow: none;
                 padding: 0;
-                max-width: none;
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
+                box-sizing: border-box;
                 background: transparent;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: clip;
             }
 
             .objective-input:focus {
@@ -1556,15 +1569,21 @@
 
         body.editor-cube-layout .activity-title-display {
             margin-top: 8px;
-            padding-right: 48px;
+            margin-right: 60px;
+            padding-right: 12px;
+            box-sizing: border-box;
         }
 
         body.editor-cube-layout .objective-section {
+            flex-direction: column;
+            align-items: stretch;
             justify-content: flex-start;
-            align-items: baseline;
-            gap: 8px;
-            margin: 8px 4px 16px;
-            padding-right: 48px;
+            gap: 6px;
+            margin: 8px 0 16px;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            padding: 0 4px;
         }
 
         body.editor-cube-layout .objective-label {
@@ -1575,8 +1594,14 @@
             border: none;
             box-shadow: none;
             padding: 0;
-            max-width: none;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
             background: transparent;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: clip;
         }
 
         body.editor-cube-layout .objective-input:focus {
@@ -1590,6 +1615,10 @@
 
         /* Phone cube shell (wireframe layout) */
         .prompt-cube {
+            --cube-rail-w: 44px;
+            --cube-rail-gap: 10px;
+            --cube-badge: 40px;
+            --cube-ctrl: 36px;
             width: 100%;
             border: none;
             background: transparent;
@@ -1605,21 +1634,32 @@
             gap: 10px;
         }
 
+        /* Prompt # row — centered over label + prompt boxes (not over the rail) */
+        .cube-prompt-nav-row {
+            display: grid;
+            grid-template-columns: var(--cube-rail-w) 1fr;
+            column-gap: var(--cube-rail-gap);
+            width: 100%;
+            align-items: center;
+        }
+
         .cube-prompt-nav {
             display: grid;
-            grid-template-columns: 36px 40px 36px;
+            grid-template-columns: var(--cube-ctrl) var(--cube-badge) var(--cube-ctrl);
             align-items: center;
             justify-content: center;
+            justify-items: center;
             column-gap: 12px;
             color: var(--primary-color);
+            width: 100%;
         }
 
         /* Right slot holds › or + without shifting the number badge */
         .cube-prompt-nav-end,
         .cube-rail-end {
             position: relative;
-            width: 36px;
-            height: 36px;
+            width: var(--cube-ctrl);
+            height: var(--cube-ctrl);
         }
 
         .cube-prompt-nav-end > .cube-nav-btn,
@@ -1630,8 +1670,8 @@
 
         .cube-prompt-badge,
         .cube-cat-badge {
-            width: 40px;
-            height: 40px;
+            width: var(--cube-badge);
+            height: var(--cube-badge);
             border: 2px solid var(--primary-color);
             border-radius: 50%;
             display: flex;
@@ -1642,33 +1682,48 @@
             color: var(--primary-color);
             font-weight: bold;
             justify-self: center;
+            line-height: 1;
+            box-sizing: border-box;
+            /* VT323 sits high — nudge for true optical center */
+            padding-top: 3px;
         }
 
         .cube-cat-badge {
             width: 44px;
             height: 44px;
             font-size: 22px;
+            padding-top: 4px;
         }
 
-        /* Body row: fixed rail + editor — letter stays aligned to prompts box */
-        .cube-body-row {
-            display: grid;
-            grid-template-columns: 48px 1fr;
-            column-gap: 10px;
-            align-items: center;
+        /* Label full-width under nav; rail + prompt box share a row */
+        .cube-body {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
             width: 100%;
         }
 
+        .cube-prompts-row {
+            display: grid;
+            grid-template-columns: var(--cube-rail-w) 1fr;
+            column-gap: var(--cube-rail-gap);
+            align-items: center; /* category badge / chevrons middle of prompt box */
+            width: 100%;
+        }
+
+        /* Rail: chevron / badge / chevron|+ — all share badge center axis */
         .cube-rail {
             display: grid;
-            grid-template-rows: 36px 44px 36px;
+            grid-template-rows: var(--cube-ctrl) 44px var(--cube-ctrl);
             align-items: center;
             justify-items: center;
             row-gap: 8px;
             flex-shrink: 0;
+            width: var(--cube-rail-w);
         }
 
-        /* Chevrons / + : no circles — badges keep circles */
+        /* Chevrons / + : same glyph family as prompt ‹ › (vertical via rotate) */
         .cube-rail-btn,
         .cube-nav-btn {
             background: transparent;
@@ -1676,8 +1731,8 @@
             color: var(--primary-color);
             font-family: 'VT323', monospace;
             font-size: 28px;
-            width: 36px;
-            height: 36px;
+            width: var(--cube-ctrl);
+            height: var(--cube-ctrl);
             border-radius: 0;
             cursor: pointer;
             padding: 0;
@@ -1686,6 +1741,15 @@
             justify-content: center;
             line-height: 1;
             box-shadow: none;
+        }
+
+        /* ‹ points left; rotate so tip faces up / down (matches prompt ‹ › weight) */
+        .cube-rail-btn.cube-chevron-up {
+            transform: rotate(90deg);
+        }
+
+        .cube-rail-btn.cube-chevron-down {
+            transform: rotate(-90deg);
         }
 
         .cube-rail-btn:hover,
@@ -1706,13 +1770,6 @@
             display: none !important;
         }
 
-        .cube-body {
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
         .prompt-cube.cube-flash .cube-prompts {
             box-shadow: 0 0 0 2px var(--primary-color);
         }
@@ -1729,6 +1786,9 @@
             box-sizing: border-box;
             user-select: text;
             -webkit-user-select: text;
+            /* Indent label to align with prompt box (under nav content column) */
+            margin-left: calc(var(--cube-rail-w) + var(--cube-rail-gap));
+            width: calc(100% - var(--cube-rail-w) - var(--cube-rail-gap));
         }
 
         .cube-prompt-header:read-only {
@@ -1763,7 +1823,8 @@
             font-size: 13px;
             color: var(--primary-color);
             opacity: 0.65;
-            margin-top: -4px;
+            margin-top: 0;
+            margin-left: calc(var(--cube-rail-w) + var(--cube-rail-gap));
         }
 
         .cube-footer {
@@ -1859,30 +1920,34 @@
     <!-- Phone cube: A1 leads objective; swipe/chevrons for prompt sets & categories -->
     <div class="prompt-cube-wrap">
         <div id="prompt-cube" class="prompt-cube" tabindex="0" aria-label="Prompt editor cube">
-                <div class="cube-prompt-nav" aria-label="Prompt set navigation">
-                    <button type="button" class="cube-nav-btn" id="cube-prompt-prev" onclick="navigatePromptCube(-1, 0)" aria-label="Previous prompt set">‹</button>
-                    <div class="cube-prompt-badge" id="cube-prompt-badge">1</div>
-                    <div class="cube-prompt-nav-end">
-                        <button type="button" class="cube-nav-btn" id="cube-prompt-next" onclick="navigatePromptCube(1, 0)" aria-label="Next prompt set">›</button>
-                        <button type="button" class="cube-nav-btn" id="cube-prompt-add" onclick="cubeAddPrompt()" aria-label="Add prompt set">+</button>
+                <!-- Prompt # centered over boxes; ‹ › / + share badge vertical center -->
+                <div class="cube-prompt-nav-row">
+                    <div class="cube-nav-rail-spacer" aria-hidden="true"></div>
+                    <div class="cube-prompt-nav" aria-label="Prompt set navigation">
+                        <button type="button" class="cube-nav-btn" id="cube-prompt-prev" onclick="navigatePromptCube(-1, 0)" aria-label="Previous prompt set">‹</button>
+                        <div class="cube-prompt-badge" id="cube-prompt-badge">1</div>
+                        <div class="cube-prompt-nav-end">
+                            <button type="button" class="cube-nav-btn" id="cube-prompt-next" onclick="navigatePromptCube(1, 0)" aria-label="Next prompt set">›</button>
+                            <button type="button" class="cube-nav-btn" id="cube-prompt-add" onclick="cubeAddPrompt()" aria-label="Add prompt set">+</button>
+                        </div>
                     </div>
                 </div>
 
-                <div class="cube-body-row">
-                    <div class="cube-rail" aria-label="Category navigation">
-                        <button type="button" class="cube-rail-btn" id="cube-cat-up" onclick="navigatePromptCube(0, -1)" aria-label="Previous category">▲</button>
-                        <div class="cube-cat-badge" id="cube-cat-badge">A</div>
-                        <div class="cube-rail-end">
-                            <button type="button" class="cube-rail-btn" id="cube-cat-down" onclick="navigatePromptCube(0, 1)" aria-label="Next category">▼</button>
-                            <button type="button" class="cube-rail-btn" id="cube-cat-add" onclick="cubeAddCategory()" aria-label="Add category">+</button>
+                <div class="cube-body">
+                    <input type="text" id="cube-prompt-header" class="cube-prompt-header" placeholder="… insert a label" autocomplete="off">
+                    <!-- Category rail centered on prompt box only (caption sits below) -->
+                    <div class="cube-prompts-row">
+                        <div class="cube-rail" aria-label="Category navigation">
+                            <button type="button" class="cube-rail-btn cube-chevron-up" id="cube-cat-up" onclick="navigatePromptCube(0, -1)" aria-label="Previous category">‹</button>
+                            <div class="cube-cat-badge" id="cube-cat-badge">A</div>
+                            <div class="cube-rail-end">
+                                <button type="button" class="cube-rail-btn cube-chevron-down" id="cube-cat-down" onclick="navigatePromptCube(0, 1)" aria-label="Next category">‹</button>
+                                <button type="button" class="cube-rail-btn" id="cube-cat-add" onclick="cubeAddCategory()" aria-label="Add category">+</button>
+                            </div>
                         </div>
-                    </div>
-
-                    <div class="cube-body">
-                        <input type="text" id="cube-prompt-header" class="cube-prompt-header" placeholder="… insert a label" autocomplete="off">
                         <textarea id="cube-prompts" class="cube-prompts" placeholder=""></textarea>
-                        <div class="cube-prompts-caption">list your prompts in the box</div>
                     </div>
+                    <div class="cube-prompts-caption">list your prompts in the box</div>
                 </div>
 
                 <div class="cube-footer">
@@ -2011,10 +2076,10 @@
         </div>
     </div>
 
-    <script src="editor-ui-manager.js?v=20260725j"></script>
-    <script src="editor-prompt-cube.js?v=20260725j"></script>
-    <script src="editor-data-manager.js?v=20260725j"></script>
-    <script src="editor-settings-manager.js?v=20260725j"></script>
-    <script src="editor-main.js?v=20260725j"></script>
+    <script src="editor-ui-manager.js?v=20260726g"></script>
+    <script src="editor-prompt-cube.js?v=20260726g"></script>
+    <script src="editor-data-manager.js?v=20260726g"></script>
+    <script src="editor-settings-manager.js?v=20260726g"></script>
+    <script src="editor-main.js?v=20260726g"></script>
 </body>
 </html>

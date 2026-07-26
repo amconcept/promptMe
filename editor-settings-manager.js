@@ -252,6 +252,7 @@ function restoreLastRunActivity() {
     
     // Restore objective
     document.getElementById('objective-input').value = data.objective || '';
+    if (window.enforceObjectiveWidthLimit) setTimeout(window.enforceObjectiveWidthLimit, 0);
     
     // Criteria-selectable UI removed — keep off until feature is ready
     const interestsRestore = document.getElementById('prompt1-interests-mode');
@@ -1002,6 +1003,7 @@ async function loadSettingsByName(settingsName) {
         
         // Load objective
         document.getElementById('objective-input').value = settings.objective || '';
+        if (window.enforceObjectiveWidthLimit) setTimeout(window.enforceObjectiveWidthLimit, 0);
         
         // Criteria-selectable UI removed — keep off until feature is ready
         const interestsCheckbox = document.getElementById('prompt1-interests-mode');
