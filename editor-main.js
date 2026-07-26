@@ -14,7 +14,7 @@ function openSketchFromEditor() {
     } else {
         sessionStorage.setItem('promptMeEditorLayout', 'grid');
     }
-    window.location.href = 'sketch.html?from=editor';
+    window.location.href = 'sketch.html?from=editor&v=20260726f';
 }
 
 // Quick test function - navigate to sketch. Blocks if prompts missing; offers Skip if only objective missing.
@@ -684,7 +684,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (hasData) {
                 console.log('P pressed in editor - going to sketch to test');
                 saveChanges();
-                window.location.href = 'sketch.html';
+                window.location.href = 'sketch.html?v=20260726f';
             } else {
                 console.log('P pressed in editor - no data, going to index');
                 window.location.href = 'index.html';

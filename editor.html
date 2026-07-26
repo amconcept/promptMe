@@ -1853,8 +1853,8 @@
         </select>
     </div>
     
-    <!-- Criteria selectable UI hidden until feature is ready; keep input for save/load compat -->
-    <input type="checkbox" id="prompt1-interests-mode" class="settings-checkbox-input" hidden disabled aria-hidden="true" tabindex="-1">
+    <!-- Criteria selectable — not ready; keep DOM id for save/load, never show -->
+    <input type="checkbox" id="prompt1-interests-mode" class="settings-checkbox-input" hidden disabled aria-hidden="true" tabindex="-1" style="display:none !important; visibility:hidden !important; position:absolute !important; width:0 !important; height:0 !important; pointer-events:none !important;">
 
     <!-- Phone cube: A1 leads objective; swipe/chevrons for prompt sets & categories -->
     <div class="prompt-cube-wrap">
