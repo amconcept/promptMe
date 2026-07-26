@@ -759,7 +759,7 @@ async function loadSettingsByName(settingsName) {
     if (settingsName === 'Sample') {
         console.log('Loading Sample - reloading from CSV to ensure latest data');
         try {
-            const response = await fetch('Sample-activity-2025-10-27.csv');
+            const response = await fetch('Sample-activity-2025-10-27.csv?v=20260726u');
             const csvText = await response.text();
             
             // Parse CSV and populate UI directly (same as importSettings)
@@ -1133,6 +1133,12 @@ async function loadSettingsByName(settingsName) {
         updateButtonStates();
         updateActivityTitle();
         
+        // Sync cube FROM grid before save — otherwise flushPromptCube overwrites
+        // the active cell with stale empty cube text and drops a whole prompt column.
+        if (typeof window.refreshPromptCube === 'function') {
+            window.refreshPromptCube();
+        }
+
         // IMPORTANT: Use saveChanges() to properly save to promptCategories
         console.log('=== DEBUG: About to call saveChanges from loadSettingsByName ===');
         console.log('currentLoadedActivity at this point:', currentLoadedActivity);

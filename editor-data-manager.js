@@ -556,6 +556,11 @@ function importSettings() {
                         
                         // Update prompt counts
                         updateColumnCounts();
+
+                        // Sync cube from grid before save so flush doesn't wipe loaded cells
+                        if (window.refreshPromptCube) {
+                            window.refreshPromptCube();
+                        }
                         
                         // Save to main promptCategories localStorage
                         saveChanges();
@@ -572,9 +577,6 @@ function importSettings() {
                         
                         // Update button states
                         updateButtonStates();
-                        if (window.refreshPromptCube) {
-                            window.refreshPromptCube();
-                        }
                         
                         console.log('DEBUG: Import completed successfully');
                         console.log('DEBUG: Final parsed data:', {

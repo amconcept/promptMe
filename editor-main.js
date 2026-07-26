@@ -96,7 +96,7 @@ async function ensureSampleInHistory() {
         
         // Load the CSV and add to history
         try {
-            const response = await fetch('Sample-activity-2025-10-27.csv');
+            const response = await fetch('Sample-activity-2025-10-27.csv?v=20260726u');
             const csvText = await response.text();
             const sampleActivity = parseCSVToActivity(csvText);
             
@@ -164,7 +164,7 @@ async function loadDefaultActivity() {
     // Try to load from CSV file
     let defaultActivity;
     try {
-        const response = await fetch('Sample-activity-2025-10-27.csv');
+        const response = await fetch('Sample-activity-2025-10-27.csv?v=20260726u');
         const csvText = await response.text();
         defaultActivity = parseCSVToActivity(csvText);
         console.log('Loaded Sample activity from CSV file');
@@ -367,7 +367,7 @@ function populateDefaultActivity(data) {
     
     // Add prompt headers
     const promptHeadersEl = document.getElementById('prompt-headers');
-    const promptHeadersData = Object.keys(data.categories); // ['USES', 'AND IS']
+    const promptHeadersData = Object.keys(data.categories); // e.g. ['USES', 'AND']
     
     if (promptHeadersEl) {
         promptHeadersData.forEach((headerName, index) => {

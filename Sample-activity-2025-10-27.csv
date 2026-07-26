@@ -1,21 +1,14 @@
 PromptMe Activity Export
-Exported: 11/7/2025, 1:03:33 AM
+Exported: 7/26/2026
 Activity Name: Sample
-Objective: Design an object to think with that..
-Theme: greenCRT
-Background: green-crt
-Prompt 1 Interests Mode: Yes
-Criterion Labels: sport, entertainment, academic, creative
+Objective: Make a gift for a friend that:
+Theme: pinkCRT
+Background: black
+Prompt 1 Interests Mode: No
+Criterion Labels: 
 
-Category,USES,AND IS
-Furniture,cat5 cable,studious
-Furniture,wooden slats from window blinds,comforting
-Furniture,wood scraps,inspiring
-Furniture,plastic bottles,multi-functional
-textiles,windsurfing sails,reflective
-textiles,old jeans,empathetic
-textiles,cat5 cable,collaborative
-textiles,plastic strapping,organized
-electronics,button from old electronics,humorous
-electronics,cat5 cable,helpful
-electronics,LED from a toy,expressive
+Category,USES,AND
+A,a paperclip,a laser cutter
+A,rope,a 3D printer
+A,colour paper,an embroidery machine
+A,an elastic,a vinyl cutter
