@@ -83,8 +83,19 @@ function updateCubeChrome() {
     const catAdd = document.getElementById('cube-cat-add');
     const deleteBtn = document.getElementById('cube-delete-action');
 
-    if (promptBadge) promptBadge.textContent = String(p + 1);
-    if (catBadge) catBadge.textContent = String.fromCharCode(65 + c);
+    // SVG <text> keeps VT323 glyphs geometrically centered in the circle
+    if (promptBadge) {
+        const label = String(p + 1);
+        promptBadge.setAttribute('aria-label', label);
+        const t = promptBadge.querySelector('text');
+        if (t) t.textContent = label;
+    }
+    if (catBadge) {
+        const label = String.fromCharCode(65 + c);
+        catBadge.setAttribute('aria-label', label);
+        const t = catBadge.querySelector('text');
+        if (t) t.textContent = label;
+    }
 
     // Prompt nav: + when can grow from last; chevrons when multiples; at max only back
     const atFirstPrompt = p === 0;
