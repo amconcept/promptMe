@@ -164,7 +164,7 @@ function saveCurrentActivityAsLastRun() {
     const currentData = {
         objective: document.getElementById('objective-input').value,
         constraintEnabled: true,
-        prompt1InterestsMode: document.getElementById('prompt1-interests-mode').checked,
+        prompt1InterestsMode: false, // UI removed — feature not ready
         criterionLabels: criterionLabels,
         activityName: currentLoadedActivity, // Include the activity name
         categories: {}
@@ -253,8 +253,9 @@ function restoreLastRunActivity() {
     // Restore objective
     document.getElementById('objective-input').value = data.objective || '';
     
-    // Restore checkbox
-    document.getElementById('prompt1-interests-mode').checked = data.prompt1InterestsMode || false;
+    // Criteria-selectable UI removed — keep off until feature is ready
+    const interestsRestore = document.getElementById('prompt1-interests-mode');
+    if (interestsRestore) interestsRestore.checked = false;
     
     // Restore criterion labels
     if (data.criterionLabels && Array.isArray(data.criterionLabels)) {
@@ -350,7 +351,7 @@ function saveCurrentActivity() {
     // Get current prompt data (same as saveActivityWithName)
     const currentData = {
         objective: document.getElementById('objective-input').value,
-        prompt1InterestsMode: document.getElementById('prompt1-interests-mode').checked, // Include criterion selection state
+        prompt1InterestsMode: false, // UI removed — feature not ready
         criterionLabels: criterionLabels, // Include criterion labels
         categories: {},
         promptHeaders: [],
@@ -440,7 +441,7 @@ function saveActivityWithName(settingsName) {
     // Get current prompt data
     const currentData = {
         objective: document.getElementById('objective-input').value,
-        prompt1InterestsMode: document.getElementById('prompt1-interests-mode').checked, // Include criterion selection state
+        prompt1InterestsMode: false, // UI removed — feature not ready
         criterionLabels: criterionLabels,
         categories: {},
         promptHeaders: [],
@@ -1002,12 +1003,9 @@ async function loadSettingsByName(settingsName) {
         // Load objective
         document.getElementById('objective-input').value = settings.objective || '';
         
-        // Load prompt1 interests mode (criterion selection state)
+        // Criteria-selectable UI removed — keep off until feature is ready
         const interestsCheckbox = document.getElementById('prompt1-interests-mode');
-        if (interestsCheckbox && typeof settings.prompt1InterestsMode === 'boolean') {
-            interestsCheckbox.checked = settings.prompt1InterestsMode;
-            console.log('Loaded prompt1InterestsMode:', settings.prompt1InterestsMode);
-        }
+        if (interestsCheckbox) interestsCheckbox.checked = false;
         
         // Load criterion labels if they exist
         if (settings.criterionLabels && Array.isArray(settings.criterionLabels)) {

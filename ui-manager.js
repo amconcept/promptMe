@@ -1,7 +1,7 @@
 // UI Manager - Handles all UI elements and interactions
 // Responsible: buttons, inputs, positioning (control panel removed per wireframe redesign)
 
-// When true: no sidebar control panel; top tool strip, central card, EDITOR link
+// When true: no sidebar control panel — wireframe chrome around the card
 const SKETCH_HIDE_CONTROL_PANEL = true;
 
 // UI State Variables
@@ -11,12 +11,13 @@ let controlPanelToggle;
 let recordButton;
 let downloadReportButton;
 let resetReportButton;
+let editButton; // top-strip "edit" (replaces >EDITOR)
 let prevStudentButton;
 let nextStudentButton;
-let resultsLabel; // "# of #" between arrows (top-left of card)
+let resultsLabel; // "# of #" between arrows (bottom-center under card)
 let resultNameWrapper; // name input only — card identifier row
 let resultNameInput;
-let nextHintWrapper; // blinking "■ NEXT" above top-right of card
+let nextHintWrapper; // "■ NEXT ■" top-center (squares on both sides)
 
 // Control panel positioning constants - now responsive
 const CONTROL_PANEL_OFFSET = () => Math.max(min(width * 0.15, 140), 100);  // 15% of width, max 140px, min 100px
@@ -54,13 +55,76 @@ if (typeof window !== 'undefined') window.FONT_SIZES = FONT_SIZES;
 
 // Centered vintage prompt card (sketch) — tweak ratios here
 const CARD_LAYOUT = {
-    WIDTH_RATIO: 0.72,
-    HEIGHT_RATIO: 0.68, // leave room for top tools + bottom RUN
+    WIDTH_RATIO: 0.78,
+    HEIGHT_RATIO: 0.58,
     PAD_X_RATIO: 0.08,
     PAD_Y_RATIO: 0.04,
     CORNER_MAX: 40
 };
 if (typeof window !== 'undefined') window.CARD_LAYOUT = CARD_LAYOUT;
+
+// Shared phone/desktop chrome so tools, nav, and card never collide
+/**
+ * Evenly distribute phone chrome for typical smartphone heights (~640–900).
+ * Order: tools → ■ NEXT ■ → card → [< # of # >] → RUN
+ */
+function getSketchChromeMetrics(w, h) {
+    let vw = (typeof w === 'number' && w > 0) ? w : 0;
+    let vh = (typeof h === 'number' && h > 0) ? h : 0;
+    if (!vw && typeof width === 'number' && width > 0) vw = width;
+    if (!vh && typeof height === 'number' && height > 0) vh = height;
+    if (!vw) vw = window.innerWidth || 800;
+    if (!vh) vh = window.innerHeight || 600;
+
+    const phone = vw <= 768
+        || (typeof window.matchMedia === 'function'
+            && window.matchMedia('(max-width: 900px) and (max-aspect-ratio: 3/4)').matches);
+
+    const edgeTop = phone ? 10 : 14;
+    const edgeBottom = phone ? 14 : 20;
+    const toolH = phone ? 32 : 34;
+    const nextH = phone ? 28 : 30;
+    const navH = phone ? 28 : 30;
+    const runSize = phone ? 56 : 64;
+    // Fixed chrome bands (card fills the middle leftover)
+    const fixed = toolH + nextH + navH + runSize;
+    const free = Math.max(120, vh - edgeTop - edgeBottom - fixed);
+    // Even gaps (capped) so phone chrome stays tight; card takes the rest
+    const minGap = phone ? 10 : 14;
+    const maxGap = phone ? 18 : 24;
+    const idealGap = Math.min(maxGap, Math.max(minGap, free * 0.04));
+    const cardH = Math.max(160, free - idealGap * 4);
+    const gap = Math.max(minGap, (free - cardH) / 4);
+
+    const toolsTop = edgeTop;
+    const toolsBottom = toolsTop + toolH;
+    const nextTop = toolsBottom + gap;
+    const cardY = nextTop + nextH + gap;
+    const resultsTop = cardY + cardH + gap;
+    const runTop = resultsTop + navH + gap;
+
+    return {
+        phone,
+        toolTop: toolsTop,
+        toolH,
+        navH,
+        nextH,
+        runSize,
+        runGap: gap,
+        bottomPad: edgeBottom,
+        topChrome: cardY,
+        bottomChrome: vh - (cardY + cardH),
+        toolsBottom,
+        nextTop,
+        cardY,
+        cardH,
+        resultsTop,
+        runTop,
+        width: vw,
+        height: vh
+    };
+}
+if (typeof window !== 'undefined') window.getSketchChromeMetrics = getSketchChromeMetrics;
 
 // Update button sizes to be dynamic with minimum constraints
 const BUTTON_SIZES = {
@@ -74,19 +138,23 @@ const BUTTON_SIZES = {
 // Centralized control panel positioning (when panel hidden: top strip of tools)
 function positionControlPanel() {
     const currentWidth = (typeof width !== 'undefined' && width > 0) ? width : window.innerWidth;
-    const topY = 12;
+    const currentHeight = (typeof height !== 'undefined' && height > 0) ? height : window.innerHeight;
+    const chrome = getSketchChromeMetrics(currentWidth, currentHeight);
+    const topY = chrome.toolTop;
     const topRightX = currentWidth - 20;
 
     if (SKETCH_HIDE_CONTROL_PANEL) {
-        // Horizontal strip along top: screenshot · report · clear
-        const btnW = currentWidth <= 768 ? 84 : 90;
-        const gap = currentWidth <= 768 ? 6 : 10;
-        const tools = [recordButton, downloadReportButton, resetReportButton].filter(Boolean);
+        // Top strip: screenshot · report · clear · edit
+        const tools = [recordButton, downloadReportButton, resetReportButton, editButton].filter(Boolean);
+        const gap = chrome.phone ? 5 : 8;
+        const maxStrip = currentWidth - 16;
+        const btnW = Math.min(chrome.phone ? 78 : 88, Math.floor((maxStrip - gap * Math.max(0, tools.length - 1)) / Math.max(1, tools.length)));
         const totalW = tools.length * btnW + Math.max(0, tools.length - 1) * gap;
-        let x = Math.max(10, (currentWidth - totalW) / 2);
+        let x = Math.max(8, (currentWidth - totalW) / 2);
         tools.forEach((btn) => {
             btn.style('width', btnW + 'px');
-            btn.style('height', '34px');
+            btn.style('height', chrome.toolH + 'px');
+            btn.style('font-size', chrome.phone ? '13px' : '14px');
             btn.style('margin-bottom', '0');
             btn.position(x, topY);
             x += btnW + gap;
@@ -161,44 +229,24 @@ function toggleControlPanel() {
     updateSketchToggleIcon();
 }
 
-// Position name input, results nav, and >EDITOR without overlap
+// Wireframe chrome: NEXT top-center · results bottom-center · RUN bottom · name in card
 function positionNameInputAndButtons() {
-    // Use actual window dimensions if p5.js dimensions aren't ready yet
     const currentWidth = (typeof width !== 'undefined' && width > 0) ? width : window.innerWidth;
     const currentHeight = (typeof height !== 'undefined' && height > 0) ? height : window.innerHeight;
-    
-    const elementHeight = BUTTON_SIZES.HEIGHT();
-    const isNarrow = currentWidth <= 768;
+    const chrome = getSketchChromeMetrics(currentWidth, currentHeight);
+    const isNarrow = chrome.phone;
     const bounds = window.sketchCardBounds;
 
-    // >EDITOR — bottom-right only (Results moved to card top-left)
+    // Legacy >EDITOR removed — use top "edit" tool instead
     const editorSection = document.querySelector('.design-prompts-section');
-    const editorBtn = document.querySelector('.design-prompts');
-    let editorH = isNarrow ? 36 : 44;
-    if (editorBtn) {
-        const er = editorBtn.getBoundingClientRect();
-        if (er.height > 0) editorH = er.height;
-    }
-    const edgePad = isNarrow ? 10 : 20;
-    const gap = isNarrow ? 8 : 12;
-    const runSize = 64;
+    if (editorSection) editorSection.style.display = 'none';
 
-    if (editorSection && editorSection.style) {
-        editorSection.style.bottom = edgePad + 'px';
-        editorSection.style.right = edgePad + 'px';
-        editorSection.style.top = 'auto';
-        editorSection.style.left = 'auto';
-    }
-
-    // Compact Results nav — [<] # of # [>] · ■ NEXT
-    // Inset to where the top rounded corner meets the flat edge (not over the curve).
-    const arrowWidth = isNarrow ? 24 : 26;
-    const navH = isNarrow ? 26 : 28;
-    const resultsFontPx = isNarrow ? 13 : 15;
-    const compactResultsW = isNarrow ? 64 : 72;
-    const cornerInset = (bounds && typeof bounds.cornerRadius === 'number')
-        ? Math.max(12, Math.round(bounds.cornerRadius))
-        : 16;
+    const arrowWidth = isNarrow ? 26 : 28;
+    const navH = chrome.navH;
+    const nextH = chrome.nextH || navH;
+    const resultsFontPx = isNarrow ? 14 : 16;
+    const compactResultsW = isNarrow ? 72 : 80;
+    const runSize = chrome.runSize || 56;
 
     if (SKETCH_HIDE_CONTROL_PANEL && resultsLabel) {
         const historyTotal = (typeof window.classReport !== 'undefined' && Array.isArray(window.classReport))
@@ -224,24 +272,19 @@ function positionNameInputAndButtons() {
         resultsLabel.show();
     }
 
-    // Shared row above the card, inset to flat top edge
-    // Same chromeTop for Results + NEXT so they share one baseline (not cramped on the border)
-    let chromeTop = edgePad + 44;
-    let flatLeft = edgePad;           // start of [<] = corner→flat junction
-    let flatRight = currentWidth - edgePad; // end of T in NEXT = flat→corner junction
-    if (bounds && typeof bounds.x === 'number') {
-        const gapAboveCard = 16;
-        chromeTop = Math.max(edgePad + 40, bounds.y - gapAboveCard - navH);
-        flatLeft = bounds.x + cornerInset;
-        flatRight = bounds.x + bounds.w - cornerInset;
-    }
+    // Results row — bottom-center under card
+    const resultsTop = (bounds && typeof bounds.resultsTop === 'number')
+        ? bounds.resultsTop
+        : (chrome.resultsTop || (currentHeight - 100));
+    const navGap = 4;
+    const resultsGroupW = arrowWidth + navGap + compactResultsW + navGap + arrowWidth;
+    const resultsLeft = Math.round((currentWidth - resultsGroupW) / 2);
 
-    const navGap = 2;
     const styleNavArrow = (btn) => {
         if (!btn) return;
         btn.style('width', arrowWidth + 'px');
         btn.style('height', navH + 'px');
-        btn.style('font-size', '14px');
+        btn.style('font-size', '16px');
         btn.style('padding', '0');
         btn.style('margin', '0');
         btn.style('box-sizing', 'border-box');
@@ -252,15 +295,14 @@ function positionNameInputAndButtons() {
     };
 
     if (prevStudentButton) {
-        prevStudentButton.position(flatLeft, chromeTop);
+        prevStudentButton.position(resultsLeft, resultsTop);
         styleNavArrow(prevStudentButton);
     }
     if (resultsLabel) {
-        // Same top + height as arrows → label text sits middle of [<] — [>]
-        resultsLabel.position(flatLeft + arrowWidth + navGap, chromeTop);
+        resultsLabel.position(resultsLeft + arrowWidth + navGap, resultsTop);
     }
     if (nextStudentButton) {
-        nextStudentButton.position(flatLeft + arrowWidth + navGap + compactResultsW + navGap, chromeTop);
+        nextStudentButton.position(resultsLeft + arrowWidth + navGap + compactResultsW + navGap, resultsTop);
         styleNavArrow(nextStudentButton);
     }
 
@@ -283,56 +325,90 @@ function positionNameInputAndButtons() {
         }
     }
 
-    // ■ NEXT — same row/top as Results; trailing "T" on right flat→corner junction
+    // ■ NEXT ■ — top-center between tools and card
     if (SKETCH_HIDE_CONTROL_PANEL && nextHintWrapper && nextHintWrapper.elt) {
-        const fontPx = isNarrow ? 18 : 20;
+        const fontPx = isNarrow ? 18 : 22;
+        const nextTop = (bounds && typeof bounds.nextTop === 'number')
+            ? bounds.nextTop
+            : (chrome.nextTop || chrome.toolsBottom + 10);
         nextHintWrapper.elt.style.cssText = [
             'display:flex',
             'flex-direction:row',
             'align-items:center',
-            'justify-content:flex-end',
+            'justify-content:center',
             'white-space:nowrap',
             'font-family:VT323, monospace',
             'color:var(--primary-color)',
             'font-size:' + fontPx + 'px',
             'position:absolute',
             'z-index:5',
-            'height:' + navH + 'px',
+            'height:' + nextH + 'px',
             'box-sizing:border-box',
             'line-height:1',
             'margin:0',
-            'padding:0'
+            'padding:0',
+            'gap:0.4em'
         ].join(';');
-        const hintW = nextHintWrapper.elt.offsetWidth || Math.ceil(fontPx * 5.5);
-        nextHintWrapper.position(flatRight - hintW, chromeTop);
+        const hintW = nextHintWrapper.elt.offsetWidth || Math.ceil(fontPx * 7);
+        nextHintWrapper.position(Math.round((currentWidth - hintW) / 2), nextTop);
         nextHintWrapper.show();
     }
 
-    // Phone RUN: bottom-middle of card, clear gap (no border overlap)
+    // RUN — always present + pinned to visible bottom (survives stale HTML cache)
+    ensureSketchRunButton();
     const runBtn = document.getElementById('sketch-run-btn');
     if (runBtn) {
-        const phoneRun = currentWidth <= 768
-            || window.matchMedia('(max-width: 900px) and (max-aspect-ratio: 3/4)').matches;
-        runBtn.style.display = phoneRun ? 'flex' : 'none';
-        if (phoneRun) {
-            // Keep clear of EDITOR on the bottom band
-            const editorClearY = currentHeight - edgePad - editorH - gap - runSize;
-            let left = (currentWidth - runSize) / 2;
-            let top = editorClearY;
-            if (bounds && typeof bounds.x === 'number') {
-                left = bounds.x + (bounds.w - runSize) / 2;
-                // Always below the card bottom with a clear gap
-                top = Math.min(bounds.bottom + 14, editorClearY);
-                top = Math.max(bounds.bottom + 10, top);
-            }
-            runBtn.style.left = Math.round(left) + 'px';
-            runBtn.style.top = Math.round(top) + 'px';
-            runBtn.style.bottom = 'auto';
-            runBtn.style.right = 'auto';
-            runBtn.style.transform = 'none'; // left is already the button's left edge
-        }
+        const bottomPad = chrome.bottomPad || 14;
+        // Prefer bottom-anchor so mobile browser chrome can't push RUN off-screen
+        runBtn.style.cssText = [
+            'display:flex',
+            'align-items:center',
+            'justify-content:center',
+            'position:fixed',
+            'visibility:visible',
+            'opacity:1',
+            'pointer-events:auto',
+            'z-index:10001',
+            'width:' + runSize + 'px',
+            'height:' + runSize + 'px',
+            'left:50%',
+            'top:auto',
+            'bottom:' + bottomPad + 'px',
+            'right:auto',
+            'transform:translateX(-50%)',
+            'border-radius:50%',
+            'border:2px solid var(--primary-color)',
+            'background:var(--primary-color)',
+            'color:var(--background-color)',
+            'font-family:VT323, monospace',
+            'font-size:' + (isNarrow ? '16px' : '18px'),
+            'font-weight:bold',
+            'padding:0',
+            'margin:0',
+            'cursor:pointer',
+            '-webkit-tap-highlight-color:transparent',
+            'touch-action:manipulation'
+        ].join(';');
     }
 }
+
+/** Create #sketch-run-btn if HTML cache omitted it */
+function ensureSketchRunButton() {
+    if (document.getElementById('sketch-run-btn')) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'sketch-run-btn';
+    btn.className = 'sketch-run';
+    btn.setAttribute('aria-label', 'Generate prompts');
+    btn.textContent = 'RUN';
+    btn.onclick = function () {
+        if (window.playClickSound) window.playClickSound();
+        if (typeof window.triggerPromptRun === 'function') window.triggerPromptRun();
+        else if (typeof window.runSketchFromButton === 'function') window.runSketchFromButton();
+    };
+    document.body.appendChild(btn);
+}
+if (typeof window !== 'undefined') window.ensureSketchRunButton = ensureSketchRunButton;
 
 // Create UI elements (control panel omitted when SKETCH_HIDE_CONTROL_PANEL)
 function createUI() {
@@ -428,27 +504,32 @@ function createUI() {
         resultNameWrapper = createDiv('');
         resultNameWrapper.elt.style.cssText = 'display:inline-flex; flex-direction:row; align-items:center; justify-content:center; white-space:nowrap; font-family: VT323, monospace; color: var(--primary-color); font-size: ' + Math.max(FONT_SIZES.INPUT(), 14) + 'px; position: absolute;';
 
-        // "■ NEXT" — square + label hidden until revealed after a run (same flash)
+        // "■ NEXT ■" — squares on both sides; hidden until revealed after a run
         nextHintWrapper = createDiv('');
-        nextHintWrapper.elt.style.cssText = 'display:flex; flex-direction:row; align-items:center; justify-content:flex-end; white-space:nowrap; font-family: VT323, monospace; color: var(--primary-color); font-size: ' + Math.max(FONT_SIZES.INPUT(), 16) + 'px; position: absolute; z-index: 5;';
+        nextHintWrapper.elt.style.cssText = 'display:flex; flex-direction:row; align-items:center; justify-content:center; white-space:nowrap; font-family: VT323, monospace; color: var(--primary-color); font-size: ' + Math.max(FONT_SIZES.INPUT(), 16) + 'px; position: absolute; z-index: 5;';
         const prefixContainer = document.createElement('div');
-        prefixContainer.style.cssText = 'display:flex; flex-direction:row; align-items:center; gap:0.35em; cursor:pointer; outline:none; -webkit-tap-highlight-color:transparent; flex-shrink:0; height:100%;';
+        prefixContainer.style.cssText = 'display:flex; flex-direction:row; align-items:center; gap:0.4em; cursor:pointer; outline:none; -webkit-tap-highlight-color:transparent; flex-shrink:0; height:100%;';
         prefixContainer.setAttribute('tabindex', '-1');
-        const prefixSpan = document.createElement('span');
-        // CSS square (■) — hidden with NEXT until post-run reveal
-        prefixSpan.setAttribute('aria-hidden', 'true');
-        prefixSpan.style.cssText = 'display:inline-block;width:0.55em;height:0.55em;background:var(--primary-color);flex-shrink:0;user-select:none;opacity:0;transition:none;';
+        const squareCss = 'display:inline-block;width:0.55em;height:0.55em;background:var(--primary-color);flex-shrink:0;user-select:none;opacity:0;transition:none;';
+        const leftSquare = document.createElement('span');
+        leftSquare.setAttribute('aria-hidden', 'true');
+        leftSquare.style.cssText = squareCss;
         const hintLabel = document.createElement('span');
         hintLabel.textContent = 'NEXT';
         hintLabel.style.cssText = 'font-size:1em; font-weight:bold; letter-spacing:0.08em; opacity:0; transition:none; line-height:1;';
-        prefixContainer.appendChild(prefixSpan);
+        const rightSquare = document.createElement('span');
+        rightSquare.setAttribute('aria-hidden', 'true');
+        rightSquare.style.cssText = squareCss;
+        prefixContainer.appendChild(leftSquare);
         prefixContainer.appendChild(hintLabel);
+        prefixContainer.appendChild(rightSquare);
         nextHintWrapper.elt.appendChild(prefixContainer);
         let blinkInterval = null;
         let flashInterval = null;
         let flashStartTimeout = null;
         function setHintVisible(opacity) {
-            prefixSpan.style.opacity = opacity;
+            leftSquare.style.opacity = opacity;
+            rightSquare.style.opacity = opacity;
             hintLabel.style.opacity = opacity;
         }
         function stopArrowFlash() {
@@ -467,7 +548,7 @@ function createUI() {
 
             function startContinuousBlink() {
                 flashInterval = setInterval(() => {
-                    const dim = prefixSpan.style.opacity === '0.35';
+                    const dim = leftSquare.style.opacity === '0.35';
                     setHintVisible(dim ? '1' : '0.35');
                 }, 400);
             }
@@ -497,7 +578,7 @@ function createUI() {
             setHintVisible('1');
             let count = 0;
             blinkInterval = setInterval(() => {
-                const dim = prefixSpan.style.opacity === '0.35';
+                const dim = leftSquare.style.opacity === '0.35';
                 setHintVisible(dim ? '1' : '0.35');
                 count++;
                 if (count >= 6) { clearInterval(blinkInterval); blinkInterval = null; setHintVisible('1'); }
@@ -751,7 +832,34 @@ function createUI() {
             resetReportButton.style('color', 'var(--primary-color)');
         });
 
-        // Position all three bubbles
+        // Edit bubble — replaces bottom >EDITOR
+        editButton = createButton('edit');
+        editButton.mousePressed(() => {
+            playClickSound();
+            if (typeof window.goToEditor === 'function') window.goToEditor();
+            else if (typeof goToEditor === 'function') goToEditor();
+        });
+        editButton.style('background-color', 'var(--background-color)');
+        editButton.style('color', 'var(--primary-color)');
+        editButton.style('font-family', 'VT323, monospace');
+        editButton.style('font-size', '14px');
+        editButton.style('width', '90px');
+        editButton.style('height', '36px');
+        editButton.style('border', '1px solid var(--primary-color)');
+        editButton.style('border-radius', '18px');
+        editButton.style('cursor', 'pointer');
+        editButton.style('text-align', 'center');
+        editButton.style('letter-spacing', '0.5px');
+        editButton.mouseOver(() => {
+            editButton.style('background-color', 'var(--primary-color)');
+            editButton.style('color', 'var(--background-color)');
+        });
+        editButton.mouseOut(() => {
+            editButton.style('background-color', 'var(--background-color)');
+            editButton.style('color', 'var(--primary-color)');
+        });
+
+        // Position top strip (screenshot · report · clear · edit)
         positionControlPanel();
     }
 

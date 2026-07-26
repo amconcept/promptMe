@@ -79,6 +79,7 @@ function goToEditor() {
         window.location.href = 'editor.html?from=sketch';
     }, 200); // Increased delay to ensure save completes
 }
+window.goToEditor = goToEditor;
 
 // Theme: single source is theme-manager.js (loaded by sketch.html)
 function loadInitialThemeFromEditor() {
@@ -1007,27 +1008,31 @@ function draw() {
     
     textFont(DEFAULT_FONT);
 
-    // --- Static card + fixed type; prompts wrap at max inner width (no card resize / text zoom) ---
+    // --- LOCKED card; chrome evenly distributed: tools → NEXT → card → results → RUN ---
     const cardLayout = (typeof window !== 'undefined' && window.CARD_LAYOUT) ? window.CARD_LAYOUT : {
-        WIDTH_RATIO: 0.72, HEIGHT_RATIO: 0.75, PAD_X_RATIO: 0.08, PAD_Y_RATIO: 0.04, CORNER_MAX: 40
+        WIDTH_RATIO: 0.82, HEIGHT_RATIO: 0.5, PAD_X_RATIO: 0.08, PAD_Y_RATIO: 0.04, CORNER_MAX: 40
     };
-    // Reserve chrome: top tools + Results/NEXT; bottom RUN + EDITOR on phone
-    const phoneChrome = width <= 768
-        || (typeof window.matchMedia === 'function'
-            && window.matchMedia('(max-width: 900px) and (max-aspect-ratio: 3/4)').matches);
-    const topChrome = phoneChrome ? 56 : 52;
-    const bottomChrome = phoneChrome ? 100 : 56;
-    const cardWidth = width * cardLayout.WIDTH_RATIO;
-    let cardHeight = height * cardLayout.HEIGHT_RATIO;
-    const maxCardH = Math.max(180, height - topChrome - bottomChrome);
-    if (cardHeight > maxCardH) cardHeight = maxCardH;
+    const chrome = (typeof window.getSketchChromeMetrics === 'function')
+        ? window.getSketchChromeMetrics(width, height)
+        : {
+            phone: width <= 768, toolTop: 10, toolH: 32, toolsBottom: 42,
+            navH: 28, nextH: 28, runSize: 56, runGap: 12, bottomPad: 14,
+            nextTop: 52, cardY: 90, cardH: 320, resultsTop: 430, runTop: 470
+        };
+    const toolsBottom = chrome.toolsBottom != null ? chrome.toolsBottom : 42;
+    const cardY = (typeof chrome.cardY === 'number') ? chrome.cardY : toolsBottom + 40;
+    const cardHeight = (typeof chrome.cardH === 'number') ? chrome.cardH : height * 0.45;
+    const runTop = (typeof chrome.runTop === 'number') ? chrome.runTop : (height - 70);
+    const nextTop = (typeof chrome.nextTop === 'number') ? chrome.nextTop : (toolsBottom + 10);
+    const resultsTop = (typeof chrome.resultsTop === 'number') ? chrome.resultsTop : (cardY + cardHeight + 12);
+
+    const cardWidth = width * (chrome.phone ? 0.86 : (cardLayout.WIDTH_RATIO || 0.78));
     const cardX = (width - cardWidth) / 2;
-    const cardY = topChrome + (height - topChrome - bottomChrome - cardHeight) / 2;
-    const cornerRadius = min(cardLayout.CORNER_MAX, cardWidth * 0.06, cardHeight * 0.05);
-    const padX = cardWidth * cardLayout.PAD_X_RATIO;
-    const padY = cardHeight * cardLayout.PAD_Y_RATIO;
-    const innerWidth = cardWidth - padX * 2; // max visual width for prompts / objective wrap
-    const MAX_PROMPT_WIDTH = innerWidth; // hard cap: never wider than card content area
+    const cornerRadius = min(cardLayout.CORNER_MAX || 40, cardWidth * 0.06, cardHeight * 0.05);
+    const padX = cardWidth * (cardLayout.PAD_X_RATIO || 0.08);
+    const padY = cardHeight * (cardLayout.PAD_Y_RATIO || 0.04);
+    const innerWidth = cardWidth - padX * 2;
+    const MAX_PROMPT_WIDTH = innerWidth;
 
     const objectiveText = (categories?.objective || '').trim();
     const prompt1InterestsMode = categories.prompt1InterestsMode || false;
@@ -1046,25 +1051,25 @@ function draw() {
     const fieldName = (window.getResultNameFieldValue && window.getResultNameFieldValue()) || '';
     const displayName = (studentName || previousName || fieldName || '').trim();
 
-    // Fixed design type sizes — slight scale; spacing tuned for up to 4 prompts in static card
-    const PROMPT_TO_LABEL_RATIO = 1.4;
-    const promptSize = Math.min(width * 0.048, 42);
-    const labelSize = promptSize / PROMPT_TO_LABEL_RATIO;
-    const objectiveSize = labelSize; // static objective title size
-    const nameSize = Math.max(18, Math.min(30, promptSize * 0.72));
-    const nameRowHeight = Math.max(34, nameSize * 1.35);
-    const promptLineH = promptSize * 1.18;
-    const labelLineH = labelSize * 1.12;
-    const objectiveLineH = objectiveSize * 1.15;
-    const labelGap = labelSize * 0.15; // header → value
-    const promptBlockGap = labelSize * 0.5; // between prompt blocks
-    // Space between objective title and first prompt (pushes prompts down)
-    const objectiveToPromptGap = Math.max(40, padY * 3.);
+    // Type sizes — start roomy, then scale down so content never spills out of the locked card
+    const PROMPT_TO_LABEL_RATIO = 1.35;
+    let promptSize = chrome.phone ? Math.min(width * 0.068, 48) : Math.min(width * 0.048, 42);
+    let labelSize = promptSize / PROMPT_TO_LABEL_RATIO;
+    let objectiveSize = labelSize;
+    let nameSize = Math.max(18, Math.min(chrome.phone ? 32 : 30, promptSize * 0.75));
+    let nameRowHeight = Math.max(32, nameSize * 1.25);
+    let promptLineH = promptSize * 1.14;
+    let labelLineH = labelSize * 1.08;
+    let objectiveLineH = objectiveSize * 1.1;
+    let labelGap = labelSize * 0.1;
+    let promptBlockGap = labelSize * 0.35;
+    // Extra air between objective and first prompt so prompts sit lower in the card
+    let objectiveToPromptGap = chrome.phone ? Math.max(28, padY * 2.2) : Math.max(44, padY * 2.8);
     const innerLeft = cardX + padX;
     const centerX = cardX + cardWidth / 2;
-    const innerTop = cardY + padY + nameRowHeight;
-    const innerBottom = cardY + cardHeight - padY;
-    const availableHeight = innerBottom - innerTop;
+    let innerTop = cardY + padY + nameRowHeight;
+    let innerBottom = cardY + cardHeight - padY;
+    let availableHeight = innerBottom - innerTop;
 
     function wrapTextToWidth(str, maxW) {
         const s = (str || '').toString();
@@ -1144,7 +1149,26 @@ function draw() {
         return total;
     }
 
-    const contentH = measureContentHeight();
+    // Scale type down so up to 4 prompts stay inside the locked card (no spill)
+    let contentH = measureContentHeight();
+    if (contentH > availableHeight && availableHeight > 40 && contentH > 0) {
+        const s = availableHeight / contentH;
+        promptSize *= s;
+        labelSize *= s;
+        objectiveSize *= s;
+        nameSize = Math.max(16, nameSize * s);
+        nameRowHeight = Math.max(28, nameSize * 1.25);
+        promptLineH = promptSize * 1.14;
+        labelLineH = labelSize * 1.08;
+        objectiveLineH = objectiveSize * 1.1;
+        labelGap = labelSize * 0.1;
+        promptBlockGap = labelSize * 0.35;
+        objectiveToPromptGap = Math.max(8, objectiveToPromptGap * s);
+        innerTop = cardY + padY + nameRowHeight;
+        innerBottom = cardY + cardHeight - padY;
+        availableHeight = innerBottom - innerTop;
+        contentH = measureContentHeight();
+    }
 
     window.sketchCardBounds = {
         x: cardX,
@@ -1152,17 +1176,18 @@ function draw() {
         w: cardWidth,
         h: cardHeight,
         bottom: cardY + cardHeight,
+        nextTop: nextTop,
+        resultsTop: resultsTop,
+        runTop: runTop,
+        toolsBottom: toolsBottom,
         cornerRadius: cornerRadius,
         nameRowY: cardY + padY,
         nameRowH: nameRowHeight,
         nameSize: nameSize
     };
+    // Always sync DOM chrome to the locked card (don't skip — RUN was getting stuck off-screen)
     if (typeof window.positionNameInputAndButtons === 'function') {
-        const key = cardX + ',' + cardY + ',' + nameRowHeight + ',' + nameSize;
-        if (window._lastSketchCardNameKey !== key) {
-            window._lastSketchCardNameKey = key;
-            window.positionNameInputAndButtons();
-        }
+        window.positionNameInputAndButtons();
     }
 
     noStroke();

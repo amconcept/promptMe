@@ -26,7 +26,7 @@ function saveChanges() {
     const data = {
         objective: document.getElementById('objective-input').value,
         constraintEnabled: true,
-        prompt1InterestsMode: document.getElementById('prompt1-interests-mode').checked,
+        prompt1InterestsMode: false, // UI removed — feature not ready
         criterionLabels: criterionLabels,
         activityName: currentLoadedActivity,
         categories: {}
@@ -128,11 +128,9 @@ function loadSavedData() {
                 objectiveInput.value = data.objective || '';
             }
 
-            // Set prompt1 interests mode
+            // Criteria-selectable UI removed — keep off until feature is ready
             const prompt1InterestsModeCheckbox = document.getElementById('prompt1-interests-mode');
-            if (prompt1InterestsModeCheckbox) {
-                prompt1InterestsModeCheckbox.checked = data.prompt1InterestsMode || false;
-            }
+            if (prompt1InterestsModeCheckbox) prompt1InterestsModeCheckbox.checked = false;
 
             // Don't load class list from localStorage - start fresh each time
             classList = [];
@@ -269,7 +267,7 @@ function exportSettings() {
         objective: document.getElementById('objective-input').value,
         theme: localStorage.getItem('selectedTheme') || 'windows',
         background: localStorage.getItem('selectedBackground') || 'black',
-        prompt1InterestsMode: document.getElementById('prompt1-interests-mode').checked,
+        prompt1InterestsMode: false, // UI removed — feature not ready
         criterionLabels: criterionLabels,
         categories: {},
         promptHeaders: [],
@@ -470,11 +468,9 @@ function importSettings() {
                             }
                         }
                         
-                        // Apply prompt1InterestsMode
+                        // Criteria-selectable UI removed — keep off until feature is ready
                         const interestsCheckbox = document.getElementById('prompt1-interests-mode');
-                        if (interestsCheckbox) {
-                            interestsCheckbox.checked = prompt1InterestsMode;
-                        }
+                        if (interestsCheckbox) interestsCheckbox.checked = false;
                         
                         // Apply criterion labels
                         window.criterionLabels = criterionLabels;

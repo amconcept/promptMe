@@ -1853,13 +1853,8 @@
         </select>
     </div>
     
-    <!-- Make criterion selectable -->
-    <div class="settings-checkbox" style="margin-top: 10px; margin-bottom: 12px; justify-content: center;">
-        <input type="checkbox" id="prompt1-interests-mode" class="settings-checkbox-input">
-        <label for="prompt1-interests-mode" class="settings-checkbox-label">
-            Make criteria selectable
-        </label>
-    </div>
+    <!-- Criteria selectable UI hidden until feature is ready; keep input for save/load compat -->
+    <input type="checkbox" id="prompt1-interests-mode" class="settings-checkbox-input" hidden disabled aria-hidden="true" tabindex="-1">
 
     <!-- Phone cube: A1 leads objective; swipe/chevrons for prompt sets & categories -->
     <div class="prompt-cube-wrap">

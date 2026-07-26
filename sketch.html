@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>Prompt Generator</title>
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
@@ -76,69 +77,27 @@
             background-color: var(--primary-color);
         }
 
-        /* >EDITOR — positioned by ui-manager.js to avoid overlapping nav arrows */
-        .design-prompts-section {
-            position: fixed;
-            bottom: max(20px, 3vh);
-            right: max(20px, 3vw);
-            left: auto;
-            z-index: 1000;
-            pointer-events: none; /* section box doesn't steal taps */
-        }
+        /* Legacy >EDITOR hidden — replaced by top "edit" tool */
+        .design-prompts-section { display: none !important; }
 
-        .design-prompts {
-            pointer-events: auto;
-            background-color: var(--primary-color);
-            color: var(--background-color);
-            border: 1px solid var(--primary-color);
-            border-radius: 4px;
-            font-size: 22px;
-            font-family: 'VT323', monospace;
-            font-weight: normal;
-            padding: 10px 16px;
-            width: auto;
-            min-width: 0;
-            height: auto;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: none;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            text-align: center;
-            margin: 0;
-            white-space: nowrap;
-        }
-        
-        @media (max-width: 768px) {
-            .design-prompts {
-                font-size: 16px;
-                padding: 8px 12px;
-            }
-        }
-        
-        .design-prompts:hover {
-            background-color: var(--background-color);
-            color: var(--primary-color);
-        }
-
-        /* Phone RUN — bottom-middle under card; positioned by ui-manager.js */
+        /* RUN — fixed to viewport bottom; z above canvas / p5 DOM */
         .sketch-run {
-            display: none;
-            position: fixed;
+            display: flex !important;
+            position: fixed !important;
             left: 50%;
-            bottom: 72px;
+            bottom: max(14px, env(safe-area-inset-bottom, 0px));
             transform: translateX(-50%);
-            width: 64px;
-            height: 64px;
+            width: 56px;
+            height: 56px;
             border-radius: 50%;
             border: 2px solid var(--primary-color);
             background: var(--primary-color);
             color: var(--background-color);
             font-family: 'VT323', monospace;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
             cursor: pointer;
-            z-index: 1000;
+            z-index: 10001;
             align-items: center;
             justify-content: center;
             padding: 0;
@@ -151,34 +110,24 @@
             background: var(--background-color);
             color: var(--primary-color);
         }
-
-        @media (max-width: 768px),
-               ((max-width: 900px) and (max-aspect-ratio: 3/4)) {
-            .sketch-run {
-                display: flex;
-            }
-        }
     </style>
     <script>
         if (typeof applyThemeFromStorage === 'function') applyThemeFromStorage();
     </script>
 </head>
 <body>
-    <!-- Phone RUN (same action as UP arrow); >EDITOR bottom-right -->
+    <!-- Phone RUN (same action as UP arrow); edit is in the top tool strip -->
     <button type="button" id="sketch-run-btn" class="sketch-run" onclick="runSketchFromButton()" aria-label="Generate prompts">RUN</button>
-    <div class="design-prompts-section">
-        <button class="design-prompts" onclick="goToEditor()">&gt;EDITOR</button>
-    </div>
     
     <!-- Load modules (theme-manager already in <head>) -->
-    <script src="ui-manager.js?v=20260725q"></script>
-    <script src="animation-manager.js?v=20260725q"></script>
-    <script src="data-manager.js?v=20260725q"></script>
-    <script src="student-manager.js?v=20260725q"></script>
-    <script src="prompt-generator.js?v=20260725q"></script>
-    <script src="sketch-refactored.js?v=20260725q"></script>
+    <script src="ui-manager.js?v=20260726e"></script>
+    <script src="animation-manager.js?v=20260726e"></script>
+    <script src="data-manager.js?v=20260726e"></script>
+    <script src="student-manager.js?v=20260726e"></script>
+    <script src="prompt-generator.js?v=20260726e"></script>
+    <script src="sketch-refactored.js?v=20260726e"></script>
     <script>
-        console.log('PromptMe sketch build 20260725q');
+        console.log('PromptMe sketch build 20260726e');
         // Phone RUN → same path as UP arrow
         function runSketchFromButton() {
             if (window.playClickSound) window.playClickSound();
@@ -187,6 +136,8 @@
             }
         }
         window.runSketchFromButton = runSketchFromButton;
+        // If a cached HTML shell omitted the button, inject it now
+        if (typeof window.ensureSketchRunButton === 'function') window.ensureSketchRunButton();
     </script>
 </body>
 </html> 

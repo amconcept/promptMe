@@ -360,11 +360,9 @@ function populateDefaultActivity(data) {
         objectiveInput.value = data.objective || '';
     }
     
-    // Set checkbox
+    // Criteria-selectable UI removed — keep off until feature is ready
     const checkbox = document.getElementById('prompt1-interests-mode');
-    if (checkbox) {
-        checkbox.checked = data.prompt1InterestsMode || false;
-    }
+    if (checkbox) checkbox.checked = false;
     
     // Add prompt headers
     const promptHeadersEl = document.getElementById('prompt-headers');
