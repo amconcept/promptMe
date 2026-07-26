@@ -69,6 +69,7 @@ function nextStudent() {
 function advanceToNextResultAndClearPrompts(newName) {
     if (typeof window.commitPendingPrompts === 'function') window.commitPendingPrompts();
     if (typeof window.stopResultNameArrowFlash === 'function') window.stopResultNameArrowFlash();
+    if (typeof window.setSketchAwaitingNext === 'function') window.setSketchAwaitingNext(false);
 
     const historyTotal = Array.isArray(classReport) ? classReport.length : 0;
     // New run always starts at the end of history (index === length means empty slot)

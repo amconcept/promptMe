@@ -87,12 +87,12 @@
             left: 50%;
             bottom: max(14px, env(safe-area-inset-bottom, 0px));
             transform: translateX(-50%);
-            width: 56px;
-            height: 56px;
+            width: 64px;
+            height: 64px;
             border-radius: 50%;
             border: 2px solid var(--primary-color);
             background: var(--primary-color);
-            color: var(--background-color);
+            color: #000000;
             font-family: 'VT323', monospace;
             font-size: 16px;
             font-weight: bold;
@@ -105,10 +105,67 @@
             touch-action: manipulation;
         }
 
+        /* After a run, waiting for GO TO NEXT — outline only (title-bright, not filled) */
+        .sketch-run.sketch-run-muted {
+            background: var(--background-color);
+            color: var(--primary-color);
+            font-size: 12px;
+            letter-spacing: 0.02em;
+            opacity: 0.85;
+        }
+
         .sketch-run:hover,
         .sketch-run:active {
             background: var(--background-color);
             color: var(--primary-color);
+        }
+
+        .sketch-run.sketch-run-muted:hover,
+        .sketch-run.sketch-run-muted:active {
+            background: var(--primary-color);
+            color: #000000;
+            opacity: 1;
+        }
+
+        /* GO TO NEXT — solid CTA (hidden until post-run reveal) */
+        .sketch-next-btn {
+            display: inline-flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45em;
+            background: var(--primary-color);
+            color: #000000;
+            border: 2px solid var(--primary-color);
+            border-radius: 4px;
+            padding: 7px 14px;
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 0.06em;
+            line-height: 1;
+            cursor: pointer;
+            opacity: 0;
+            pointer-events: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            user-select: none;
+            box-sizing: border-box;
+            white-space: nowrap;
+        }
+
+        .sketch-next-btn .sketch-next-sq {
+            display: inline-block;
+            width: 0.5em;
+            height: 0.5em;
+            background: #000000;
+            flex-shrink: 0;
+        }
+
+        .sketch-next-btn .sketch-next-label {
+            color: #000000;
+            font-weight: bold;
+            line-height: 1;
         }
     </style>
     <script>
@@ -120,14 +177,14 @@
     <button type="button" id="sketch-run-btn" class="sketch-run" onclick="runSketchFromButton()" aria-label="Generate prompts">RUN</button>
     
     <!-- Load modules (theme-manager already in <head>) -->
-    <script src="ui-manager.js?v=20260726f"></script>
-    <script src="animation-manager.js?v=20260726f"></script>
-    <script src="data-manager.js?v=20260726f"></script>
-    <script src="student-manager.js?v=20260726f"></script>
-    <script src="prompt-generator.js?v=20260726f"></script>
-    <script src="sketch-refactored.js?v=20260726f"></script>
+    <script src="ui-manager.js?v=20260726q"></script>
+    <script src="animation-manager.js?v=20260726q"></script>
+    <script src="data-manager.js?v=20260726q"></script>
+    <script src="student-manager.js?v=20260726q"></script>
+    <script src="prompt-generator.js?v=20260726q"></script>
+    <script src="sketch-refactored.js?v=20260726q"></script>
     <script>
-        console.log('PromptMe sketch build 20260726f');
+        console.log('PromptMe sketch build 20260726q');
         // Phone RUN → same path as UP arrow
         function runSketchFromButton() {
             if (window.playClickSound) window.playClickSound();

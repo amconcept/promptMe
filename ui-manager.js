@@ -17,7 +17,8 @@ let nextStudentButton;
 let resultsLabel; // "# of #" between arrows (bottom-center under card)
 let resultNameWrapper; // name input only — card identifier row
 let resultNameInput;
-let nextHintWrapper; // "■ NEXT ■" top-center (squares on both sides)
+let nextHintWrapper; // "GO TO NEXT" button top-center (revealed after a run)
+window.sketchAwaitingNext = false; // true after run completes until teacher advances
 
 // Control panel positioning constants - now responsive
 const CONTROL_PANEL_OFFSET = () => Math.max(min(width * 0.15, 140), 100);  // 15% of width, max 140px, min 100px
@@ -83,9 +84,9 @@ function getSketchChromeMetrics(w, h) {
     const edgeTop = phone ? 10 : 14;
     const edgeBottom = phone ? 14 : 20;
     const toolH = phone ? 32 : 34;
-    const nextH = phone ? 28 : 30;
+    const nextH = phone ? 36 : 38;
     const navH = phone ? 28 : 30;
-    const runSize = phone ? 56 : 64;
+    const runSize = 64;
     // Fixed chrome bands (card fills the middle leftover)
     const fixed = toolH + nextH + navH + runSize;
     const free = Math.max(120, vh - edgeTop - edgeBottom - fixed);
@@ -325,9 +326,9 @@ function positionNameInputAndButtons() {
         }
     }
 
-    // ■ NEXT ■ — top-center between tools and card
+    // GO TO NEXT — top-center button between tools and card
     if (SKETCH_HIDE_CONTROL_PANEL && nextHintWrapper && nextHintWrapper.elt) {
-        const fontPx = isNarrow ? 18 : 22;
+        const fontPx = isNarrow ? 16 : 18;
         const nextTop = (bounds && typeof bounds.nextTop === 'number')
             ? bounds.nextTop
             : (chrome.nextTop || chrome.toolsBottom + 10);
@@ -336,37 +337,38 @@ function positionNameInputAndButtons() {
             'flex-direction:row',
             'align-items:center',
             'justify-content:center',
-            'white-space:nowrap',
-            'font-family:VT323, monospace',
-            'color:var(--primary-color)',
-            'font-size:' + fontPx + 'px',
             'position:absolute',
-            'z-index:5',
+            'z-index:5000',
             'height:' + nextH + 'px',
             'box-sizing:border-box',
-            'line-height:1',
             'margin:0',
             'padding:0',
-            'gap:0.4em'
+            'pointer-events:none'
         ].join(';');
-        const hintW = nextHintWrapper.elt.offsetWidth || Math.ceil(fontPx * 7);
+        const btn = nextHintWrapper.elt.querySelector('.sketch-next-btn');
+        if (btn) btn.style.fontSize = fontPx + 'px';
+        const hintW = nextHintWrapper.elt.offsetWidth || Math.ceil(fontPx * 10);
         nextHintWrapper.position(Math.round((currentWidth - hintW) / 2), nextTop);
         nextHintWrapper.show();
     }
 
-    // RUN — always present + pinned to visible bottom (survives stale HTML cache)
+    // RUN / RE-RUN — pinned to visible bottom
     ensureSketchRunButton();
     const runBtn = document.getElementById('sketch-run-btn');
     if (runBtn) {
         const bottomPad = chrome.bottomPad || 14;
-        // Prefer bottom-anchor so mobile browser chrome can't push RUN off-screen
+        const awaiting = !!window.sketchAwaitingNext;
+        const label = awaiting ? 'RE-RUN' : 'RUN';
+        runBtn.textContent = label;
+        runBtn.setAttribute('aria-label', awaiting ? 'Regenerate prompts' : 'Generate prompts');
+        runBtn.classList.toggle('sketch-run-muted', awaiting);
         runBtn.style.cssText = [
             'display:flex',
             'align-items:center',
             'justify-content:center',
             'position:fixed',
             'visibility:visible',
-            'opacity:1',
+            'opacity:' + (awaiting ? '0.85' : '1'),
             'pointer-events:auto',
             'z-index:10001',
             'width:' + runSize + 'px',
@@ -378,11 +380,12 @@ function positionNameInputAndButtons() {
             'transform:translateX(-50%)',
             'border-radius:50%',
             'border:2px solid var(--primary-color)',
-            'background:var(--primary-color)',
-            'color:var(--background-color)',
+            'background:' + (awaiting ? 'var(--background-color)' : 'var(--primary-color)'),
+            'color:' + (awaiting ? 'var(--primary-color)' : '#000000'),
             'font-family:VT323, monospace',
-            'font-size:' + (isNarrow ? '16px' : '18px'),
+            'font-size:' + (awaiting ? (isNarrow ? '11px' : '12px') : (isNarrow ? '16px' : '18px')),
             'font-weight:bold',
+            'letter-spacing:' + (awaiting ? '0.02em' : '0'),
             'padding:0',
             'margin:0',
             'cursor:pointer',
@@ -391,6 +394,21 @@ function positionNameInputAndButtons() {
         ].join(';');
     }
 }
+
+/** Toggle post-run waiting state: RE-RUN muted until teacher presses GO TO NEXT */
+function setSketchAwaitingNext(awaiting) {
+    window.sketchAwaitingNext = !!awaiting;
+    if (typeof window.positionNameInputAndButtons === 'function') {
+        window.positionNameInputAndButtons();
+    } else {
+        const runBtn = document.getElementById('sketch-run-btn');
+        if (runBtn) {
+            runBtn.textContent = awaiting ? 'RE-RUN' : 'RUN';
+            runBtn.classList.toggle('sketch-run-muted', !!awaiting);
+        }
+    }
+}
+if (typeof window !== 'undefined') window.setSketchAwaitingNext = setSketchAwaitingNext;
 
 /** Create #sketch-run-btn if HTML cache omitted it */
 function ensureSketchRunButton() {
@@ -504,33 +522,41 @@ function createUI() {
         resultNameWrapper = createDiv('');
         resultNameWrapper.elt.style.cssText = 'display:inline-flex; flex-direction:row; align-items:center; justify-content:center; white-space:nowrap; font-family: VT323, monospace; color: var(--primary-color); font-size: ' + Math.max(FONT_SIZES.INPUT(), 14) + 'px; position: absolute;';
 
-        // "■ NEXT ■" — squares on both sides; hidden until revealed after a run
+        // GO TO NEXT — solid button; hidden until revealed after a run
         nextHintWrapper = createDiv('');
-        nextHintWrapper.elt.style.cssText = 'display:flex; flex-direction:row; align-items:center; justify-content:center; white-space:nowrap; font-family: VT323, monospace; color: var(--primary-color); font-size: ' + Math.max(FONT_SIZES.INPUT(), 16) + 'px; position: absolute; z-index: 5;';
-        const prefixContainer = document.createElement('div');
-        prefixContainer.style.cssText = 'display:flex; flex-direction:row; align-items:center; gap:0.4em; cursor:pointer; outline:none; -webkit-tap-highlight-color:transparent; flex-shrink:0; height:100%;';
-        prefixContainer.setAttribute('tabindex', '-1');
-        const squareCss = 'display:inline-block;width:0.55em;height:0.55em;background:var(--primary-color);flex-shrink:0;user-select:none;opacity:0;transition:none;';
+        nextHintWrapper.elt.style.cssText = 'display:flex; flex-direction:row; align-items:center; justify-content:center; position:absolute; z-index:5000; pointer-events:none;';
+        const prefixContainer = document.createElement('button');
+        prefixContainer.type = 'button';
+        prefixContainer.className = 'sketch-next-btn';
+        prefixContainer.setAttribute('aria-label', 'Go to next');
         const leftSquare = document.createElement('span');
+        leftSquare.className = 'sketch-next-sq';
         leftSquare.setAttribute('aria-hidden', 'true');
-        leftSquare.style.cssText = squareCss;
         const hintLabel = document.createElement('span');
-        hintLabel.textContent = 'NEXT';
-        hintLabel.style.cssText = 'font-size:1em; font-weight:bold; letter-spacing:0.08em; opacity:0; transition:none; line-height:1;';
+        hintLabel.className = 'sketch-next-label';
+        hintLabel.textContent = 'GO TO NEXT';
         const rightSquare = document.createElement('span');
+        rightSquare.className = 'sketch-next-sq';
         rightSquare.setAttribute('aria-hidden', 'true');
-        rightSquare.style.cssText = squareCss;
         prefixContainer.appendChild(leftSquare);
         prefixContainer.appendChild(hintLabel);
         prefixContainer.appendChild(rightSquare);
         nextHintWrapper.elt.appendChild(prefixContainer);
+
+        function hintTextForMode(mode) {
+            return (mode === 'start') ? 'START' : 'GO TO NEXT';
+        }
+
         let blinkInterval = null;
         let flashInterval = null;
         let flashStartTimeout = null;
         function setHintVisible(opacity) {
-            leftSquare.style.opacity = opacity;
-            rightSquare.style.opacity = opacity;
-            hintLabel.style.opacity = opacity;
+            const op = String(opacity);
+            prefixContainer.style.opacity = op;
+            // Only clickable while visible
+            const show = op !== '0';
+            prefixContainer.style.pointerEvents = show ? 'auto' : 'none';
+            nextHintWrapper.elt.style.pointerEvents = show ? 'auto' : 'none';
         }
         function stopArrowFlash() {
             if (flashStartTimeout) { clearTimeout(flashStartTimeout); flashStartTimeout = null; }
@@ -541,14 +567,16 @@ function createUI() {
         window.stopResultNameArrowFlash = stopArrowFlash;
         window.startResultNameArrowFlash = function(hint) {
             const mode = (hint === 'start' || hint === 'next') ? hint : (window.getResultNameHint && window.getResultNameHint() || 'next');
-            hintLabel.textContent = (mode === 'start') ? 'START' : 'NEXT';
+            hintLabel.textContent = hintTextForMode(mode);
+            prefixContainer.setAttribute('aria-label', hintLabel.textContent);
+            if (typeof window.setSketchAwaitingNext === 'function') window.setSketchAwaitingNext(true);
             if (flashStartTimeout) { clearTimeout(flashStartTimeout); flashStartTimeout = null; }
             if (flashInterval) { clearInterval(flashInterval); flashInterval = null; }
             setHintVisible('0');
 
             function startContinuousBlink() {
                 flashInterval = setInterval(() => {
-                    const dim = leftSquare.style.opacity === '0.35';
+                    const dim = prefixContainer.style.opacity === '0.35';
                     setHintVisible(dim ? '1' : '0.35');
                 }, 400);
             }
@@ -571,14 +599,16 @@ function createUI() {
                 startContinuousBlink();
             }
         };
-        window.setResultNameHint = function(t) { hintLabel.textContent = (t === 'start') ? 'START' : 'NEXT'; };
+        window.setResultNameHint = function(t) {
+            hintLabel.textContent = hintTextForMode(t === 'start' ? 'start' : 'next');
+        };
         prefixContainer.addEventListener('mouseenter', () => {
             const mode = (window.getResultNameHint && window.getResultNameHint()) || 'next';
-            hintLabel.textContent = (mode === 'start') ? 'START' : 'NEXT';
+            hintLabel.textContent = hintTextForMode(mode);
             setHintVisible('1');
             let count = 0;
             blinkInterval = setInterval(() => {
-                const dim = leftSquare.style.opacity === '0.35';
+                const dim = prefixContainer.style.opacity === '0.35';
                 setHintVisible(dim ? '1' : '0.35');
                 count++;
                 if (count >= 6) { clearInterval(blinkInterval); blinkInterval = null; setHintVisible('1'); }
@@ -586,14 +616,16 @@ function createUI() {
         });
         prefixContainer.addEventListener('mouseleave', () => {
             if (blinkInterval) { clearInterval(blinkInterval); blinkInterval = null; }
-            // Keep visible while post-run flash is active; otherwise hide square + NEXT together
+            // Keep visible while post-run flash is active; otherwise hide
             if (!flashInterval) setHintVisible('0');
         });
         prefixContainer.addEventListener('click', () => {
             stopArrowFlash();
+            if (typeof window.setSketchAwaitingNext === 'function') window.setSketchAwaitingNext(false);
             if (typeof window.advanceToNextResultAndClearPrompts === 'function') window.advanceToNextResultAndClearPrompts('');
             if (resultNameInput && resultNameInput.elt) resultNameInput.elt.focus();
         });
+        // Name focus hides the flash cue but keeps RE-RUN muted until GO TO NEXT
         resultNameInput = createInput('');
         resultNameInput.elt.setAttribute('placeholder', ' ');
         resultNameInput.elt.style.cssText = 'border:none; background:transparent; outline:none; color:var(--primary-color); -webkit-text-fill-color:var(--primary-color); caret-color:var(--primary-color); font:inherit; font-weight:bold; text-align:center; padding:0; margin:0; display:inline-block; width:100%; min-width:6em;';
