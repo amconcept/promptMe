@@ -121,12 +121,13 @@
             color: var(--primary-color);
         }
 
-        /* Phone RUN — mirrors editor cube-run; positioned by ui-manager.js */
+        /* Phone RUN — bottom-middle under card; positioned by ui-manager.js */
         .sketch-run {
             display: none;
             position: fixed;
-            left: 16px;
-            bottom: 80px;
+            left: 50%;
+            bottom: 72px;
+            transform: translateX(-50%);
             width: 64px;
             height: 64px;
             border-radius: 50%;
@@ -170,14 +171,14 @@
     </div>
     
     <!-- Load modules (theme-manager already in <head>) -->
-    <script src="ui-manager.js?v=20260725k"></script>
-    <script src="animation-manager.js?v=20260725k"></script>
-    <script src="data-manager.js?v=20260725k"></script>
-    <script src="student-manager.js?v=20260725k"></script>
-    <script src="prompt-generator.js?v=20260725k"></script>
-    <script src="sketch-refactored.js?v=20260725k"></script>
+    <script src="ui-manager.js?v=20260725q"></script>
+    <script src="animation-manager.js?v=20260725q"></script>
+    <script src="data-manager.js?v=20260725q"></script>
+    <script src="student-manager.js?v=20260725q"></script>
+    <script src="prompt-generator.js?v=20260725q"></script>
+    <script src="sketch-refactored.js?v=20260725q"></script>
     <script>
-        console.log('PromptMe sketch build 20260725k');
+        console.log('PromptMe sketch build 20260725q');
         // Phone RUN → same path as UP arrow
         function runSketchFromButton() {
             if (window.playClickSound) window.playClickSound();

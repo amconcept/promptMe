@@ -1,7 +1,7 @@
 // UI Manager - Handles all UI elements and interactions
 // Responsible: buttons, inputs, positioning (control panel removed per wireframe redesign)
 
-// When true: no sidebar control panel; only central card, screenshot top-right, name area, EDITOR link
+// When true: no sidebar control panel; top tool strip, central card, EDITOR link
 const SKETCH_HIDE_CONTROL_PANEL = true;
 
 // UI State Variables
@@ -13,10 +13,10 @@ let downloadReportButton;
 let resetReportButton;
 let prevStudentButton;
 let nextStudentButton;
-let resultsLabel; // "Results X of Y" between arrows (below card)
+let resultsLabel; // "# of #" between arrows (top-left of card)
 let resultNameWrapper; // name input only — card identifier row
 let resultNameInput;
-let nextHintWrapper; // blinking "> NEXT" above top of card (separate from name)
+let nextHintWrapper; // blinking "■ NEXT" above top-right of card
 
 // Control panel positioning constants - now responsive
 const CONTROL_PANEL_OFFSET = () => Math.max(min(width * 0.15, 140), 100);  // 15% of width, max 140px, min 100px
@@ -55,7 +55,7 @@ if (typeof window !== 'undefined') window.FONT_SIZES = FONT_SIZES;
 // Centered vintage prompt card (sketch) — tweak ratios here
 const CARD_LAYOUT = {
     WIDTH_RATIO: 0.72,
-    HEIGHT_RATIO: 0.75,
+    HEIGHT_RATIO: 0.68, // leave room for top tools + bottom RUN
     PAD_X_RATIO: 0.08,
     PAD_Y_RATIO: 0.04,
     CORNER_MAX: 40
@@ -71,30 +71,26 @@ const BUTTON_SIZES = {
     ELEMENT_SPACING: () => Math.max(min(height * 0.02, 20), 10) // Minimum spacing between elements
 };
 
-// Centralized control panel positioning function (when panel hidden: positions top-right bubbles)
+// Centralized control panel positioning (when panel hidden: top strip of tools)
 function positionControlPanel() {
     const currentWidth = (typeof width !== 'undefined' && width > 0) ? width : window.innerWidth;
-    const topRightY = 20;
+    const topY = 12;
     const topRightX = currentWidth - 20;
 
     if (SKETCH_HIDE_CONTROL_PANEL) {
-        // Stack top-right bubbles: screenshot, report, clear
-        const btnW = 90;
-        const btnH = 36;
-        const gap = 8;
-
-        let y = topRightY;
-        if (recordButton) {
-            recordButton.position(topRightX - btnW, y);
-            y += btnH + gap;
-        }
-        if (downloadReportButton) {
-            downloadReportButton.position(topRightX - btnW, y);
-            y += btnH + gap;
-        }
-        if (resetReportButton) {
-            resetReportButton.position(topRightX - btnW, y);
-        }
+        // Horizontal strip along top: screenshot · report · clear
+        const btnW = currentWidth <= 768 ? 84 : 90;
+        const gap = currentWidth <= 768 ? 6 : 10;
+        const tools = [recordButton, downloadReportButton, resetReportButton].filter(Boolean);
+        const totalW = tools.length * btnW + Math.max(0, tools.length - 1) * gap;
+        let x = Math.max(10, (currentWidth - totalW) / 2);
+        tools.forEach((btn) => {
+            btn.style('width', btnW + 'px');
+            btn.style('height', '34px');
+            btn.style('margin-bottom', '0');
+            btn.position(x, topY);
+            x += btnW + gap;
+        });
         return;
     }
 
@@ -173,34 +169,20 @@ function positionNameInputAndButtons() {
     
     const elementHeight = BUTTON_SIZES.HEIGHT();
     const isNarrow = currentWidth <= 768;
+    const bounds = window.sketchCardBounds;
 
-    // >EDITOR DOM button — measure so nav can clear it
+    // >EDITOR — bottom-right only (Results moved to card top-left)
     const editorSection = document.querySelector('.design-prompts-section');
     const editorBtn = document.querySelector('.design-prompts');
-    let editorW = isNarrow ? 88 : 140;
     let editorH = isNarrow ? 36 : 44;
     if (editorBtn) {
         const er = editorBtn.getBoundingClientRect();
-        if (er.width > 0) editorW = er.width;
         if (er.height > 0) editorH = er.height;
     }
     const edgePad = isNarrow ? 10 : 20;
-    const gap = isNarrow ? 10 : 16;
+    const gap = isNarrow ? 8 : 12;
+    const runSize = 64;
 
-    // Bottom band: [<] Results [>]  ……  >EDITOR  (same row, no overlap)
-    const arrowWidth = isNarrow ? 36 : 30;
-    const nameFieldWidth = isNarrow
-        ? Math.max(100, Math.min(currentWidth - editorW - arrowWidth * 2 - edgePad * 2 - gap * 3, 160))
-        : BUTTON_SIZES.WIDTH();
-    const navTotalW = nameFieldWidth + (arrowWidth * 2) + 20;
-    const rowH = Math.max(elementHeight, editorH);
-    const fieldY = currentHeight - edgePad - rowH;
-    // Center nav in the space left of EDITOR
-    const usableRight = currentWidth - edgePad - editorW - gap;
-    const startX = Math.max(edgePad, (usableRight - navTotalW) / 2);
-    const fieldX = startX + arrowWidth + 10;
-
-    // Place EDITOR at bottom-right of the same band
     if (editorSection && editorSection.style) {
         editorSection.style.bottom = edgePad + 'px';
         editorSection.style.right = edgePad + 'px';
@@ -208,10 +190,17 @@ function positionNameInputAndButtons() {
         editorSection.style.left = 'auto';
     }
 
-    if (SKETCH_HIDE_CONTROL_PANEL && resultsLabel) {
-        resultsLabel.position(fieldX, fieldY + Math.max(0, (rowH - elementHeight) / 2));
-        resultsLabel.size(nameFieldWidth, elementHeight);
+    // Compact Results nav — [<] # of # [>] · ■ NEXT
+    // Inset to where the top rounded corner meets the flat edge (not over the curve).
+    const arrowWidth = isNarrow ? 24 : 26;
+    const navH = isNarrow ? 26 : 28;
+    const resultsFontPx = isNarrow ? 13 : 15;
+    const compactResultsW = isNarrow ? 64 : 72;
+    const cornerInset = (bounds && typeof bounds.cornerRadius === 'number')
+        ? Math.max(12, Math.round(bounds.cornerRadius))
+        : 16;
 
+    if (SKETCH_HIDE_CONTROL_PANEL && resultsLabel) {
         const historyTotal = (typeof window.classReport !== 'undefined' && Array.isArray(window.classReport))
             ? window.classReport.length
             : 0;
@@ -219,17 +208,64 @@ function positionNameInputAndButtons() {
             ? allStudents.length
             : 0;
         const baseTotal = historyTotal > 0 ? historyTotal : fallbackTotal;
-
-        // 0-based slot index; do not clamp when currentStudentIndex === classReport.length (empty slot after NEXT)
         let idx = (typeof currentStudentIndex !== 'undefined' && currentStudentIndex >= 0) ? currentStudentIndex : 0;
         const displayTotal = Math.max(baseTotal, idx + 1, 1);
-
-        resultsLabel.html('Results ' + (idx + 1) + ' of ' + displayTotal);
+        resultsLabel.html((idx + 1) + ' of ' + displayTotal);
+        resultsLabel.size(compactResultsW, navH);
+        resultsLabel.style('font-size', resultsFontPx + 'px');
+        resultsLabel.style('letter-spacing', '0.02em');
+        resultsLabel.style('line-height', navH + 'px');
+        resultsLabel.style('display', 'flex');
+        resultsLabel.style('align-items', 'center');
+        resultsLabel.style('justify-content', 'center');
+        resultsLabel.style('box-sizing', 'border-box');
+        resultsLabel.style('margin', '0');
+        resultsLabel.style('padding', '0');
         resultsLabel.show();
     }
+
+    // Shared row above the card, inset to flat top edge
+    // Same chromeTop for Results + NEXT so they share one baseline (not cramped on the border)
+    let chromeTop = edgePad + 44;
+    let flatLeft = edgePad;           // start of [<] = corner→flat junction
+    let flatRight = currentWidth - edgePad; // end of T in NEXT = flat→corner junction
+    if (bounds && typeof bounds.x === 'number') {
+        const gapAboveCard = 16;
+        chromeTop = Math.max(edgePad + 40, bounds.y - gapAboveCard - navH);
+        flatLeft = bounds.x + cornerInset;
+        flatRight = bounds.x + bounds.w - cornerInset;
+    }
+
+    const navGap = 2;
+    const styleNavArrow = (btn) => {
+        if (!btn) return;
+        btn.style('width', arrowWidth + 'px');
+        btn.style('height', navH + 'px');
+        btn.style('font-size', '14px');
+        btn.style('padding', '0');
+        btn.style('margin', '0');
+        btn.style('box-sizing', 'border-box');
+        btn.style('display', 'flex');
+        btn.style('align-items', 'center');
+        btn.style('justify-content', 'center');
+        btn.style('line-height', '1');
+    };
+
+    if (prevStudentButton) {
+        prevStudentButton.position(flatLeft, chromeTop);
+        styleNavArrow(prevStudentButton);
+    }
+    if (resultsLabel) {
+        // Same top + height as arrows → label text sits middle of [<] — [>]
+        resultsLabel.position(flatLeft + arrowWidth + navGap, chromeTop);
+    }
+    if (nextStudentButton) {
+        nextStudentButton.position(flatLeft + arrowWidth + navGap + compactResultsW + navGap, chromeTop);
+        styleNavArrow(nextStudentButton);
+    }
+
     // Name input: centered in the card identifier row
     if (SKETCH_HIDE_CONTROL_PANEL && resultNameWrapper && resultNameWrapper.elt) {
-        const bounds = window.sketchCardBounds;
         if (bounds && typeof bounds.x === 'number') {
             const fontPx = bounds.nameSize || Math.max(FONT_SIZES.INPUT(), 18);
             const rowHName = bounds.nameRowH || 40;
@@ -246,61 +282,54 @@ function positionNameInputAndButtons() {
             resultNameWrapper.show();
         }
     }
-    // NEXT control: above the top-right corner of the card (`>` then NEXT inline)
+
+    // ■ NEXT — same row/top as Results; trailing "T" on right flat→corner junction
     if (SKETCH_HIDE_CONTROL_PANEL && nextHintWrapper && nextHintWrapper.elt) {
-        const bounds = window.sketchCardBounds;
-        const fontPx = Math.max(FONT_SIZES.INPUT(), 16);
-        nextHintWrapper.elt.style.fontSize = fontPx + 'px';
-        nextHintWrapper.elt.style.justifyContent = 'flex-end';
-        if (bounds && typeof bounds.x === 'number') {
-            const gapAboveCard = 8;
-            const top = Math.max(8, bounds.y - gapAboveCard - fontPx * 1.15);
-            // Align trailing "T" with where the top edge meets the corner radius (not the outer corner tip)
-            const hintW = nextHintWrapper.elt.offsetWidth || Math.ceil(fontPx * 4.5);
-            const radiusInset = (typeof bounds.cornerRadius === 'number') ? bounds.cornerRadius : 24;
-            nextHintWrapper.position(bounds.x + bounds.w - hintW - radiusInset, top);
-        } else {
-            nextHintWrapper.position(Math.max(24, currentWidth * 0.72), Math.max(12, currentHeight * 0.04));
-        }
+        const fontPx = isNarrow ? 18 : 20;
+        nextHintWrapper.elt.style.cssText = [
+            'display:flex',
+            'flex-direction:row',
+            'align-items:center',
+            'justify-content:flex-end',
+            'white-space:nowrap',
+            'font-family:VT323, monospace',
+            'color:var(--primary-color)',
+            'font-size:' + fontPx + 'px',
+            'position:absolute',
+            'z-index:5',
+            'height:' + navH + 'px',
+            'box-sizing:border-box',
+            'line-height:1',
+            'margin:0',
+            'padding:0'
+        ].join(';');
+        const hintW = nextHintWrapper.elt.offsetWidth || Math.ceil(fontPx * 5.5);
+        nextHintWrapper.position(flatRight - hintW, chromeTop);
         nextHintWrapper.show();
     }
-    const arrowY = fieldY + Math.max(0, (rowH - elementHeight) / 2);
-    if (prevStudentButton) {
-        prevStudentButton.position(startX, arrowY);
-        if (isNarrow) {
-            prevStudentButton.style('width', arrowWidth + 'px');
-            prevStudentButton.style('height', elementHeight + 'px');
-        }
-    }
-    if (nextStudentButton) {
-        nextStudentButton.position(startX + arrowWidth + 10 + nameFieldWidth + 10, arrowY);
-        if (isNarrow) {
-            nextStudentButton.style('width', arrowWidth + 'px');
-            nextStudentButton.style('height', elementHeight + 'px');
-        }
-    }
 
-    // Phone RUN: bottom-left of prompt card (mirrors editor cube-footer RUN)
+    // Phone RUN: bottom-middle of card, clear gap (no border overlap)
     const runBtn = document.getElementById('sketch-run-btn');
     if (runBtn) {
         const phoneRun = currentWidth <= 768
             || window.matchMedia('(max-width: 900px) and (max-aspect-ratio: 3/4)').matches;
         runBtn.style.display = phoneRun ? 'flex' : 'none';
         if (phoneRun) {
-            const runSize = 64;
-            const bounds = window.sketchCardBounds;
-            let left = edgePad;
-            let top = fieldY - runSize - gap;
+            // Keep clear of EDITOR on the bottom band
+            const editorClearY = currentHeight - edgePad - editorH - gap - runSize;
+            let left = (currentWidth - runSize) / 2;
+            let top = editorClearY;
             if (bounds && typeof bounds.x === 'number') {
-                left = bounds.x;
-                // Sit just under the card, but stay above the Results / EDITOR row
-                top = Math.min(bounds.bottom + 8, fieldY - runSize - 8);
-                top = Math.max(edgePad, top);
+                left = bounds.x + (bounds.w - runSize) / 2;
+                // Always below the card bottom with a clear gap
+                top = Math.min(bounds.bottom + 14, editorClearY);
+                top = Math.max(bounds.bottom + 10, top);
             }
-            runBtn.style.left = left + 'px';
-            runBtn.style.top = top + 'px';
+            runBtn.style.left = Math.round(left) + 'px';
+            runBtn.style.top = Math.round(top) + 'px';
             runBtn.style.bottom = 'auto';
             runBtn.style.right = 'auto';
+            runBtn.style.transform = 'none'; // left is already the button's left edge
         }
     }
 }
@@ -384,9 +413,9 @@ function createUI() {
     }
 
     if (SKETCH_HIDE_CONTROL_PANEL) {
-        resultsLabel = createDiv('Results 1 of 1');
+        resultsLabel = createDiv('1 of 1');
         resultsLabel.style('font-family', 'VT323, monospace');
-        resultsLabel.style('font-size', FONT_SIZES.INPUT() + 'px');
+        resultsLabel.style('font-size', '13px');
         resultsLabel.style('color', 'var(--primary-color)');
         resultsLabel.style('background-color', 'var(--background-color)');
         resultsLabel.style('border', 'none');
@@ -394,36 +423,39 @@ function createUI() {
         resultsLabel.style('align-items', 'center');
         resultsLabel.style('justify-content', 'center');
         resultsLabel.style('text-align', 'center');
+        resultsLabel.style('white-space', 'nowrap');
         // Card name input (identifier) — separate from NEXT
         resultNameWrapper = createDiv('');
         resultNameWrapper.elt.style.cssText = 'display:inline-flex; flex-direction:row; align-items:center; justify-content:center; white-space:nowrap; font-family: VT323, monospace; color: var(--primary-color); font-size: ' + Math.max(FONT_SIZES.INPUT(), 14) + 'px; position: absolute;';
 
-        // Blinking "> NEXT" control — above top-right of card; label to the right of chevron
+        // "■ NEXT" — square + label hidden until revealed after a run (same flash)
         nextHintWrapper = createDiv('');
-        nextHintWrapper.elt.style.cssText = 'display:inline-flex; flex-direction:row; align-items:center; justify-content:flex-end; white-space:nowrap; font-family: VT323, monospace; color: var(--primary-color); font-size: ' + Math.max(FONT_SIZES.INPUT(), 16) + 'px; position: absolute; z-index: 5;';
+        nextHintWrapper.elt.style.cssText = 'display:flex; flex-direction:row; align-items:center; justify-content:flex-end; white-space:nowrap; font-family: VT323, monospace; color: var(--primary-color); font-size: ' + Math.max(FONT_SIZES.INPUT(), 16) + 'px; position: absolute; z-index: 5;';
         const prefixContainer = document.createElement('div');
-        prefixContainer.style.cssText = 'display:flex; flex-direction:row; align-items:baseline; gap:0.35em; cursor:pointer; outline:none; -webkit-tap-highlight-color:transparent; flex-shrink:0;';
+        prefixContainer.style.cssText = 'display:flex; flex-direction:row; align-items:center; gap:0.35em; cursor:pointer; outline:none; -webkit-tap-highlight-color:transparent; flex-shrink:0; height:100%;';
         prefixContainer.setAttribute('tabindex', '-1');
         const prefixSpan = document.createElement('span');
-        prefixSpan.textContent = '>';
-        prefixSpan.style.userSelect = 'none';
-        prefixSpan.style.fontWeight = 'bold';
+        // CSS square (■) — hidden with NEXT until post-run reveal
+        prefixSpan.setAttribute('aria-hidden', 'true');
+        prefixSpan.style.cssText = 'display:inline-block;width:0.55em;height:0.55em;background:var(--primary-color);flex-shrink:0;user-select:none;opacity:0;transition:none;';
         const hintLabel = document.createElement('span');
         hintLabel.textContent = 'NEXT';
-        // No transitions — only opacity blinking (synced to three-note cue)
-        hintLabel.style.cssText = 'font-size:0.85em; font-weight:bold; letter-spacing:0.08em; opacity:0; transition:none; line-height:1;';
+        hintLabel.style.cssText = 'font-size:1em; font-weight:bold; letter-spacing:0.08em; opacity:0; transition:none; line-height:1;';
         prefixContainer.appendChild(prefixSpan);
         prefixContainer.appendChild(hintLabel);
         nextHintWrapper.elt.appendChild(prefixContainer);
         let blinkInterval = null;
         let flashInterval = null;
         let flashStartTimeout = null;
+        function setHintVisible(opacity) {
+            prefixSpan.style.opacity = opacity;
+            hintLabel.style.opacity = opacity;
+        }
         function stopArrowFlash() {
             if (flashStartTimeout) { clearTimeout(flashStartTimeout); flashStartTimeout = null; }
             if (flashInterval) { clearInterval(flashInterval); flashInterval = null; }
             if (blinkInterval) { clearInterval(blinkInterval); blinkInterval = null; }
-            prefixSpan.style.opacity = '1';
-            hintLabel.style.opacity = '0';
+            setHintVisible('0');
         }
         window.stopResultNameArrowFlash = stopArrowFlash;
         window.startResultNameArrowFlash = function(hint) {
@@ -431,25 +463,21 @@ function createUI() {
             hintLabel.textContent = (mode === 'start') ? 'START' : 'NEXT';
             if (flashStartTimeout) { clearTimeout(flashStartTimeout); flashStartTimeout = null; }
             if (flashInterval) { clearInterval(flashInterval); flashInterval = null; }
-            hintLabel.style.opacity = '0';
-            prefixSpan.style.opacity = '1';
+            setHintVisible('0');
 
             function startContinuousBlink() {
                 flashInterval = setInterval(() => {
                     const dim = prefixSpan.style.opacity === '0.35';
-                    prefixSpan.style.opacity = dim ? '1' : '0.35';
-                    hintLabel.style.opacity = dim ? '1' : '0.35';
+                    setHintVisible(dim ? '1' : '0.35');
                 }, 400);
             }
 
             if (typeof window.playNextHintCueSound === 'function') {
                 window.playNextHintCueSound(function (beatIndex) {
-                    hintLabel.style.opacity = '1';
-                    prefixSpan.style.opacity = '1';
+                    setHintVisible('1');
                     if (beatIndex < 2) {
                         setTimeout(function () {
-                            hintLabel.style.opacity = '0.35';
-                            prefixSpan.style.opacity = '0.35';
+                            setHintVisible('0.35');
                         }, 72);
                     }
                 });
@@ -458,7 +486,7 @@ function createUI() {
                     startContinuousBlink();
                 }, 430);
             } else {
-                hintLabel.style.opacity = '1';
+                setHintVisible('1');
                 startContinuousBlink();
             }
         };
@@ -466,18 +494,19 @@ function createUI() {
         prefixContainer.addEventListener('mouseenter', () => {
             const mode = (window.getResultNameHint && window.getResultNameHint()) || 'next';
             hintLabel.textContent = (mode === 'start') ? 'START' : 'NEXT';
-            hintLabel.style.opacity = '1';
+            setHintVisible('1');
             let count = 0;
             blinkInterval = setInterval(() => {
-                prefixSpan.style.opacity = prefixSpan.style.opacity === '0.35' ? '1' : '0.35';
+                const dim = prefixSpan.style.opacity === '0.35';
+                setHintVisible(dim ? '1' : '0.35');
                 count++;
-                if (count >= 6) { clearInterval(blinkInterval); blinkInterval = null; prefixSpan.style.opacity = '1'; }
+                if (count >= 6) { clearInterval(blinkInterval); blinkInterval = null; setHintVisible('1'); }
             }, 120);
         });
         prefixContainer.addEventListener('mouseleave', () => {
             if (blinkInterval) { clearInterval(blinkInterval); blinkInterval = null; }
-            prefixSpan.style.opacity = '1';
-            if (!flashInterval) hintLabel.style.opacity = '0';
+            // Keep visible while post-run flash is active; otherwise hide square + NEXT together
+            if (!flashInterval) setHintVisible('0');
         });
         prefixContainer.addEventListener('click', () => {
             stopArrowFlash();

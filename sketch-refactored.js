@@ -1011,10 +1011,18 @@ function draw() {
     const cardLayout = (typeof window !== 'undefined' && window.CARD_LAYOUT) ? window.CARD_LAYOUT : {
         WIDTH_RATIO: 0.72, HEIGHT_RATIO: 0.75, PAD_X_RATIO: 0.08, PAD_Y_RATIO: 0.04, CORNER_MAX: 40
     };
+    // Reserve chrome: top tools + Results/NEXT; bottom RUN + EDITOR on phone
+    const phoneChrome = width <= 768
+        || (typeof window.matchMedia === 'function'
+            && window.matchMedia('(max-width: 900px) and (max-aspect-ratio: 3/4)').matches);
+    const topChrome = phoneChrome ? 56 : 52;
+    const bottomChrome = phoneChrome ? 100 : 56;
     const cardWidth = width * cardLayout.WIDTH_RATIO;
-    const cardHeight = height * cardLayout.HEIGHT_RATIO;
+    let cardHeight = height * cardLayout.HEIGHT_RATIO;
+    const maxCardH = Math.max(180, height - topChrome - bottomChrome);
+    if (cardHeight > maxCardH) cardHeight = maxCardH;
     const cardX = (width - cardWidth) / 2;
-    const cardY = (height - cardHeight) / 2;
+    const cardY = topChrome + (height - topChrome - bottomChrome - cardHeight) / 2;
     const cornerRadius = min(cardLayout.CORNER_MAX, cardWidth * 0.06, cardHeight * 0.05);
     const padX = cardWidth * cardLayout.PAD_X_RATIO;
     const padY = cardHeight * cardLayout.PAD_Y_RATIO;
