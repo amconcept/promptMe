@@ -1,5 +1,5 @@
-// Prompt Cube — one central cell editor; swipe right = prompts, swipe down = criteria
-// Keeps the hidden .prompt-grid in sync for existing save/load logic.
+// Phone cube editor — same data model as grid; A1 leads objective & prompt labels.
+// Horizontal = prompt sets (max 4). Vertical = categories. Chevrons vs + by position.
 
 let cubePromptIndex = 0;
 let cubeCriterionIndex = 0;
@@ -23,34 +23,108 @@ function clampCubeIndices() {
     cubeCriterionIndex = Math.max(0, Math.min(cubeCriterionIndex, cc - 1));
 }
 
-/** Write visible cube fields back into the hidden grid cell */
+/** Label (prompt-set header) is editable on category A only; others inherit */
+function isLabelEditableOnCube() {
+    return cubeCriterionIndex === 0;
+}
+
+/** Write cube fields into hidden grid (no save — callers decide) */
 function flushPromptCube() {
     const headers = document.querySelectorAll('.header-input');
-    const criteria = document.querySelectorAll('.criterion-label-input');
     const textareas = document.querySelectorAll('.textarea-container textarea');
     const promptCount = headers.length;
-    if (!promptCount || !criteria.length) return;
+    const criterionCount = getCubeCriterionCount();
+    if (!promptCount || !criterionCount) return;
 
     clampCubeIndices();
     const p = cubePromptIndex;
     const c = cubeCriterionIndex;
 
     const headerInput = document.getElementById('cube-prompt-header');
-    const criterionInput = document.getElementById('cube-criterion-label');
     const promptsArea = document.getElementById('cube-prompts');
 
-    if (headers[p] && headerInput) {
+    // Prompt-set label lives on the column; edit only from category A
+    if (headers[p] && headerInput && isLabelEditableOnCube() && !headerInput.readOnly) {
         headers[p].value = headerInput.value;
     }
-    if (criteria[c] && criterionInput) {
-        criteria[c].value = criterionInput.value;
-        if (typeof updateCriterionLabel === 'function') {
-            updateCriterionLabel(c, criterionInput.value);
-        }
-    }
+
     const ta = textareas[c * promptCount + p];
     if (ta && promptsArea) {
         ta.value = promptsArea.value;
+    }
+}
+
+/** Show/hide chrome without removing layout space (keeps A/B and set # stable) */
+function setCubeControlActive(el, active) {
+    if (!el) return;
+    el.classList.toggle('is-inactive', !active);
+    el.setAttribute('aria-hidden', active ? 'false' : 'true');
+    el.disabled = !active;
+    el.tabIndex = active ? 0 : -1;
+}
+
+/** Update + / chevron / delete chrome for current cell */
+function updateCubeChrome() {
+    const pc = getCubePromptCount();
+    const cc = getCubeCriterionCount();
+    clampCubeIndices();
+    const p = cubePromptIndex;
+    const c = cubeCriterionIndex;
+    const maxP = typeof MAX_PROMPTS === 'number' ? MAX_PROMPTS : 4;
+    const maxC = typeof MAX_CATEGORIES === 'number' ? MAX_CATEGORIES : 6;
+
+    const promptBadge = document.getElementById('cube-prompt-badge');
+    const catBadge = document.getElementById('cube-cat-badge');
+    const prevBtn = document.getElementById('cube-prompt-prev');
+    const nextBtn = document.getElementById('cube-prompt-next');
+    const addPromptBtn = document.getElementById('cube-prompt-add');
+    const catUp = document.getElementById('cube-cat-up');
+    const catDown = document.getElementById('cube-cat-down');
+    const catAdd = document.getElementById('cube-cat-add');
+    const deleteBtn = document.getElementById('cube-delete-action');
+
+    if (promptBadge) promptBadge.textContent = String(p + 1);
+    if (catBadge) catBadge.textContent = String.fromCharCode(65 + c);
+
+    // Prompt nav: + when can grow from last; chevrons when multiples; at max only back
+    const atFirstPrompt = p === 0;
+    const atLastPrompt = p === pc - 1;
+    const canAddPrompt = pc < maxP;
+    const showPrev = !(atFirstPrompt || pc <= 1);
+    const showNext = !(atLastPrompt || pc <= 1);
+    const showAddPrompt = canAddPrompt && atLastPrompt;
+
+    setCubeControlActive(prevBtn, showPrev);
+    setCubeControlActive(nextBtn, showNext);
+    setCubeControlActive(addPromptBtn, showAddPrompt);
+
+    // Category rail: fixed 3-row grid — inactive controls stay invisible but occupy space
+    const atFirstCat = c === 0;
+    const atLastCat = c === cc - 1;
+    const canAddCat = cc < maxC;
+    const showCatUp = !(atFirstCat || cc <= 1);
+    const showCatDown = !(atLastCat || cc <= 1);
+    const showCatAdd = canAddCat && atLastCat;
+
+    setCubeControlActive(catUp, showCatUp);
+    setCubeControlActive(catDown, showCatDown);
+    setCubeControlActive(catAdd, showCatAdd);
+
+    // Contextual delete (never A1)
+    if (deleteBtn) {
+        if (p > 0) {
+            deleteBtn.hidden = false;
+            deleteBtn.textContent = 'delete prompt set ' + (p + 1);
+            deleteBtn.onclick = () => cubeDeletePrompt();
+        } else if (c > 0) {
+            deleteBtn.hidden = false;
+            deleteBtn.textContent = 'delete category ' + String.fromCharCode(65 + c);
+            deleteBtn.onclick = () => cubeDeleteCriterion();
+        } else {
+            deleteBtn.hidden = true;
+            deleteBtn.textContent = '';
+            deleteBtn.onclick = null;
+        }
     }
 }
 
@@ -60,61 +134,37 @@ function loadPromptCube() {
     if (!cube) return;
 
     const headers = document.querySelectorAll('.header-input');
-    const criteria = document.querySelectorAll('.criterion-label-input');
     const textareas = document.querySelectorAll('.textarea-container textarea');
-    const letterEl = document.getElementById('cube-criterion-letter');
     const headerInput = document.getElementById('cube-prompt-header');
-    const criterionInput = document.getElementById('cube-criterion-label');
     const promptsArea = document.getElementById('cube-prompts');
-    const promptPos = document.getElementById('cube-prompt-pos');
-    const criterionPos = document.getElementById('cube-criterion-pos');
-    const deletePromptBtn = document.getElementById('cube-delete-prompt');
-    const deleteCriterionBtn = document.getElementById('cube-delete-criterion');
 
     const promptCount = headers.length;
-    const criterionCount = criteria.length;
+    const criterionCount = getCubeCriterionCount();
     if (!promptCount || !criterionCount) return;
 
     clampCubeIndices();
     const p = cubePromptIndex;
     const c = cubeCriterionIndex;
 
-    if (letterEl) {
-        letterEl.textContent = String.fromCharCode(65 + c) + ':';
-    }
     if (headerInput) {
-        headerInput.value = headers[p] ? headers[p].value : '';
-        headerInput.placeholder = 'Prompt ' + (p + 1) + ' name';
+        const colLabel = headers[p] ? headers[p].value : '';
+        headerInput.value = colLabel;
+        const editable = isLabelEditableOnCube();
+        headerInput.readOnly = !editable;
+        if (editable) {
+            headerInput.placeholder = '… insert a label';
+        } else {
+            headerInput.placeholder = 'same as label A' + (p + 1);
+            if (!colLabel) headerInput.value = '';
+        }
     }
-    if (criterionInput) {
-        criterionInput.value = criteria[c] ? criteria[c].value : '';
-    }
+
     const ta = textareas[c * promptCount + p];
     if (promptsArea) {
         promptsArea.value = ta ? ta.value : '';
     }
-    if (promptPos) {
-        promptPos.textContent = 'PROMPT ' + (p + 1) + ' / ' + promptCount;
-    }
-    if (criterionPos) {
-        criterionPos.textContent = 'CRITERION ' + String.fromCharCode(65 + c) + ' / ' + criterionCount;
-    }
-    if (deletePromptBtn) {
-        deletePromptBtn.hidden = promptCount <= 1;
-    }
-    if (deleteCriterionBtn) {
-        deleteCriterionBtn.hidden = criterionCount <= 1;
-    }
 
-    // Keep add buttons in sync with limits
-    const addPromptBtn = document.querySelector('.cube-add-prompt');
-    const addCatBtn = document.querySelector('.cube-add-category');
-    if (addPromptBtn) {
-        addPromptBtn.style.display = promptCount >= MAX_PROMPTS ? 'none' : 'inline-flex';
-    }
-    if (addCatBtn) {
-        addCatBtn.style.display = criterionCount >= MAX_CATEGORIES ? 'none' : 'inline-flex';
-    }
+    updateCubeChrome();
 }
 
 function refreshPromptCube() {
@@ -122,6 +172,7 @@ function refreshPromptCube() {
     loadPromptCube();
 }
 
+/** Navigate without wrapping (edges use + / back-only rules) */
 function navigatePromptCube(dPrompt, dCriterion) {
     const pc = getCubePromptCount();
     const cc = getCubeCriterionCount();
@@ -130,16 +181,15 @@ function navigatePromptCube(dPrompt, dCriterion) {
     flushPromptCube();
 
     if (dPrompt) {
-        cubePromptIndex = (cubePromptIndex + dPrompt + pc) % pc;
+        cubePromptIndex = Math.max(0, Math.min(pc - 1, cubePromptIndex + dPrompt));
     }
     if (dCriterion) {
-        cubeCriterionIndex = (cubeCriterionIndex + dCriterion + cc) % cc;
+        cubeCriterionIndex = Math.max(0, Math.min(cc - 1, cubeCriterionIndex + dCriterion));
     }
 
     const cube = document.getElementById('prompt-cube');
     if (cube) {
         cube.classList.remove('cube-flash');
-        // force reflow for animation restart
         void cube.offsetWidth;
         cube.classList.add('cube-flash');
     }
@@ -150,34 +200,48 @@ function navigatePromptCube(dPrompt, dCriterion) {
 
 function cubeAddPrompt() {
     flushPromptCube();
+    const before = getCubePromptCount();
+    const maxP = typeof MAX_PROMPTS === 'number' ? MAX_PROMPTS : 4;
+    if (before >= maxP) return;
     if (typeof addNewPrompt === 'function') addNewPrompt();
     cubePromptIndex = Math.max(0, getCubePromptCount() - 1);
     refreshPromptCube();
+    if (typeof autoSaveToLocalStorage === 'function') autoSaveToLocalStorage();
 }
 
 function cubeAddCategory() {
     flushPromptCube();
+    const before = getCubeCriterionCount();
+    const maxC = typeof MAX_CATEGORIES === 'number' ? MAX_CATEGORIES : 6;
+    if (before >= maxC) return;
     if (typeof addNewCategory === 'function') addNewCategory();
     cubeCriterionIndex = Math.max(0, getCubeCriterionCount() - 1);
     refreshPromptCube();
+    if (typeof autoSaveToLocalStorage === 'function') autoSaveToLocalStorage();
 }
 
 function cubeDeletePrompt() {
+    // Column delete removes that prompt set across all categories (grid logic)
+    if (cubePromptIndex <= 0) return;
     flushPromptCube();
     if (typeof deletePromptAt === 'function') {
         deletePromptAt(cubePromptIndex);
     }
     clampCubeIndices();
     refreshPromptCube();
+    if (typeof autoSaveToLocalStorage === 'function') autoSaveToLocalStorage();
 }
 
 function cubeDeleteCriterion() {
+    // Cannot delete category A (minimum with prompt 1)
+    if (cubeCriterionIndex <= 0) return;
     flushPromptCube();
     if (typeof deleteCategoryAt === 'function') {
         deleteCategoryAt(cubeCriterionIndex);
     }
     clampCubeIndices();
     refreshPromptCube();
+    if (typeof autoSaveToLocalStorage === 'function') autoSaveToLocalStorage();
 }
 
 function onCubeFieldInput() {
@@ -214,26 +278,20 @@ function initPromptCubeGestures() {
         const target = e.target;
         const inTextarea = target && target.id === 'cube-prompts';
 
-        // Horizontal: swipe right → next prompt, left → previous
         if (absX > absY) {
             if (dx > 0) navigatePromptCube(1, 0);
             else navigatePromptCube(-1, 0);
             return;
         }
 
-        // Vertical: allow native scroll inside prompts textarea
         if (inTextarea) return;
 
-        // Swipe down → next criterion, up → previous
         if (dy > 0) navigatePromptCube(0, 1);
         else navigatePromptCube(0, -1);
     }, { passive: true });
 
-    // Desktop: arrow keys when focus is inside cube (not while typing in textarea/input)
     document.addEventListener('keydown', (e) => {
-        if (!cube.contains(document.activeElement) && document.activeElement !== document.body) {
-            // allow arrows when nothing focused / cube focused
-        }
+        if (!isCubeLayout()) return;
         const tag = (document.activeElement && document.activeElement.tagName) || '';
         if (tag === 'TEXTAREA' || tag === 'INPUT') return;
         if (!cube.contains(document.activeElement) && document.activeElement !== document.body) return;
@@ -253,7 +311,7 @@ function initPromptCubeGestures() {
         }
     });
 
-    ['cube-prompt-header', 'cube-criterion-label', 'cube-prompts'].forEach((id) => {
+    ['cube-prompt-header', 'cube-prompts'].forEach((id) => {
         const el = document.getElementById(id);
         if (!el) return;
         el.addEventListener('input', onCubeFieldInput);
@@ -261,9 +319,66 @@ function initPromptCubeGestures() {
     });
 }
 
+const CUBE_LAYOUT_MQ = window.matchMedia(
+    '(max-width: 640px), ((max-width: 900px) and (max-aspect-ratio: 3/4))'
+);
+// Remember phone/cube across RUN → sketch → >EDITOR (new tab / viewport blips).
+const EDITOR_LAYOUT_KEY = 'promptMeEditorLayout';
+const DESKTOP_LAYOUT_MQ = window.matchMedia('(min-width: 901px)');
+
+function rememberEditorLayoutForSketch() {
+    // Prefer live media query at leave-time (not sticky flag) so we record what user saw.
+    sessionStorage.setItem(EDITOR_LAYOUT_KEY, CUBE_LAYOUT_MQ.matches ? 'cube' : 'grid');
+}
+
+function prefersForcedCube() {
+    return sessionStorage.getItem(EDITOR_LAYOUT_KEY) === 'cube';
+}
+
+function isCubeLayout() {
+    return CUBE_LAYOUT_MQ.matches || prefersForcedCube();
+}
+
+function syncEditorLayoutMode() {
+    const cubeMode = isCubeLayout();
+    document.body.classList.toggle('editor-cube-layout', cubeMode);
+
+    const grid = document.querySelector('.prompt-grid');
+    const addBtns = document.querySelector('.add-buttons-container');
+    const cubeWrap = document.querySelector('.prompt-cube-wrap');
+
+    if (grid) grid.setAttribute('aria-hidden', cubeMode ? 'true' : 'false');
+    if (addBtns) addBtns.setAttribute('aria-hidden', cubeMode ? 'true' : 'false');
+    if (cubeWrap) cubeWrap.setAttribute('aria-hidden', cubeMode ? 'false' : 'true');
+
+    if (cubeMode) {
+        refreshPromptCube();
+    } else if (typeof flushPromptCube === 'function') {
+        flushPromptCube();
+        if (typeof autoSaveToLocalStorage === 'function') autoSaveToLocalStorage();
+    }
+}
+
+function onEditorLayoutMqChange() {
+    // Drop sticky cube only when the window becomes clearly desktop.
+    if (DESKTOP_LAYOUT_MQ.matches && !CUBE_LAYOUT_MQ.matches) {
+        sessionStorage.removeItem(EDITOR_LAYOUT_KEY);
+    }
+    syncEditorLayoutMode();
+}
+
 function initPromptCube() {
     initPromptCubeGestures();
-    refreshPromptCube();
+    syncEditorLayoutMode();
+    if (isCubeLayout()) refreshPromptCube();
+
+    if (typeof CUBE_LAYOUT_MQ.addEventListener === 'function') {
+        CUBE_LAYOUT_MQ.addEventListener('change', onEditorLayoutMqChange);
+        DESKTOP_LAYOUT_MQ.addEventListener('change', onEditorLayoutMqChange);
+    } else if (typeof CUBE_LAYOUT_MQ.addListener === 'function') {
+        CUBE_LAYOUT_MQ.addListener(onEditorLayoutMqChange);
+        DESKTOP_LAYOUT_MQ.addListener(onEditorLayoutMqChange);
+    }
 }
 
 window.flushPromptCube = flushPromptCube;
@@ -275,6 +390,10 @@ window.cubeAddCategory = cubeAddCategory;
 window.cubeDeletePrompt = cubeDeletePrompt;
 window.cubeDeleteCriterion = cubeDeleteCriterion;
 window.initPromptCube = initPromptCube;
+window.isCubeLayout = isCubeLayout;
+window.syncEditorLayoutMode = syncEditorLayoutMode;
+window.rememberEditorLayoutForSketch = rememberEditorLayoutForSketch;
+window.updateCubeChrome = updateCubeChrome;
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initPromptCube);
@@ -282,7 +401,6 @@ if (document.readyState === 'loading') {
     initPromptCube();
 }
 
-// Refresh cube after grid rebuilds (load / add / delete)
 window.addEventListener('promptDataUpdated', () => {
-    setTimeout(refreshPromptCube, 50);
+    if (isCubeLayout()) setTimeout(refreshPromptCube, 50);
 });

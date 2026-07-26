@@ -4,6 +4,19 @@
 // Global variables
 let classList = []; // Array to store student names from uploaded class list
 
+// Open sketch in the same tab so >EDITOR returns to this window.
+// Phone/cube preference is stored so editor can restore cube even if viewport blips.
+function openSketchFromEditor() {
+    if (typeof rememberEditorLayoutForSketch === 'function') {
+        rememberEditorLayoutForSketch();
+    } else if (window.matchMedia('(max-width: 640px), ((max-width: 900px) and (max-aspect-ratio: 3/4))').matches) {
+        sessionStorage.setItem('promptMeEditorLayout', 'cube');
+    } else {
+        sessionStorage.setItem('promptMeEditorLayout', 'grid');
+    }
+    window.location.href = 'sketch.html?from=editor';
+}
+
 // Quick test function - navigate to sketch. Blocks if prompts missing; offers Skip if only objective missing.
 function quickTest() {
     if (window.playClickSound) {
@@ -38,15 +51,15 @@ function quickTest() {
     // Objective missing but prompts exist: show "Missing objective" with Skip to proceed or Cancel to stay.
     if (missingObjective) {
         if (window.showMissingObjectiveWithSkip) {
-            window.showMissingObjectiveWithSkip(() => window.open('sketch.html', '_blank'));
+            window.showMissingObjectiveWithSkip(() => openSketchFromEditor());
         } else {
             if (confirm('Missing objective. Skip and open prompting window?')) {
-                window.open('sketch.html', '_blank');
+                openSketchFromEditor();
             }
         }
         return;
     }
-    window.open('sketch.html', '_blank');
+    openSketchFromEditor();
 }
 
 // Helper function to check if editor has any data worth testing
@@ -690,6 +703,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Make functions globally available
 window.quickTest = quickTest;
+window.openSketchFromEditor = openSketchFromEditor;
 window.checkIfHasData = checkIfHasData;
 window.loadCurrentStateFromLocalStorage = loadCurrentStateFromLocalStorage;
 

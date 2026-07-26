@@ -985,12 +985,28 @@ function updateSettingsToggleIcon() {
     toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
 }
 
+// Ignore outside-close after open (mobile ghost-clicks often land ~300–600ms later)
+let _overflowMenuIgnoreOutsideUntil = 0;
+let _overflowMenuToggleLockUntil = 0;
+
 // Toggle overflow menu (... top-right)
-function toggleSettingsPanel() {
+function toggleSettingsPanel(event) {
+    if (event) {
+        try {
+            event.preventDefault();
+            event.stopPropagation();
+        } catch (err) { /* optional */ }
+    }
+
+    // Prevent open+close from double-bound handlers or stacked click/pointer events
+    const now = Date.now();
+    if (now < _overflowMenuToggleLockUntil) return;
+    _overflowMenuToggleLockUntil = now + 320;
+
     const panel = document.getElementById('settings-panel');
     if (!panel) return;
 
-    playClickSound();
+    try { playClickSound(); } catch (e) { /* audio optional */ }
 
     const willOpen = !panel.classList.contains('open');
     panel.classList.toggle('open', willOpen);
@@ -998,6 +1014,8 @@ function toggleSettingsPanel() {
     updateSettingsToggleIcon();
 
     if (willOpen) {
+        // Long enough to absorb iOS/Android ghost taps after the opening gesture
+        _overflowMenuIgnoreOutsideUntil = Date.now() + 900;
         if (typeof closeFileMenuDropdown === 'function') closeFileMenuDropdown();
         if (typeof closeThemeMenuDropdown === 'function') closeThemeMenuDropdown();
     }
@@ -1011,29 +1029,40 @@ function closeSettingsPanel() {
     updateSettingsToggleIcon();
 }
 
-// Wire ... toggle + close overflow menu on outside click / Escape
+// Wire ... toggle + close overflow menu on outside pointer / Escape
 (function initOverflowMenu() {
-    function onDocClick(e) {
+    function isOverflowUiTarget(target) {
         const panel = document.getElementById('settings-panel');
         const toggle = document.getElementById('settings-panel-toggle');
+        if (!target || !target.closest) return false;
+        if (toggle && (toggle === target || toggle.contains(target))) return true;
+        if (panel && (panel === target || panel.contains(target))) return true;
+        return false;
+    }
+
+    function onDocPointerDown(e) {
+        const panel = document.getElementById('settings-panel');
         if (!panel || !panel.classList.contains('open')) return;
-        if (panel.contains(e.target) || (toggle && toggle.contains(e.target))) return;
+        if (Date.now() < _overflowMenuIgnoreOutsideUntil) return;
+        if (isOverflowUiTarget(e.target)) return;
         closeSettingsPanel();
     }
+
     function onKey(e) {
         if (e.key === 'Escape') closeSettingsPanel();
     }
+
     function bind() {
         const toggle = document.getElementById('settings-panel-toggle');
         if (toggle && toggle.dataset.bound !== '1') {
             toggle.dataset.bound = '1';
+            // Single click path only — pointerup+click together causes open-then-close
             toggle.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                toggleSettingsPanel();
+                toggleSettingsPanel(e);
             });
         }
-        document.addEventListener('click', onDocClick);
+        // pointerdown only for outside-close (extra document click listener caused ghost closes)
+        document.addEventListener('pointerdown', onDocPointerDown, true);
         document.addEventListener('keydown', onKey);
         closeSettingsPanel();
     }

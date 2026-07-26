@@ -2,10 +2,16 @@
 // Responsible for: Saving/loading data, CSV export/import, localStorage management
 
 // Save changes to localStorage (editor prompts/categories; working report and usedPrompts preserved)
+let _saveChangesFlushing = false;
 function saveChanges() {
-    // Sync cube fields into the hidden grid before reading DOM
-    if (typeof flushPromptCube === 'function') {
-        flushPromptCube();
+    // Sync cube fields into the hidden grid before reading DOM (guard against re-entry)
+    if (!_saveChangesFlushing && typeof flushPromptCube === 'function') {
+        _saveChangesFlushing = true;
+        try {
+            flushPromptCube();
+        } finally {
+            _saveChangesFlushing = false;
+        }
     }
 
     // Read existing promptCategories so we preserve working report and usedPrompts from sketch

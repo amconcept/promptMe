@@ -165,36 +165,51 @@ function toggleControlPanel() {
     updateSketchToggleIcon();
 }
 
-// Position name input and navigation buttons
+// Position name input, results nav, and >EDITOR without overlap
 function positionNameInputAndButtons() {
     // Use actual window dimensions if p5.js dimensions aren't ready yet
     const currentWidth = (typeof width !== 'undefined' && width > 0) ? width : window.innerWidth;
     const currentHeight = (typeof height !== 'undefined' && height > 0) ? height : window.innerHeight;
     
-    const bottomMargin = BUTTON_SIZES.BOTTOM_MARGIN();
     const elementHeight = BUTTON_SIZES.HEIGHT();
-    const elementSpacing = BUTTON_SIZES.ELEMENT_SPACING();
-    
-    // Always show arrows next to name field
-    // Calculate centered positioning for equal gaps
-    const nameFieldWidth = BUTTON_SIZES.WIDTH();
-    const arrowWidth = 30;
-    const totalWidth = nameFieldWidth + (arrowWidth * 2) + 20; // 20px total gap (10px each side)
-    const startX = (currentWidth - totalWidth) / 2;
-    const fieldX = startX + arrowWidth + 10;
-    let fieldY;
-    if (SKETCH_HIDE_CONTROL_PANEL) {
-        const bounds = window.sketchCardBounds;
-        const cardBottom = (bounds && typeof bounds.bottom === 'number')
-            ? bounds.bottom
-            : (currentHeight * 0.5 + (currentHeight * 0.4));
-        fieldY = cardBottom + 28;
-    } else {
-        const verticalOffset = 80;
-        fieldY = currentHeight - bottomMargin - (elementHeight * 2) - elementSpacing - verticalOffset;
+    const isNarrow = currentWidth <= 768;
+
+    // >EDITOR DOM button — measure so nav can clear it
+    const editorSection = document.querySelector('.design-prompts-section');
+    const editorBtn = document.querySelector('.design-prompts');
+    let editorW = isNarrow ? 88 : 140;
+    let editorH = isNarrow ? 36 : 44;
+    if (editorBtn) {
+        const er = editorBtn.getBoundingClientRect();
+        if (er.width > 0) editorW = er.width;
+        if (er.height > 0) editorH = er.height;
     }
+    const edgePad = isNarrow ? 10 : 20;
+    const gap = isNarrow ? 10 : 16;
+
+    // Bottom band: [<] Results [>]  ……  >EDITOR  (same row, no overlap)
+    const arrowWidth = isNarrow ? 36 : 30;
+    const nameFieldWidth = isNarrow
+        ? Math.max(100, Math.min(currentWidth - editorW - arrowWidth * 2 - edgePad * 2 - gap * 3, 160))
+        : BUTTON_SIZES.WIDTH();
+    const navTotalW = nameFieldWidth + (arrowWidth * 2) + 20;
+    const rowH = Math.max(elementHeight, editorH);
+    const fieldY = currentHeight - edgePad - rowH;
+    // Center nav in the space left of EDITOR
+    const usableRight = currentWidth - edgePad - editorW - gap;
+    const startX = Math.max(edgePad, (usableRight - navTotalW) / 2);
+    const fieldX = startX + arrowWidth + 10;
+
+    // Place EDITOR at bottom-right of the same band
+    if (editorSection && editorSection.style) {
+        editorSection.style.bottom = edgePad + 'px';
+        editorSection.style.right = edgePad + 'px';
+        editorSection.style.top = 'auto';
+        editorSection.style.left = 'auto';
+    }
+
     if (SKETCH_HIDE_CONTROL_PANEL && resultsLabel) {
-        resultsLabel.position(fieldX, fieldY + 10);
+        resultsLabel.position(fieldX, fieldY + Math.max(0, (rowH - elementHeight) / 2));
         resultsLabel.size(nameFieldWidth, elementHeight);
 
         const historyTotal = (typeof window.classReport !== 'undefined' && Array.isArray(window.classReport))
@@ -217,14 +232,14 @@ function positionNameInputAndButtons() {
         const bounds = window.sketchCardBounds;
         if (bounds && typeof bounds.x === 'number') {
             const fontPx = bounds.nameSize || Math.max(FONT_SIZES.INPUT(), 18);
-            const rowH = bounds.nameRowH || 40;
+            const rowHName = bounds.nameRowH || 40;
             const rowY = (typeof bounds.nameRowY === 'number') ? bounds.nameRowY : (bounds.y + 16);
             resultNameWrapper.elt.style.fontSize = fontPx + 'px';
             resultNameWrapper.elt.style.fontWeight = 'bold';
             resultNameWrapper.elt.style.justifyContent = 'center';
             const approxW = Math.min(bounds.w * 0.55, 320);
             resultNameWrapper.elt.style.width = approxW + 'px';
-            resultNameWrapper.position(bounds.x + (bounds.w - approxW) / 2, rowY + Math.max(0, (rowH - fontPx) / 2 - 2));
+            resultNameWrapper.position(bounds.x + (bounds.w - approxW) / 2, rowY + Math.max(0, (rowHName - fontPx) / 2 - 2));
             resultNameWrapper.show();
         } else {
             resultNameWrapper.position(Math.max(24, currentWidth * 0.02), Math.max(20, currentHeight * 0.06));
@@ -249,11 +264,20 @@ function positionNameInputAndButtons() {
         }
         nextHintWrapper.show();
     }
+    const arrowY = fieldY + Math.max(0, (rowH - elementHeight) / 2);
     if (prevStudentButton) {
-        prevStudentButton.position(startX, fieldY);
+        prevStudentButton.position(startX, arrowY);
+        if (isNarrow) {
+            prevStudentButton.style('width', arrowWidth + 'px');
+            prevStudentButton.style('height', elementHeight + 'px');
+        }
     }
     if (nextStudentButton) {
-        nextStudentButton.position(startX + arrowWidth + 10 + nameFieldWidth + 10, fieldY);
+        nextStudentButton.position(startX + arrowWidth + 10 + nameFieldWidth + 10, arrowY);
+        if (isNarrow) {
+            nextStudentButton.style('width', arrowWidth + 'px');
+            nextStudentButton.style('height', elementHeight + 'px');
+        }
     }
 }
 

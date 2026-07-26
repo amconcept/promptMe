@@ -589,7 +589,7 @@
             font-size: clamp(16px, 2.5vw, 20px);
             box-shadow: 0 0 12px var(--primary-shadow);
             transition: none;
-            z-index: 1001;
+            z-index: 3001;
             display: none;
         }
         
@@ -598,9 +598,9 @@
             margin-right: 0;
         }
         
-        /* Main content container for better centering */
+        /* Main content — wide for grid; cube mode tightens via media query */
         .main-content {
-            max-width: 720px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 0 20px 100px;
         }
@@ -624,11 +624,13 @@
             cursor: pointer;
             box-shadow: none;
             transition: all 0.1s ease;
-            z-index: 1002;
+            z-index: 3002;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 0 0 6px 0;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
 
         .settings-panel-toggle:hover,
@@ -645,10 +647,11 @@
             width: min(280px, calc(100vw - 32px));
             max-height: calc(100vh - 90px);
             overflow-y: auto;
+            z-index: 3001;
         }
 
         .settings-panel.open {
-            display: block;
+            display: block !important;
         }
 
         /* Mobile Responsive Design */
@@ -852,10 +855,6 @@
 
             /* Legacy mobile Theme row replaced by ... menu */
             .mobile-settings {
-                display: none !important;
-            }
-
-            .add-buttons-container {
                 display: none !important;
             }
             
@@ -1408,8 +1407,25 @@
             text-transform: uppercase;
         }
 
-        /* Hidden data grid — cube is the editor surface */
-        .prompt-grid {
+        /*
+         * Layout modes
+         * - Default (wide / landscape): full prompt GRID
+         * - Vertical phone: CUBE (portrait-leaning aspect + phone-ish width)
+         *
+         * 3/4 ≈ width/height ≤ 0.75 (taller than wide). max-width keeps
+         * large portrait desktop monitors on the grid.
+         */
+        .prompt-cube-wrap {
+            display: none; /* grid mode default */
+            flex-direction: column;
+            align-items: center;
+            margin: 10px auto 30px;
+            width: 100%;
+            max-width: 420px;
+        }
+
+        /* Visually hide grid while keeping it in the DOM as the data store */
+        .prompt-grid.is-data-only {
             position: absolute !important;
             width: 1px !important;
             height: 1px !important;
@@ -1422,66 +1438,288 @@
             pointer-events: none !important;
         }
 
-        .add-buttons-container {
+        @media (max-width: 640px),
+               ((max-width: 900px) and (max-aspect-ratio: 3/4)) {
+            .main-content {
+                max-width: 720px;
+            }
+
+            .prompt-cube-wrap {
+                display: flex;
+                max-width: 100%;
+            }
+
+            .add-buttons-container {
+                display: none !important;
+            }
+
+            .prompt-grid {
+                position: absolute !important;
+                width: 1px !important;
+                height: 1px !important;
+                padding: 0 !important;
+                margin: -1px !important;
+                overflow: hidden !important;
+                clip: rect(0, 0, 0, 0) !important;
+                white-space: nowrap !important;
+                border: 0 !important;
+                pointer-events: none !important;
+            }
+
+            /* Phone chrome: ... menu stays; RUN replaces START / FAB */
+            h1 {
+                display: none;
+            }
+
+            .mobile-header,
+            .mobile-fab,
+            .start-prompting-section {
+                display: none !important;
+            }
+
+            .activity-title-display {
+                margin-top: 8px;
+                padding-right: 48px;
+            }
+
+            /* A1-led objective: not a boxed field */
+            .objective-section {
+                justify-content: flex-start;
+                align-items: baseline;
+                gap: 8px;
+                margin: 8px 4px 16px;
+                padding-right: 48px; /* clear ... */
+            }
+
+            .objective-label {
+                font-size: 16px;
+            }
+
+            .objective-input {
+                border: none;
+                box-shadow: none;
+                padding: 0;
+                max-width: none;
+                background: transparent;
+            }
+
+            .objective-input:focus {
+                border: none;
+                box-shadow: none;
+            }
+
+            .settings-checkbox {
+                margin: 0 0 12px !important;
+            }
+        }
+
+        /*
+         * Forced phone/cube when returning from sketch (body class from JS).
+         * Mirrors the media-query rules so a wider return tab still shows cube
+         * until the window is clearly desktop (≥901px clears the preference).
+         */
+        body.editor-cube-layout .main-content {
+            max-width: 720px;
+        }
+
+        body.editor-cube-layout .prompt-cube-wrap {
+            display: flex;
+            max-width: 100%;
+        }
+
+        body.editor-cube-layout .add-buttons-container {
+            display: none !important;
+        }
+
+        body.editor-cube-layout .prompt-grid {
+            position: absolute !important;
+            width: 1px !important;
+            height: 1px !important;
+            padding: 0 !important;
+            margin: -1px !important;
+            overflow: hidden !important;
+            clip: rect(0, 0, 0, 0) !important;
+            white-space: nowrap !important;
+            border: 0 !important;
+            pointer-events: none !important;
+        }
+
+        body.editor-cube-layout h1 {
             display: none;
         }
 
-        /* Central prompt cube */
-        .prompt-cube-wrap {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 10px auto 30px;
-            width: 100%;
-            max-width: 420px;
+        body.editor-cube-layout .mobile-header,
+        body.editor-cube-layout .mobile-fab,
+        body.editor-cube-layout .start-prompting-section {
+            display: none !important;
         }
 
+        body.editor-cube-layout .activity-title-display {
+            margin-top: 8px;
+            padding-right: 48px;
+        }
+
+        body.editor-cube-layout .objective-section {
+            justify-content: flex-start;
+            align-items: baseline;
+            gap: 8px;
+            margin: 8px 4px 16px;
+            padding-right: 48px;
+        }
+
+        body.editor-cube-layout .objective-label {
+            font-size: 16px;
+        }
+
+        body.editor-cube-layout .objective-input {
+            border: none;
+            box-shadow: none;
+            padding: 0;
+            max-width: none;
+            background: transparent;
+        }
+
+        body.editor-cube-layout .objective-input:focus {
+            border: none;
+            box-shadow: none;
+        }
+
+        body.editor-cube-layout .settings-checkbox {
+            margin: 0 0 12px !important;
+        }
+
+        /* Phone cube shell (wireframe layout) */
         .prompt-cube {
             width: 100%;
-            aspect-ratio: 1 / 1;
-            max-height: min(72vh, 420px);
-            border: 2px solid var(--primary-color);
-            background: var(--background-color);
-            box-shadow: inset 0 0 24px var(--primary-shadow-light);
+            border: none;
+            background: transparent;
             display: flex;
             flex-direction: column;
-            padding: 14px;
+            padding: 0;
             box-sizing: border-box;
             touch-action: pan-y;
             user-select: none;
             -webkit-user-select: none;
             position: relative;
+            min-height: 360px;
+            gap: 10px;
         }
 
-        .prompt-cube.cube-flash {
-            animation: cubeFlash 180ms ease-out;
+        .cube-prompt-nav {
+            display: grid;
+            grid-template-columns: 36px 40px 36px;
+            align-items: center;
+            justify-content: center;
+            column-gap: 12px;
+            color: var(--primary-color);
         }
 
-        @keyframes cubeFlash {
-            from { box-shadow: 0 0 0 2px var(--primary-color), inset 0 0 24px var(--primary-shadow); }
-            to { box-shadow: inset 0 0 24px var(--primary-shadow-light); }
+        /* Right slot holds › or + without shifting the number badge */
+        .cube-prompt-nav-end,
+        .cube-rail-end {
+            position: relative;
+            width: 36px;
+            height: 36px;
         }
 
-        .cube-row {
+        .cube-prompt-nav-end > .cube-nav-btn,
+        .cube-rail-end > .cube-rail-btn {
+            position: absolute;
+            inset: 0;
+        }
+
+        .cube-prompt-badge,
+        .cube-cat-badge {
+            width: 40px;
+            height: 40px;
+            border: 2px solid var(--primary-color);
+            border-radius: 50%;
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
+            justify-content: center;
+            font-size: 20px;
+            font-family: 'VT323', monospace;
+            color: var(--primary-color);
+            font-weight: bold;
+            justify-self: center;
         }
 
-        .cube-letter {
+        .cube-cat-badge {
+            width: 44px;
+            height: 44px;
             font-size: 22px;
-            font-weight: bold;
-            color: var(--primary-color);
-            min-width: 28px;
+        }
+
+        /* Body row: fixed rail + editor — letter stays aligned to prompts box */
+        .cube-body-row {
+            display: grid;
+            grid-template-columns: 48px 1fr;
+            column-gap: 10px;
+            align-items: center;
+            width: 100%;
+        }
+
+        .cube-rail {
+            display: grid;
+            grid-template-rows: 36px 44px 36px;
+            align-items: center;
+            justify-items: center;
+            row-gap: 8px;
             flex-shrink: 0;
         }
 
-        .cube-criterion-input,
-        .cube-prompt-header {
-            flex: 1;
+        /* Chevrons / + : no circles — badges keep circles */
+        .cube-rail-btn,
+        .cube-nav-btn {
+            background: transparent;
+            border: none;
+            color: var(--primary-color);
+            font-family: 'VT323', monospace;
+            font-size: 28px;
+            width: 36px;
+            height: 36px;
+            border-radius: 0;
+            cursor: pointer;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            box-shadow: none;
+        }
+
+        .cube-rail-btn:hover,
+        .cube-nav-btn:hover {
+            background: transparent;
+            color: var(--primary-hover);
+            opacity: 1;
+        }
+
+        /* Keep layout slots; hide without collapsing (prevents A/B / number shift) */
+        .cube-rail-btn.is-inactive,
+        .cube-nav-btn.is-inactive {
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .cube-delete-link[hidden] {
+            display: none !important;
+        }
+
+        .cube-body {
             min-width: 0;
-            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .prompt-cube.cube-flash .cube-prompts {
+            box-shadow: 0 0 0 2px var(--primary-color);
+        }
+
+        .cube-prompt-header {
+            width: 100%;
+            padding: 10px 12px;
             border: 1px solid var(--primary-color);
             border-radius: 0;
             background: var(--background-color);
@@ -1493,7 +1731,10 @@
             -webkit-user-select: text;
         }
 
-        .cube-criterion-input:focus,
+        .cube-prompt-header:read-only {
+            opacity: 0.75;
+        }
+
         .cube-prompt-header:focus,
         .cube-prompts:focus {
             outline: none;
@@ -1501,45 +1742,10 @@
             box-shadow: 0 0 6px var(--primary-shadow);
         }
 
-        .cube-nav-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-            margin-bottom: 8px;
-            color: var(--primary-color);
-            font-size: 14px;
-            letter-spacing: 1px;
-        }
-
-        .cube-nav-btn {
-            background: transparent;
-            border: 1px solid var(--primary-color);
-            color: var(--primary-color);
-            font-family: 'VT323', monospace;
-            font-size: 18px;
-            width: 36px;
-            height: 32px;
-            cursor: pointer;
-            padding: 0;
-            flex-shrink: 0;
-        }
-
-        .cube-nav-btn:hover {
-            background: var(--primary-color);
-            color: var(--background-color);
-        }
-
-        .cube-pos {
-            flex: 1;
-            text-align: center;
-            opacity: 0.9;
-        }
-
         .cube-prompts {
             flex: 1;
             width: 100%;
-            min-height: 0;
+            min-height: 200px;
             resize: none;
             border: 1px solid var(--primary-color);
             background: var(--frame-background);
@@ -1548,69 +1754,56 @@
             font-size: 18px;
             padding: 12px;
             box-sizing: border-box;
-            margin-bottom: 8px;
             user-select: text;
             -webkit-user-select: text;
             touch-action: pan-y;
         }
 
-        .cube-hint {
-            text-align: center;
+        .cube-prompts-caption {
             font-size: 13px;
             color: var(--primary-color);
             opacity: 0.65;
-            margin-bottom: 8px;
-            letter-spacing: 0.5px;
+            margin-top: -4px;
         }
 
-        .cube-actions {
+        .cube-footer {
             display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            justify-content: center;
-            margin-top: 12px;
-            width: 100%;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 8px;
         }
 
-        .cube-actions .cube-delete[hidden] {
-            display: none !important;
-        }
-
-        .cube-actions button {
-            background: var(--background-color);
-            color: var(--primary-color);
-            border: 1px solid var(--primary-color);
-            font-family: 'VT323', monospace;
-            font-size: 16px;
-            padding: 8px 12px;
-            cursor: pointer;
-            min-height: 40px;
-        }
-
-        .cube-actions button:hover {
+        .cube-run {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            border: 2px solid var(--primary-color);
             background: var(--primary-color);
             color: var(--background-color);
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            flex-shrink: 0;
         }
 
-        .cube-actions .cube-delete {
+        .cube-run:hover {
+            background: var(--background-color);
+            color: var(--primary-color);
+        }
+
+        .cube-delete-link {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            font-family: 'VT323', monospace;
+            font-size: 14px;
+            text-decoration: underline;
+            cursor: pointer;
             opacity: 0.85;
-        }
-
-        @media (max-width: 768px) {
-            .prompt-cube-wrap {
-                max-width: 100%;
-            }
-
-            .prompt-cube {
-                max-height: min(70vh, 480px);
-                aspect-ratio: auto;
-                min-height: 340px;
-            }
-
-            h1 {
-                margin-top: 8px;
-                padding-right: 48px; /* clear ... button */
-            }
+            text-align: right;
+            padding: 8px 0;
         }
     </style>
     <script src="theme-manager.js"></script>
@@ -1668,48 +1861,49 @@
         </label>
     </div>
 
-    <!-- Central prompt cube: swipe right = prompts, swipe down = criteria -->
+    <!-- Phone cube: A1 leads objective; swipe/chevrons for prompt sets & categories -->
     <div class="prompt-cube-wrap">
         <div id="prompt-cube" class="prompt-cube" tabindex="0" aria-label="Prompt editor cube">
-            <div class="cube-row">
-                <span class="cube-letter" id="cube-criterion-letter">A:</span>
-                <input type="text" id="cube-criterion-label" class="cube-criterion-input" placeholder="Enter criterion label" autocomplete="off">
-            </div>
+                <div class="cube-prompt-nav" aria-label="Prompt set navigation">
+                    <button type="button" class="cube-nav-btn" id="cube-prompt-prev" onclick="navigatePromptCube(-1, 0)" aria-label="Previous prompt set">‹</button>
+                    <div class="cube-prompt-badge" id="cube-prompt-badge">1</div>
+                    <div class="cube-prompt-nav-end">
+                        <button type="button" class="cube-nav-btn" id="cube-prompt-next" onclick="navigatePromptCube(1, 0)" aria-label="Next prompt set">›</button>
+                        <button type="button" class="cube-nav-btn" id="cube-prompt-add" onclick="cubeAddPrompt()" aria-label="Add prompt set">+</button>
+                    </div>
+                </div>
 
-            <div class="cube-nav-row">
-                <button type="button" class="cube-nav-btn" onclick="navigatePromptCube(-1, 0)" aria-label="Previous prompt">‹</button>
-                <span class="cube-pos" id="cube-prompt-pos">PROMPT 1 / 1</span>
-                <button type="button" class="cube-nav-btn" onclick="navigatePromptCube(1, 0)" aria-label="Next prompt">›</button>
-            </div>
+                <div class="cube-body-row">
+                    <div class="cube-rail" aria-label="Category navigation">
+                        <button type="button" class="cube-rail-btn" id="cube-cat-up" onclick="navigatePromptCube(0, -1)" aria-label="Previous category">▲</button>
+                        <div class="cube-cat-badge" id="cube-cat-badge">A</div>
+                        <div class="cube-rail-end">
+                            <button type="button" class="cube-rail-btn" id="cube-cat-down" onclick="navigatePromptCube(0, 1)" aria-label="Next category">▼</button>
+                            <button type="button" class="cube-rail-btn" id="cube-cat-add" onclick="cubeAddCategory()" aria-label="Add category">+</button>
+                        </div>
+                    </div>
 
-            <input type="text" id="cube-prompt-header" class="cube-prompt-header" placeholder="Prompt 1 name" autocomplete="off" style="margin-bottom: 8px; width: 100%;">
+                    <div class="cube-body">
+                        <input type="text" id="cube-prompt-header" class="cube-prompt-header" placeholder="… insert a label" autocomplete="off">
+                        <textarea id="cube-prompts" class="cube-prompts" placeholder=""></textarea>
+                        <div class="cube-prompts-caption">list your prompts in the box</div>
+                    </div>
+                </div>
 
-            <textarea id="cube-prompts" class="cube-prompts" placeholder="Enter prompts (one per line)"></textarea>
-
-            <div class="cube-hint">swipe → prompts · swipe ↓ criteria</div>
-
-            <div class="cube-nav-row" style="margin-bottom: 0;">
-                <button type="button" class="cube-nav-btn" onclick="navigatePromptCube(0, -1)" aria-label="Previous criterion">▲</button>
-                <span class="cube-pos" id="cube-criterion-pos">CRITERION A / 1</span>
-                <button type="button" class="cube-nav-btn" onclick="navigatePromptCube(0, 1)" aria-label="Next criterion">▼</button>
-            </div>
-        </div>
-
-        <div class="cube-actions">
-            <button type="button" class="cube-add-prompt" onclick="cubeAddPrompt()">+ Prompt</button>
-            <button type="button" class="cube-add-category" onclick="cubeAddCategory()">+ Category</button>
-            <button type="button" class="cube-delete" id="cube-delete-prompt" onclick="cubeDeletePrompt()" hidden>Delete Prompt</button>
-            <button type="button" class="cube-delete" id="cube-delete-criterion" onclick="cubeDeleteCriterion()" hidden>Delete Category</button>
+                <div class="cube-footer">
+                    <button type="button" class="cube-run" onclick="quickTest()" aria-label="Start prompting">RUN</button>
+                    <button type="button" class="cube-delete-link" id="cube-delete-action" hidden></button>
+                </div>
         </div>
     </div>
 
-    <!-- Hidden legacy add buttons (kept for scripts that query them) -->
-    <div class="add-buttons-container" aria-hidden="true">
-        <button class="add-prompt-button" onclick="addNewPrompt()" type="button">Add Prompt</button>
-        <button class="add-category-button" onclick="addNewCategory()" type="button">Add Category</button>
+    <!-- Add buttons: visible in grid (wide) mode; hidden in cube (phone) mode -->
+    <div class="add-buttons-container">
+        <button class="add-prompt-button" onclick="addNewPrompt()" type="button">+ Add Prompt</button>
+        <button class="add-category-button" onclick="addNewCategory()" type="button">+ Add Category</button>
     </div>
     
-        <div class="prompt-grid" aria-hidden="true">
+        <div class="prompt-grid">
             <!-- Empty placeholder for first column (replaces "Criterion" label) -->
             <div class="grid-placeholder header-placeholder"></div>
             <!-- Prompt headers -->
@@ -1822,10 +2016,10 @@
         </div>
     </div>
 
-    <script src="editor-ui-manager.js"></script>
-    <script src="editor-prompt-cube.js"></script>
-    <script src="editor-data-manager.js"></script>
-    <script src="editor-settings-manager.js"></script>
-    <script src="editor-main.js"></script>
+    <script src="editor-ui-manager.js?v=20260725j"></script>
+    <script src="editor-prompt-cube.js?v=20260725j"></script>
+    <script src="editor-data-manager.js?v=20260725j"></script>
+    <script src="editor-settings-manager.js?v=20260725j"></script>
+    <script src="editor-main.js?v=20260725j"></script>
 </body>
 </html>
