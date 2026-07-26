@@ -1085,23 +1085,53 @@ function isPhoneObjectiveLayout() {
                 || window.matchMedia('(max-width: 900px) and (max-aspect-ratio: 3/4)').matches));
 }
 
-/** True if text fits on one line inside the objective input (uses real rendered font). */
-function objectiveTextFits(input, text) {
-    const prev = input.value;
-    const selStart = input.selectionStart;
-    const selEnd = input.selectionEnd;
-    input.value = text == null ? '' : String(text);
-    // +1 tolerates subpixel scrollWidth quirks
-    const fits = input.scrollWidth <= input.clientWidth + 1;
-    input.value = prev;
-    if (typeof selStart === 'number' && typeof selEnd === 'number') {
-        try { input.setSelectionRange(selStart, selEnd); } catch (e) { /* ignore */ }
+// Hidden span for width checks — never mutate the real <input> during key events
+// (iOS Safari breaks caret/IME if value is rewritten mid-keystroke).
+let _objectiveMirror = null;
+function getObjectiveMirror(input) {
+    if (!_objectiveMirror) {
+        _objectiveMirror = document.createElement('span');
+        _objectiveMirror.setAttribute('aria-hidden', 'true');
+        _objectiveMirror.style.cssText = [
+            'position:absolute',
+            'left:-99999px',
+            'top:0',
+            'visibility:hidden',
+            'pointer-events:none',
+            'white-space:pre',
+            'display:inline-block'
+        ].join(';');
+        document.body.appendChild(_objectiveMirror);
     }
-    return fits;
+    const style = window.getComputedStyle(input);
+    _objectiveMirror.style.font = style.font;
+    _objectiveMirror.style.fontSize = style.fontSize;
+    _objectiveMirror.style.fontFamily = style.fontFamily;
+    _objectiveMirror.style.fontWeight = style.fontWeight;
+    _objectiveMirror.style.fontStyle = style.fontStyle;
+    _objectiveMirror.style.letterSpacing = style.letterSpacing;
+    _objectiveMirror.style.textTransform = style.textTransform;
+    _objectiveMirror.style.padding = '0';
+    _objectiveMirror.style.border = '0';
+    return _objectiveMirror;
+}
+
+function measureObjectiveTextWidth(text, input) {
+    const mirror = getObjectiveMirror(input);
+    // Use non-breaking space so empty string still has a measurable box
+    mirror.textContent = (text == null || text === '') ? '' : String(text);
+    return mirror.offsetWidth;
+}
+
+function objectiveTextFits(input, text) {
+    const maxW = input.clientWidth || input.getBoundingClientRect().width;
+    if (!maxW) return true; // not laid out yet — never block typing
+    return measureObjectiveTextWidth(text, input) <= maxW + 1;
 }
 
 function fitObjectiveToWidth(value, input) {
-    if (!input.clientWidth) return value;
+    const maxW = input.clientWidth || input.getBoundingClientRect().width;
+    if (!maxW) return value;
     let v = value || '';
     if (objectiveTextFits(input, v)) return v;
     let lo = 0;
@@ -1134,33 +1164,14 @@ function bindObjectiveWidthLimit() {
     if (!input || input.dataset.widthLimitBound === '1') return;
     input.dataset.widthLimitBound = '1';
 
-    input.addEventListener('beforeinput', (e) => {
-        if (!isPhoneObjectiveLayout()) return;
-        if (e.inputType && e.inputType.startsWith('delete')) return;
-        const data = e.data;
-        if (data == null) return;
-        const start = input.selectionStart ?? input.value.length;
-        const end = input.selectionEnd ?? start;
-        const next = input.value.slice(0, start) + data + input.value.slice(end);
-        if (!objectiveTextFits(input, next)) {
-            e.preventDefault();
-        }
+    // Soft limit: trim after input. Avoid keydown/beforeinput preventDefault —
+    // those (plus rewriting input.value to measure) break iPhone keyboards.
+    input.addEventListener('input', (e) => {
+        if (e.isComposing) return;
+        enforceObjectiveWidthLimit();
     });
 
-    input.addEventListener('keydown', (e) => {
-        if (!isPhoneObjectiveLayout()) return;
-        // Block printable keys that would overflow (covers browsers weak on beforeinput)
-        if (e.ctrlKey || e.metaKey || e.altKey) return;
-        if (e.key.length !== 1) return;
-        const start = input.selectionStart ?? input.value.length;
-        const end = input.selectionEnd ?? start;
-        const next = input.value.slice(0, start) + e.key + input.value.slice(end);
-        if (!objectiveTextFits(input, next)) {
-            e.preventDefault();
-        }
-    });
-
-    input.addEventListener('input', () => {
+    input.addEventListener('compositionend', () => {
         enforceObjectiveWidthLimit();
     });
 
