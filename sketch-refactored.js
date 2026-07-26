@@ -1296,59 +1296,10 @@ function keyPressed() {
         return;
     }
     
-    // Handle up arrow key for generating prompts (same as Enter)
+    // Handle up arrow key for generating prompts (same as Enter / phone RUN)
     if (keyCode === UP_ARROW || key === 'ArrowUp') {
         debugLog('Up arrow pressed - generating prompts');
-        let inputValue = (window.getResultNameFieldValue && window.getResultNameFieldValue()) || '';
-        if (!inputValue) inputValue = getAutoRunName();
-        studentName = inputValue;
-        // Keep index on the intended history slot (NEXT sets index === classReport.length).
-        // Never clamp to allStudents.length - 1 — that jumped back into an old run and putBack freed its prompts.
-        if (studentName && Array.isArray(allStudents)) {
-            while (allStudents.length <= currentStudentIndex) allStudents.push('');
-            if (currentStudentIndex < 0) currentStudentIndex = 0;
-            allStudents[currentStudentIndex] = studentName;
-            if (typeof totalUniqueStudents !== 'undefined') totalUniqueStudents = allStudents.length;
-        }
-        if (resultNameEl) resultNameEl.blur();
-        // Check for missing objective or prompts – show themed message and encourage user to fill in editor
-        const missing = getMissingEditorData();
-        if (missing.missingObjective || missing.missingPrompts) {
-            if (audioCtx && window.playSound) {
-                window.playSound({ FREQUENCY: 200, DURATION: 150 });
-            }
-            let msg = 'Waiting for user to input objective and prompts.';
-            if (missing.missingObjective && missing.missingPrompts) {
-                msg = 'Waiting for user to input objective and prompts.';
-            } else if (missing.missingObjective) {
-                msg = 'Waiting for user to input objective.';
-            } else {
-                msg = 'Waiting for user to input prompts.';
-            }
-            showThemedMessage(msg);
-            return;
-        }
-        
-        // Resume audio context on this user gesture so scramble/reveal sounds play (browser requires gesture in call stack)
-        if (window.audioCtx && window.audioCtx.state === 'suspended') {
-            window.audioCtx.resume().catch(function() {});
-        }
-        // Call startGeneration which will trigger animation
-        if (window.startGeneration) {
-            debugLog('Calling window.startGeneration');
-            window.startGeneration();
-            fieldClearedForNextStudent = false; // Reset flag
-        } else {
-            console.error('startGeneration is not available on window object');
-            // Force reset regardless of isGenerating state
-            if (window.resetGeneratorState) {
-                window.resetGeneratorState();
-            }
-            if (window.generateNextAttribute) {
-                window.generateNextAttribute();
-            }
-            fieldClearedForNextStudent = false; // Reset flag
-        }
+        triggerPromptRun();
         return;
     }
     
@@ -1365,55 +1316,7 @@ function keyPressed() {
     
     if (keyCode === 13 || key === 'Enter') {
         debugLog('Return/Enter pressed - generating prompts');
-        let inputValue = (window.getResultNameFieldValue && window.getResultNameFieldValue()) || '';
-        if (!inputValue) inputValue = getAutoRunName();
-        studentName = inputValue;
-        // Keep index on the intended history slot (NEXT sets index === classReport.length).
-        // Never clamp to allStudents.length - 1 — that jumped back into an old run and putBack freed its prompts.
-        if (studentName && Array.isArray(allStudents)) {
-            while (allStudents.length <= currentStudentIndex) allStudents.push('');
-            if (currentStudentIndex < 0) currentStudentIndex = 0;
-            allStudents[currentStudentIndex] = studentName;
-            if (typeof totalUniqueStudents !== 'undefined') totalUniqueStudents = allStudents.length;
-        }
-        if (resultNameEl) resultNameEl.blur();
-        const missingEnter = getMissingEditorData();
-            if (missingEnter.missingObjective || missingEnter.missingPrompts) {
-                if (audioCtx && window.playSound) {
-                    window.playSound({ FREQUENCY: 200, DURATION: 150 });
-                }
-                let msgEnter = 'Waiting for user to input objective and prompts.';
-                if (missingEnter.missingObjective && missingEnter.missingPrompts) {
-                    msgEnter = 'Waiting for user to input objective and prompts.';
-                } else if (missingEnter.missingObjective) {
-                    msgEnter = 'Waiting for user to input objective.';
-                } else {
-                    msgEnter = 'Waiting for user to input prompts.';
-                }
-                showThemedMessage(msgEnter);
-                return;
-            }
-            
-            // Resume audio context on this user gesture so scramble/reveal sounds play (browser requires gesture in call stack)
-            if (window.audioCtx && window.audioCtx.state === 'suspended') {
-                window.audioCtx.resume().catch(function() {});
-            }
-            // Call startGeneration which will trigger animation
-            if (window.startGeneration) {
-                debugLog('Calling window.startGeneration');
-                window.startGeneration();
-                fieldClearedForNextStudent = false; // Reset flag
-            } else {
-                console.error('startGeneration is not available on window object');
-                // Force reset regardless of isGenerating state
-                if (window.resetGeneratorState) {
-                    window.resetGeneratorState();
-                }
-                if (window.generateNextAttribute) {
-                    window.generateNextAttribute();
-                }
-                fieldClearedForNextStudent = false; // Reset flag
-            }
+        triggerPromptRun();
         return;
     }
     
@@ -1431,6 +1334,52 @@ function keyPressed() {
     }
 }
 
+// Same action as UP arrow / Enter — used by phone RUN button
+function triggerPromptRun() {
+    const resultNameEl = window.getResultNameFieldElement ? window.getResultNameFieldElement() : null;
+    let inputValue = (window.getResultNameFieldValue && window.getResultNameFieldValue()) || '';
+    if (!inputValue) inputValue = getAutoRunName();
+    studentName = inputValue;
+    // Keep index on the intended history slot (NEXT sets index === classReport.length).
+    if (studentName && Array.isArray(allStudents)) {
+        while (allStudents.length <= currentStudentIndex) allStudents.push('');
+        if (currentStudentIndex < 0) currentStudentIndex = 0;
+        allStudents[currentStudentIndex] = studentName;
+        if (typeof totalUniqueStudents !== 'undefined') totalUniqueStudents = allStudents.length;
+    }
+    if (resultNameEl) resultNameEl.blur();
+
+    const missing = getMissingEditorData();
+    if (missing.missingObjective || missing.missingPrompts) {
+        if (audioCtx && window.playSound) {
+            window.playSound({ FREQUENCY: 200, DURATION: 150 });
+        }
+        let msg = 'Waiting for user to input objective and prompts.';
+        if (missing.missingObjective && !missing.missingPrompts) {
+            msg = 'Waiting for user to input objective.';
+        } else if (!missing.missingObjective && missing.missingPrompts) {
+            msg = 'Waiting for user to input prompts.';
+        }
+        showThemedMessage(msg);
+        return;
+    }
+
+    // Resume audio on this gesture so scramble/reveal sounds can play
+    if (window.audioCtx && window.audioCtx.state === 'suspended') {
+        window.audioCtx.resume().catch(function () {});
+    }
+    if (window.startGeneration) {
+        debugLog('Calling window.startGeneration');
+        window.startGeneration();
+        fieldClearedForNextStudent = false;
+    } else {
+        console.error('startGeneration is not available on window object');
+        if (window.resetGeneratorState) window.resetGeneratorState();
+        if (window.generateNextAttribute) window.generateNextAttribute();
+        fieldClearedForNextStudent = false;
+    }
+}
+
 function mousePressed() {
     // Result name is in "> " field top-left (ui-manager); no canvas hit area needed
 }
@@ -1441,3 +1390,4 @@ function windowResized() {
 
 // Export functions to window for use in other modules
 window.takeScreenshot = takeScreenshot;
+window.triggerPromptRun = triggerPromptRun;

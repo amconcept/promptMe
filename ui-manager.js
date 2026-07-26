@@ -279,6 +279,30 @@ function positionNameInputAndButtons() {
             nextStudentButton.style('height', elementHeight + 'px');
         }
     }
+
+    // Phone RUN: bottom-left of prompt card (mirrors editor cube-footer RUN)
+    const runBtn = document.getElementById('sketch-run-btn');
+    if (runBtn) {
+        const phoneRun = currentWidth <= 768
+            || window.matchMedia('(max-width: 900px) and (max-aspect-ratio: 3/4)').matches;
+        runBtn.style.display = phoneRun ? 'flex' : 'none';
+        if (phoneRun) {
+            const runSize = 64;
+            const bounds = window.sketchCardBounds;
+            let left = edgePad;
+            let top = fieldY - runSize - gap;
+            if (bounds && typeof bounds.x === 'number') {
+                left = bounds.x;
+                // Sit just under the card, but stay above the Results / EDITOR row
+                top = Math.min(bounds.bottom + 8, fieldY - runSize - 8);
+                top = Math.max(edgePad, top);
+            }
+            runBtn.style.left = left + 'px';
+            runBtn.style.top = top + 'px';
+            runBtn.style.bottom = 'auto';
+            runBtn.style.right = 'auto';
+        }
+    }
 }
 
 // Create UI elements (control panel omitted when SKETCH_HIDE_CONTROL_PANEL)

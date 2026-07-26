@@ -120,24 +120,72 @@
             background-color: var(--background-color);
             color: var(--primary-color);
         }
+
+        /* Phone RUN — mirrors editor cube-run; positioned by ui-manager.js */
+        .sketch-run {
+            display: none;
+            position: fixed;
+            left: 16px;
+            bottom: 80px;
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            border: 2px solid var(--primary-color);
+            background: var(--primary-color);
+            color: var(--background-color);
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        .sketch-run:hover,
+        .sketch-run:active {
+            background: var(--background-color);
+            color: var(--primary-color);
+        }
+
+        @media (max-width: 768px),
+               ((max-width: 900px) and (max-aspect-ratio: 3/4)) {
+            .sketch-run {
+                display: flex;
+            }
+        }
     </style>
     <script>
         if (typeof applyThemeFromStorage === 'function') applyThemeFromStorage();
     </script>
 </head>
 <body>
-    <!-- >EDITOR link bottom-right (wireframe) -->
+    <!-- Phone RUN (same action as UP arrow); >EDITOR bottom-right -->
+    <button type="button" id="sketch-run-btn" class="sketch-run" onclick="runSketchFromButton()" aria-label="Generate prompts">RUN</button>
     <div class="design-prompts-section">
         <button class="design-prompts" onclick="goToEditor()">&gt;EDITOR</button>
     </div>
     
     <!-- Load modules (theme-manager already in <head>) -->
-    <script src="ui-manager.js?v=20260725g"></script>
-    <script src="animation-manager.js?v=20260725g"></script>
-    <script src="data-manager.js?v=20260725g"></script>
-    <script src="student-manager.js?v=20260725g"></script>
-    <script src="prompt-generator.js?v=20260725g"></script>
-    <script src="sketch-refactored.js?v=20260725g"></script>
-    <script>console.log('PromptMe sketch build 20260725g');</script>
+    <script src="ui-manager.js?v=20260725k"></script>
+    <script src="animation-manager.js?v=20260725k"></script>
+    <script src="data-manager.js?v=20260725k"></script>
+    <script src="student-manager.js?v=20260725k"></script>
+    <script src="prompt-generator.js?v=20260725k"></script>
+    <script src="sketch-refactored.js?v=20260725k"></script>
+    <script>
+        console.log('PromptMe sketch build 20260725k');
+        // Phone RUN → same path as UP arrow
+        function runSketchFromButton() {
+            if (window.playClickSound) window.playClickSound();
+            if (typeof window.triggerPromptRun === 'function') {
+                window.triggerPromptRun();
+            }
+        }
+        window.runSketchFromButton = runSketchFromButton;
+    </script>
 </body>
 </html> 
