@@ -267,16 +267,43 @@ function initPromptCubeGestures() {
     if (!cube || cube.dataset.gesturesBound === '1') return;
     cube.dataset.gesturesBound = '1';
 
+    let axisLocked = null; // 'x' | 'y' | null once direction is clear
+    let navigatedThisGesture = false;
+
     cube.addEventListener('touchstart', (e) => {
         if (!e.touches || !e.touches[0]) return;
+        const t = e.target;
+        // Don't steal taps meant for ‹ › / + / RUN
+        if (t && (t.closest('button') || t.closest('a'))) {
+            cubeTouchActive = false;
+            return;
+        }
         cubeTouchActive = true;
+        axisLocked = null;
+        navigatedThisGesture = false;
         cubeTouchStartX = e.touches[0].clientX;
         cubeTouchStartY = e.touches[0].clientY;
     }, { passive: true });
 
+    // Claim horizontal swipes so the browser doesn't cancel them (textarea stays pan-y for scroll)
+    cube.addEventListener('touchmove', (e) => {
+        if (!cubeTouchActive || navigatedThisGesture || !e.touches || !e.touches[0]) return;
+        const dx = e.touches[0].clientX - cubeTouchStartX;
+        const dy = e.touches[0].clientY - cubeTouchStartY;
+        const absX = Math.abs(dx);
+        const absY = Math.abs(dy);
+        if (!axisLocked && (absX > 12 || absY > 12)) {
+            axisLocked = absX > absY ? 'x' : 'y';
+        }
+        if (axisLocked === 'x' && absX > 14) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+
     cube.addEventListener('touchend', (e) => {
         if (!cubeTouchActive) return;
         cubeTouchActive = false;
+        if (navigatedThisGesture) return;
         const t = e.changedTouches && e.changedTouches[0];
         if (!t) return;
 
@@ -287,18 +314,24 @@ function initPromptCubeGestures() {
         if (absX < CUBE_SWIPE_THRESHOLD && absY < CUBE_SWIPE_THRESHOLD) return;
 
         const target = e.target;
-        const inTextarea = target && target.id === 'cube-prompts';
+        const inTextarea = target && (target.id === 'cube-prompts' || target.id === 'cube-prompt-header');
+        const horizontal = axisLocked === 'x' || (axisLocked !== 'y' && absX > absY);
 
-        if (absX > absY) {
-            if (dx > 0) navigatePromptCube(1, 0);
-            else navigatePromptCube(-1, 0);
+        if (horizontal) {
+            // Inside the list, require a clear sideways swipe so typing/scroll still works
+            if (inTextarea && absX < absY * 1.35) return;
+            if (absX < CUBE_SWIPE_THRESHOLD) return;
+            // Finger left → next prompt; finger right → previous (carousel-style)
+            navigatePromptCube(dx < 0 ? 1 : -1, 0);
+            navigatedThisGesture = true;
             return;
         }
 
+        // Vertical: skip when gesture started in the list (keep native scroll)
         if (inTextarea) return;
-
-        if (dy > 0) navigatePromptCube(0, 1);
-        else navigatePromptCube(0, -1);
+        if (absY < CUBE_SWIPE_THRESHOLD) return;
+        navigatePromptCube(0, dy < 0 ? -1 : 1);
+        navigatedThisGesture = true;
     }, { passive: true });
 
     document.addEventListener('keydown', (e) => {

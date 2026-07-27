@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RANDO CALRISIAN</title>
+    <title>RANDO CALRISSIAN</title>
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
     <style>
         * {
@@ -18,6 +18,7 @@
             --text-color: #FFFFFF;
             --primary-color: #FFFFFF;
             --accent-color: #C0C0C0;
+            --primary-shadow: rgba(255, 255, 255, 0.35);
         }
 
         body {
@@ -120,6 +121,84 @@
             fill: var(--primary-color);
             transition: fill 0.3s ease;
         }
+
+        /* First-visit welcome popup */
+        #welcome-popup {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 16px;
+            box-sizing: border-box;
+        }
+
+        #welcome-popup[hidden] {
+            display: none !important;
+        }
+
+        .welcome-dialog {
+            background: var(--background-color);
+            border: 3px solid var(--primary-color);
+            border-radius: 8px;
+            color: var(--primary-color);
+            max-width: 560px;
+            width: 100%;
+            max-height: min(80vh, 640px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 0 30px var(--primary-shadow);
+            text-align: left;
+        }
+
+        .welcome-header {
+            padding: 18px 20px;
+            border-bottom: 2px solid var(--primary-color);
+            font-size: clamp(22px, 4vw, 28px);
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        .welcome-body {
+            padding: 20px 22px;
+            overflow-y: auto;
+            font-size: clamp(16px, 2.8vw, 20px);
+            line-height: 1.55;
+            letter-spacing: 0.5px;
+        }
+
+        .welcome-body p {
+            margin: 0 0 1em;
+            color: var(--primary-color);
+        }
+
+        .welcome-body p:last-child {
+            margin-bottom: 0;
+        }
+
+        .welcome-body a {
+            color: var(--primary-color);
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            font-weight: bold;
+        }
+
+        .welcome-actions {
+            padding: 16px 20px 20px;
+            display: flex;
+            justify-content: center;
+            border-top: 1px solid var(--primary-color);
+        }
+
+        .welcome-actions button {
+            font-size: 18px;
+            padding: 10px 28px;
+        }
     </style>
     <script src="theme-manager.js"></script>
     <script>
@@ -137,11 +216,56 @@
         </svg>
     </div>
     <div class="container">
-        <h1>RANDO CALRISIAN</h1>
+        <h1>RANDO CALRISSIAN</h1>
         <p class="subtitle">A prompting tool for humans.</p>
         <div class="buttons">
             <button class="edit" onclick="window.location.href='editor.html'">Design your prompts</button>
         </div>
     </div>
+
+    <!-- First-time welcome (hidden after dismiss; localStorage key below) -->
+    <div id="welcome-popup" hidden role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+        <div class="welcome-dialog">
+            <div class="welcome-header" id="welcome-title">Welcome to Rando Calrissian</div>
+            <div class="welcome-body">
+                <p>Rando Calrissian helps you set an objective, then guide an activity through thoughtful combinations of prompts and constraints that spark creativity and unexpected connections.</p>
+                <p>Visit <a href="editor.html?help=1" id="welcome-help-link">Help &amp; Instructions</a> to learn how to build and run your first activity.</p>
+            </div>
+            <div class="welcome-actions">
+                <button type="button" id="welcome-close-btn">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            var STORAGE_KEY = 'randoCalrissianWelcomeSeen';
+            var popup = document.getElementById('welcome-popup');
+            var closeBtn = document.getElementById('welcome-close-btn');
+            var helpLink = document.getElementById('welcome-help-link');
+            if (!popup) return;
+
+            function dismissWelcome() {
+                try { localStorage.setItem(STORAGE_KEY, '1'); } catch (e) {}
+                popup.hidden = true;
+            }
+
+            // First visit only
+            var seen = false;
+            try { seen = localStorage.getItem(STORAGE_KEY) === '1'; } catch (e) {}
+            if (!seen) popup.hidden = false;
+
+            if (closeBtn) closeBtn.addEventListener('click', dismissWelcome);
+            // Mark seen when they follow Help so it does not return next visit
+            if (helpLink) {
+                helpLink.addEventListener('click', function () {
+                    try { localStorage.setItem(STORAGE_KEY, '1'); } catch (e) {}
+                });
+            }
+            popup.addEventListener('click', function (e) {
+                if (e.target === popup) dismissWelcome();
+            });
+        })();
+    </script>
 </body>
 </html>

@@ -511,9 +511,10 @@ document.addEventListener('DOMContentLoaded', () => {
         window.migrateOldThemes();
     }
     
-    // Check if we're returning from sketch
+    // Check if we're returning from sketch or opening Help from the welcome page
     const urlParams = new URLSearchParams(window.location.search);
     const isFromSketch = urlParams.get('from') === 'sketch';
+    const openHelp = urlParams.get('help') === '1';
     
     console.log('=== DEBUG: Editor initialization ===');
     console.log('Current URL:', window.location.href);
@@ -698,6 +699,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add debug logs back
     console.log('Final prompt headers:', document.querySelectorAll('.header-input'));
     console.log('Final category rows:', document.querySelectorAll('.category-row'));
+    
+    // Welcome page: editor.html?help=1 opens Help & Instructions
+    if (openHelp) {
+        const params = new URLSearchParams(window.location.search);
+        params.delete('help');
+        const qs = params.toString();
+        window.history.replaceState({}, document.title, window.location.pathname + (qs ? '?' + qs : ''));
+        setTimeout(() => {
+            if (typeof window.showInstructionsPopup === 'function') {
+                window.showInstructionsPopup();
+            }
+        }, 250);
+    }
     
     // Checkbox state is now saved only when user explicitly saves via "SAVE" button
 });

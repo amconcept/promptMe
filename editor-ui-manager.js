@@ -797,58 +797,67 @@ function showInstructionsPopup() {
     content.id = 'instructions-popup-content';
     document.head.appendChild(style);
     
-    // Add content sections
+    // Help content — groupings (A, B, C…) match how the randomizer locks a run
     content.innerHTML = `
-        <div style="margin-bottom: 25px;">
-            <strong style="color: var(--primary-hover); font-size: 18px;">Quick Start:</strong>
-            <ul style="margin: 10px 0; padding-left: 25px; color: var(--primary-color);">
-                <li style="margin: 8px 0;">Try the "Sample" activity first (loaded automatically)</li>
-                <li style="margin: 8px 0;">Fill the central cube with prompts (one per line)</li>
-                <li style="margin: 8px 0;">Swipe right / left to edit other prompts</li>
-                <li style="margin: 8px 0;">Swipe down / up to edit other criteria</li>
-                <li style="margin: 8px 0;">Use ... (top right) for Theme, File, Help</li>
-                <li style="margin: 8px 0;">Set your objective at the top, then START</li>
-            </ul>
+        <div style="margin-bottom: 22px;">
+            <p style="margin: 0 0 10px; color: var(--primary-color);">
+                Rando Calrissian helps you set an objective, then guide an activity through thoughtful combinations of prompts and constraints that spark creativity and unexpected connections.
+            </p>
         </div>
-        
-        <div style="margin-bottom: 25px;">
-            <strong style="color: var(--primary-hover); font-size: 18px;">Keyboard Controls (Prompting):</strong>
-            <ul style="margin: 10px 0; padding-left: 25px; color: var(--primary-color);">
-                <li style="margin: 8px 0;"><strong>↑ or Enter</strong> : Generate prompts (name required)</li>
-                <li style="margin: 8px 0;"><strong>↓</strong> : Clear / insert student name</li>
-                <li style="margin: 8px 0;"><strong>← →</strong> : Navigate between students</li>
-            </ul>
+
+        <div style="margin-bottom: 22px;">
+            <strong style="color: var(--primary-hover); font-size: 18px;">The idea</strong>
+            <p style="margin: 10px 0; color: var(--primary-color);">
+                Write one objective. Add up to four prompts with labels such as <strong>USES</strong>, <strong>WITH</strong>, or <strong>AND</strong>.
+            </p>
+            <p style="margin: 10px 0; color: var(--primary-color);">
+                Under each prompt, list options one per line. Optional groupings <strong>A, B, C…</strong> can organize matching options across prompts.
+            </p>
+            <p style="margin: 10px 0; color: var(--primary-color);">
+                When you run the activity, Rando selects one option from each prompt, always from the same grouping. It avoids repeats until every option in a list has been used.
+            </p>
+            <p style="margin: 14px 0 6px; color: var(--primary-hover); font-weight: bold;">Example</p>
+            <p style="margin: 0 0 4px; color: var(--primary-color);"><em>Make a gift for a friend that:</em></p>
+            <p style="margin: 0 0 4px; color: var(--primary-color);"><strong>USES</strong> a paperclip</p>
+            <p style="margin: 0; color: var(--primary-color);"><strong>AND</strong> a laser cutter</p>
         </div>
-        
-        <div style="margin-bottom: 25px;">
-            <strong style="color: var(--primary-hover); font-size: 18px;">Understanding Prompts &amp; Criteria:</strong>
-            <ul style="margin: 10px 0; padding-left: 25px; color: var(--primary-color);">
-                <li style="margin: 8px 0;"><strong>Prompts</strong> (swipe sideways) = Different prompt types</li>
-                <li style="margin: 8px 0;"><strong>Criteria A, B, C…</strong> (swipe down) = Categories that work together</li>
-                <li style="margin: 8px 0;">Each student gets one option from the same criterion</li>
-                <li style="margin: 8px 0;">Example: A = "Elementary", B = "Advanced"</li>
-            </ul>
+
+        <div style="margin-bottom: 22px;">
+            <strong style="color: var(--primary-hover); font-size: 18px;">Prompts and groupings</strong>
+            <p style="margin: 10px 0; color: var(--primary-color);">
+                A <strong>prompt</strong> is a heading students see, plus its list of options.
+            </p>
+            <p style="margin: 10px 0; color: var(--primary-color);">
+                A <strong>grouping</strong> connects matching options across prompts.
+            </p>
+            <p style="margin: 10px 0; color: var(--primary-color);">
+                Use one grouping for a shared pool. Add more to differentiate by age, experience, interests, or support needs, or to keep combinations compatible.
+            </p>
         </div>
-        
-        <div style="margin-bottom: 25px;">
-            <strong style="color: var(--primary-hover); font-size: 18px;">Tips & Best Practices:</strong>
-            <ul style="margin: 10px 0; padding-left: 25px; color: var(--primary-color);">
-                <li style="margin: 8px 0;">Save your activities to reuse them later</li>
-                <li style="margin: 8px 0;">Share activities with colleagues via CSV export</li>
-                <li style="margin: 8px 0;">Use clear, specific options in each category</li>
-                <li style="margin: 8px 0;">Test your activity before using with students</li>
-                <li style="margin: 8px 0;">The app prevents repetition automatically</li>
-            </ul>
+
+        <div style="margin-bottom: 22px;">
+            <strong style="color: var(--primary-hover); font-size: 18px;">Good for</strong>
+            <p style="margin: 10px 0; color: var(--primary-color);">
+                Maker and design challenges, brainstorming, creative warm-ups, classroom activities, or simply challenging yourself.
+            </p>
         </div>
-        
-        <div style="margin-bottom: 25px;">
-            <strong style="color: var(--primary-hover); font-size: 18px;">Activity Management (... menu → File):</strong>
+
+        <div style="margin-bottom: 22px;">
+            <strong style="color: var(--primary-hover); font-size: 18px;">Be creative</strong>
+            <p style="margin: 10px 0; color: var(--primary-color);">
+                Try prompts out. Coach students as they work toward an objective through unexpected combinations. Adjust, rerun, and see where the ideas lead.
+            </p>
+            <p style="margin: 10px 0; color: var(--primary-color);">
+                Designing prompts that spark curiosity, creativity, and divergent thinking is an art. Rando supports intentional prompting that remains intentionally human.
+            </p>
+        </div>
+
+        <div style="margin-bottom: 22px;">
+            <strong style="color: var(--primary-hover); font-size: 18px;">Running the tool</strong>
             <ul style="margin: 10px 0; padding-left: 25px; color: var(--primary-color);">
-                <li style="margin: 8px 0;"><strong>NEW</strong> : Start a fresh activity</li>
-                <li style="margin: 8px 0;"><strong>SAVE</strong> : Save changes to current activity</li>
-                <li style="margin: 8px 0;"><strong>SAVE AS</strong> : Save as a new activity</li>
-                <li style="margin: 8px 0;"><strong>SHARE</strong> : Export activity as CSV file</li>
-                <li style="margin: 8px 0;"><strong>LOAD</strong> : Import activity from CSV file</li>
+                <li style="margin: 8px 0;"><strong>Editor</strong> — build prompts; swipe or use ‹ › for prompts, letter rail for groupings; <strong>RUN</strong> opens the prompting window</li>
+                <li style="margin: 8px 0;"><strong>Prompting</strong> — <strong>RUN</strong> generates; <strong>GO TO NEXT</strong> starts a new result; ‹ › browses past runs</li>
+                <li style="margin: 8px 0;"><strong>File (… menu)</strong> — save activities, export/share CSV, load Sample</li>
             </ul>
         </div>
     `;
