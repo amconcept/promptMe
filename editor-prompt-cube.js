@@ -129,7 +129,7 @@ function updateCubeChrome() {
             deleteBtn.onclick = () => cubeDeletePrompt();
         } else if (c > 0) {
             deleteBtn.hidden = false;
-            deleteBtn.textContent = 'delete category ' + String.fromCharCode(65 + c);
+            deleteBtn.textContent = 'delete grouping ' + String.fromCharCode(65 + c);
             deleteBtn.onclick = () => cubeDeleteCriterion();
         } else {
             deleteBtn.hidden = true;

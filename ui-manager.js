@@ -684,7 +684,7 @@ function createUI() {
     }
     allCategoriesCheckbox.style('background-color', 'var(--primary-color)');
     
-    const allCategoriesLabel = createDiv('All Categories');
+    const allCategoriesLabel = createDiv('All Groupings');
     allCategoriesLabel.parent(allCategoriesDiv);
     allCategoriesLabel.style('color', 'var(--primary-color)');
     allCategoriesLabel.style('font-size', '18px');  // Match editor theme-picker label

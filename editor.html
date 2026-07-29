@@ -1972,8 +1972,8 @@
                     <input type="text" id="cube-prompt-header" class="cube-prompt-header" placeholder="… insert a label" autocomplete="off">
                     <!-- Category rail centered on prompt box only (caption sits below) -->
                     <div class="cube-prompts-row">
-                        <div class="cube-rail" aria-label="Category navigation">
-                            <button type="button" class="cube-rail-btn cube-chevron-up" id="cube-cat-up" onclick="navigatePromptCube(0, -1)" aria-label="Previous category">‹</button>
+                        <div class="cube-rail" aria-label="Grouping navigation">
+                            <button type="button" class="cube-rail-btn cube-chevron-up" id="cube-cat-up" onclick="navigatePromptCube(0, -1)" aria-label="Previous grouping">‹</button>
                             <div class="cube-cat-badge" id="cube-cat-badge" aria-label="A">
                                 <svg viewBox="0 0 44 44" aria-hidden="true">
                                     <circle cx="22" cy="22" r="20"></circle>
@@ -1982,8 +1982,8 @@
                                 </svg>
                             </div>
                             <div class="cube-rail-end">
-                                <button type="button" class="cube-rail-btn cube-chevron-down" id="cube-cat-down" onclick="navigatePromptCube(0, 1)" aria-label="Next category">‹</button>
-                                <button type="button" class="cube-rail-btn" id="cube-cat-add" onclick="cubeAddCategory()" aria-label="Add category">+</button>
+                                <button type="button" class="cube-rail-btn cube-chevron-down" id="cube-cat-down" onclick="navigatePromptCube(0, 1)" aria-label="Next grouping">‹</button>
+                                <button type="button" class="cube-rail-btn" id="cube-cat-add" onclick="cubeAddCategory()" aria-label="Add grouping">+</button>
                             </div>
                         </div>
                         <textarea id="cube-prompts" class="cube-prompts" placeholder=""></textarea>
@@ -2001,11 +2001,11 @@
     <!-- Add buttons: visible in grid (wide) mode; hidden in cube (phone) mode -->
     <div class="add-buttons-container">
         <button class="add-prompt-button" onclick="addNewPrompt()" type="button">+ Add Prompt</button>
-        <button class="add-category-button" onclick="addNewCategory()" type="button">+ Add Category</button>
+        <button class="add-category-button" onclick="addNewCategory()" type="button">+ Add Grouping</button>
     </div>
     
         <div class="prompt-grid">
-            <!-- Empty placeholder for first column (replaces "Criterion" label) -->
+            <!-- Empty placeholder for first column (grouping labels go here) -->
             <div class="grid-placeholder header-placeholder"></div>
             <!-- Prompt headers -->
         <div class="prompt-headers" id="prompt-headers">
@@ -2117,10 +2117,10 @@
         </div>
     </div>
 
-    <script src="editor-ui-manager.js?v=20260726x"></script>
-    <script src="editor-prompt-cube.js?v=20260726x"></script>
-    <script src="editor-data-manager.js?v=20260726x"></script>
-    <script src="editor-settings-manager.js?v=20260726x"></script>
-    <script src="editor-main.js?v=20260726x"></script>
+    <script src="editor-ui-manager.js?v=20260728a"></script>
+    <script src="editor-prompt-cube.js?v=20260728a"></script>
+    <script src="editor-data-manager.js?v=20260728a"></script>
+    <script src="editor-settings-manager.js?v=20260728a"></script>
+    <script src="editor-main.js?v=20260728a"></script>
 </body>
 </html>

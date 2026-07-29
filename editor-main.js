@@ -401,7 +401,7 @@ function populateDefaultActivity(data) {
             const criterionInput = document.createElement('input');
             criterionInput.type = 'text';
             criterionInput.className = 'criterion-label-input';
-            criterionInput.placeholder = 'Enter criterion label';
+            criterionInput.placeholder = 'Enter grouping label';
             criterionInput.value = label;
             
             if (labelIndex > 0) {

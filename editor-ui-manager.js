@@ -243,7 +243,7 @@ function addNewCategory() {
     
     
     if (categoryCounter >= MAX_CATEGORIES) {
-        alert(`Maximum of ${MAX_CATEGORIES} categories reached`);
+        alert(`Maximum of ${MAX_CATEGORIES} groupings reached`);
         return;
     }
     
@@ -294,7 +294,7 @@ function addNewCategory() {
     const criterionInput = document.createElement('input');
     criterionInput.type = 'text';
     criterionInput.className = 'criterion-label-input';
-    criterionInput.placeholder = 'Enter criterion label';
+    criterionInput.placeholder = 'Enter grouping label';
     criterionInput.value = criterionLabels[categoryCounter - 1] || '';
     criterionInput.onchange = () => updateCriterionLabel(categoryCounter - 1, criterionInput.value);
     criterionLabelContainer.appendChild(criterionInput);
@@ -855,7 +855,7 @@ function showInstructionsPopup() {
         <div style="margin-bottom: 22px;">
             <strong style="color: var(--primary-hover); font-size: 18px;">Running the tool</strong>
             <ul style="margin: 10px 0; padding-left: 25px; color: var(--primary-color);">
-                <li style="margin: 8px 0;"><strong>Editor</strong> — build prompts; swipe or use ‹ › for prompts, letter rail for groupings; <strong>RUN</strong> opens the prompting window</li>
+                <li style="margin: 8px 0;"><strong>Editor</strong> — build prompts; swipe or use ‹ › for prompts, letter rail for groupings; <strong>+ Add Grouping</strong> adds a row; <strong>RUN</strong> opens the prompting window</li>
                 <li style="margin: 8px 0;"><strong>Prompting</strong> — <strong>RUN</strong> generates; <strong>GO TO NEXT</strong> starts a new result; ‹ › browses past runs</li>
                 <li style="margin: 8px 0;"><strong>File (… menu)</strong> — save activities, export/share CSV, load Sample</li>
             </ul>
