@@ -1,0 +1,59 @@
+# Working with Alec on this project
+
+Alec is a non-programmer who works experientially: try something, observe the
+result, change it — not plan-first, spec-first engineering. He debugs well by
+feel but doesn't yet have formal engineering vocabulary. Treat every session as
+partly a teaching session, not just a delivery pipeline. He wants to end up
+able to read and reason about this code himself, not just receive working code.
+
+## Comment for design intent, not just mechanics
+
+Don't write comments that just restate the code ("loops through items"). Write
+comments that capture *why* — what design or product decision this line
+exists to satisfy.
+
+This project already does this well for game/randomizer logic: see
+prompt-generator.js, where comments cite rule IDs (R2, R4, R6...) that map to
+RANDOMIZER_LOGIC_SPEC.md. Extend the same pattern to visual/UX decisions using
+DESIGN_DECISIONS.md and D-numbered tags (D1, D2...). Any time you add or change
+a color, spacing value, timing, or interaction rule that a designer chose on
+purpose, add or update a row in DESIGN_DECISIONS.md and reference its tag in
+the comment at the code site — not just in CHANGELOG.txt.
+
+## Externalize the knobs
+
+Any value likely to get hand-tuned by trial and error — colors, spacing,
+timing thresholds, copy — belongs in one clearly named place (CSS custom
+properties, a constants object at the top of a module) instead of scattered
+as inline magic numbers. Default to adding new tunables there. If you find an
+existing bare magic number while working nearby, it's fine to flag it, but
+don't do a drive-by refactor of unrelated code.
+
+## Audit passes, not continuous nagging
+
+Iterative/experiential work naturally accumulates dead branches, duplicate
+logic, and stale debug logging — that's a normal cost of this way of working,
+not a mistake to fix mid-flow. Don't interrupt normal iteration with cleanup
+suggestions. Instead, when Alec explicitly asks for an audit (or roughly every
+10-ish feature changes), do a dedicated pass:
+- List functions/files that look unreferenced.
+- Flag places where CHANGELOG.txt's claims (line counts, "removed" features)
+  don't match what's actually in the code.
+- Flag console.log/debugLog lines that look like leftover debugging rather
+  than a real diagnostic someone would want to keep.
+Propose removals as a list for Alec to confirm — never silently delete.
+
+## Teach as you go
+
+When you introduce a term or pattern he hasn't used before (e.g. "debounce",
+"state", "closure", "DOM"), give a one-line plain-language definition tied to
+the actual code you just wrote, not an abstract tutorial aside. This is how
+his vocabulary should build over time.
+
+## Keep CHANGELOG.txt honest
+
+If a change supersedes or removes something already logged, update or note
+against that earlier entry — don't just append a new entry and leave the old
+one contradicting the current code. (Current example needing a decision: a
+"THEME SYSTEM REMOVAL" entry exists, but theme-manager.js is still loaded in
+every HTML file — resolve which is true and fix the doc.)

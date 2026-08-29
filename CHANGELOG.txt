@@ -1,870 +1,297 @@
-PROMPTME APP - CHANGELOG & FEATURES
-=====================================
+RANDO CALRISSIAN - CHANGELOG & FEATURES
+========================================
+(formerly "PromptMe App" - repo folder and some code identifiers still use the old name)
 
-Version: 2025.2
-Last Updated: January 2025 (Updated with Name Validation & Keyboard Improvements)
+Version: 2026.7
+Last Updated: July 2026
 
 OVERVIEW
 --------
-The PromptMe App is a creative prompt generation tool that allows users to create structured prompts with categories and constraints. The app consists of three main components:
-- Editor (editor.html + modular JS): For creating and managing prompts
-- Sketch (sketch.html + modular JS): For generating and displaying random prompts
-- Index (index.html): Landing page
+Rando Calrissian is a creative prompt generation tool that lets a teacher combine one
+objective with up to four prompts, optionally organized into groupings, and draw random
+combinations without repetition. Three components:
+- Editor (editor.html + modular JS): creating and managing activities
+- Prompting window (sketch.html + modular JS): generating and displaying prompts
+- Index (index.html): landing page + first-visit welcome
 
-MAJOR REFACTORING UPDATE (Version 2025.2)
-==========================================
-- Refactored entire codebase into modular architecture for better maintainability
-- Split sketch.js (2916 lines) into 6 focused modules (2862 lines total)
-- Split editor.js (2863 lines) into 5 focused modules (2674 lines total)
-- Improved code organization, debugging, and collaboration
-- All functionality preserved with cleaner architecture
+Companion documents (read these first):
+- RANDOMIZER_LOGIC_SPEC.md - required draw behavior (R1-R7, I1-I6, scenarios S1-S10)
+- DESIGN_DECISIONS.md      - why visual/UX choices are what they are (D1-D9) + future directions
+- README.md                - how a teacher uses the app
+- .cursorrules             - how to work on this project
 
-MAJOR FEATURES IMPLEMENTED
-==========================
+TERMINOLOGY
+===========
+User-facing text says "grouping". Code and RANDOMIZER_LOGIC_SPEC.md say "category"
+(identifiers: category, criterion, criterionLabels). This split is deliberate: the UI
+wording was updated for teachers, the internal term was intentionally left alone so the
+draw logic isn't destabilized. Do not "fix" one to match the other.
 
-1. SIMPLIFIED CONSTRAINT SYSTEM
-   - Removed repetition prevention toggle (now always enabled)
-   - Kept only exhaust mode toggle as the main constraint control
-   - Streamlined UI by removing redundant controls
 
-2. EXHAUST MODE SYSTEM
-   - Toggle to enable/disable "Stop generation when all options used"
-   - Column selection dropdown to choose which prompt column to count
-   - Dynamic dropdown population based on available prompt columns
-   - Persistent selection across page refreshes
+CORRECTIONS TO EARLIER ENTRIES
+==============================
+Earlier versions of this file accumulated claims that no longer match the code. Rather
+than leave them contradicting reality, they are retracted here explicitly.
 
-3. GENERATION COUNTING SYSTEM
-   - Real-time generation counter display
-   - Shows remaining generations when exhaust mode is enabled
-   - Counts down from total items to 1 (e.g., 6, 5, 4, 3, 2, 1)
-   - Only displays when exhaust mode is active
-   - Based on total items in selected prompt column across all categories
+RETRACTED: "THEME SYSTEM REMOVAL"
+   Claimed all theming was removed. This was never true, and the entry has been deleted.
+   The theme system is fully live: 8 presets (orangeCRT, blueCRT, windows, greenCRT,
+   purpleCRT, pinkCRT, macintosh, black) in theme-manager.js, a theme menu in editor.html,
+   per-activity persistence, CSV round-trip, and themeChanged/backgroundChanged events
+   consumed by the prompting window. See DESIGN_DECISIONS.md D8, which treats theming as
+   working infrastructure toward letting teachers restyle the app as their own room, not
+   as legacy weight to be removed.
+   Only accurate part of the old entry: number-key (1-5) theme switching is gone.
 
-4. EXHAUSTION DETECTION & POPUP
-   - Automatic detection when all options are exhausted
-   - Popup modal with "New Round" button
-   - Resets all used prompts and categories
-   - Maintains category consistency across generations
+RETRACTED: module line counts under "MODULAR ARCHITECTURE (Version 2025.2)"
+   Every count was roughly half the current size. Corrected under FILE STRUCTURE below.
+   The claims that sketch modules total 2862 lines and editor modules 2674 lines were
+   also wrong; actual totals are 5404 and 4516.
 
-5. NAVIGATION IMPROVEMENTS
-   - ESC key redirects from sketch to editor (single press)
-   - Removed conflicting global ESC handlers
-   - "RUN APP" button moved to top of editor screen
-   - Direct navigation to sketch.html (bypasses index.html)
+RETRACTED: "assets/ (font files)" in the file structure
+   That directory does not exist. Fonts load from Google Fonts via <link>.
 
-6. DATA PERSISTENCE
-   - Local storage for all prompt data
-   - Settings persistence across sessions
-   - Auto-save functionality
-   - Exhaust column selection persistence
+CLARIFIED: student-interest / category-selection system
+   Earlier entries describe this as a shipped feature. The mechanism is fully built
+   (checkbox UI, wiring, CSV round-trip) but prompt1InterestsMode is hardcoded off and the
+   checkbox is hidden and disabled. It is an open question, not dead code, and not a
+   shipped feature - see DESIGN_DECISIONS.md D9. The unsolved problem is how a student's
+   interest gets identified, not the widget. Direction is captured as F2 (invisible teacher
+   curation).
 
-DETAILED CHANGES BY FILE
-========================
+REMOVED FROM THIS FILE: features that no longer exist
+   The following were documented as current but are absent from the code. Their entries
+   have been deleted rather than left as a false map of the app:
+   - Exhaust mode toggle + exhaust-column dropdown (only internal exhaustion, R6, remains)
+   - Generation counter / countdown display
+   - Exhaustion detection popup with "New Round" button
+   - Prompt count input in the editor
+   - Class list upload (editor section, and the later "UPLOAD CLASS" control-panel button)
+   - "+" button for mid-session students, and the asterisk (*) added-student system
+     (defensive asterisk-stripping remains in data-manager.js / student-manager.js, but
+     nothing can add an asterisk anymore, so those branches never fire; retired as
+     DESIGN_DECISIONS.md D6)
+   - "Prompting Tips" collapsible dropdown
+   - Visible "Possible selections: X" count displays (now a title tooltip only)
+   - 'A' key to generate (superseded by UP ARROW / Enter, and the RUN button)
+   - "RUN APP" button (now RUN / START PROMPTING)
+   - Apple II three-button control panel (SCREENSHOT / CLASS REPORT / RESET REPORT)
+   - ESC returns to editor (no ESC handler exists; use the "edit" button)
+   - "C" toggles the control panel (handler still present but a no-op, since the panel is
+     hidden by SKETCH_HIDE_CONTROL_PANEL)
+     The keyboard scheme these belonged to was retired as DESIGN_DECISIONS.md D7; current
+     controls are documented in README.md.
 
-EDITOR.HTML
------------
-- Removed "repetition prevention is always enabled" text and styling
-- Removed old constraint control section
-- Removed theme selection section and CSS
-- Removed exhaust column selection section
-- Added prompt count input section with help text
-- Added class list upload section with file input
-- Updated teacher guidance for new workflow
-- Removed name input field (moved to sketch app)
-- Added CSS styling for new sections
 
-EDITOR.JS
----------
-- Removed constraint checkbox logic and references
-- Removed all theme-related functions and references
-- Removed exhaust mode functions and logic
-- Added handleClassListUpload() function
-- Updated saveChanges() and autoSave() to save classList array
-- Added auto-set prompt count to class size on upload
-- Updated loadSavedData() to load classList
-- Added class list event listeners
-- Simplified to basic prompt count system
+CURRENT FEATURE SET
+===================
 
-SKETCH.JS
----------
-- Removed all theme system and functions
-- Added class list loading and auto-population
-- Added navigation arrows (< >) for student cycling
-- Added Apple II-style control panel with three buttons
-- Added arrow key navigation (left/right arrows)
-- Added class report data collection system
-- Added screenshot functionality with timestamp
-- Added class report download and reset functions
-- Updated prompt counting to use simple count system
-- Removed auto-advance functionality
-- Added prompt clearing on student navigation
-- Updated styling to match terminal theme throughout
-- Added equal spacing for navigation elements
-- Updated popup to use class report instead of PNG
+ACTIVITY DESIGN (EDITOR)
+- Up to 4 prompts (MAX_PROMPTS) and 6 groupings (MAX_CATEGORIES)
+- One objective per activity, shown at the top of the prompting window
+- Options entered one per line per cell
+- Desktop grid layout; phone/narrow layout switches to a single-prompt cube
+- Eight themes, saved per activity
+- Help & Instructions popup, deep-linkable via editor.html?help=1
 
-GENERATION COUNTING LOGIC
-=========================
-- Total Generations: Sum of all items in selected prompt column across all categories
-- Completed Generations: Items used in selected exhaust column only (not minimum across all types)
-- Remaining Generations: Total - Completed
-- Display: Only shows when exhaust mode is enabled
-- Countdown: From total items down to 1 (no minimum constraint)
-- Fixed: No more bouncing back to higher numbers
+PHONE CUBE EDITOR (editor-prompt-cube.js)
+- Single-prompt view for phones and narrow windows
+- Horizontal swipe or the chevron buttons move between prompts
+- Vertical swipe (outside a text area) moves between groupings
+- Gesture handler locks to one axis per gesture so text areas still scroll and button
+  taps are not stolen
+- "+" adds a prompt or grouping; badges show position within prompts and groupings
 
-EXHAUSTION DETECTION LOGIC
-=========================
-- Maps selected exhaust column name to actual prompt type
-- Counts total items in selected column across all categories
-- Counts items used in selected exhaust column only (not minimum across all types)
-- Triggers exhaustion when completed >= total
-- Shows popup with "New Round" option
-- Fixed: Variable scope issues resolved
-- Fixed: Now properly stops when all options are exhausted
+PROMPTING WINDOW
+- Circular RUN button; becomes RE-RUN (dimmed) while a finished result is displayed
+- GO TO NEXT confirms the current result and opens a fresh slot
+- Keyboard: UP ARROW / Enter generate, DOWN ARROW confirms and advances,
+  LEFT/RIGHT navigate students and browse history, SPACE interrupts a scramble in
+  progress (it does not generate)
+- Generate presses during the scramble animation are ignored
+- Re-running a finished result puts that student's options back and draws again (R5)
+- Controls: screenshot, report, clear, edit
 
-STATE MANAGEMENT
-================
-- Global variables for tracking used prompts and categories
-- Complete state reset on new round
-- Animation state management
-- Generation step tracking
-- Category consistency maintenance
+RANDOMIZATION
+- Behavior is specified in RANDOMIZER_LOGIC_SPEC.md; prompt-generator.js cites the rule
+  IDs (R2/R3, R4, R6, R7, I5) at the code sites that implement them
+- One option per prompt per run, all from a single locked grouping
+- In-play tracking is per prompt type across all groupings
+- A prompt type's in-play set refreshes only when its full union is exhausted
 
-DEBUGGING FEATURES
-==================
-- Comprehensive console logging
-- Debug mode toggle
-- State tracking logs
-- Generation calculation logs
-- Exhaustion detection logs
+STUDENT HANDLING
+- Names are optional; unnamed runs are auto-labelled "Run 1", "Run 2", ...
+- requireStudentNames is stored per activity and defaults to off
+- Comma-separated entry ("Alec, Marc, Miles") builds a navigable list
+- Position counter under the name field
 
-UI/UX IMPROVEMENTS
-==================
-- Cleaner, more intuitive interface
-- Better button placement
-- Responsive design elements
-- Clear visual feedback
-- Streamlined navigation flow
+REPORTS (PER ACTIVITY)
+- Results are stored per activity in activityReports, not in one shared pile
+- Switching activities persists the outgoing session before loading the incoming one, so
+  activities never mix results
+- "Restore Last Run" in the File menu reopens the most recent session
+- Reports survive trips to the editor and are cleared only by "clear"
+- Downloaded report includes date/time header, the objective, and activity settings
+- Screenshots save a PNG of an individual result
 
-TECHNICAL IMPROVEMENTS
-======================
-- Fixed JavaScript syntax errors
-- Improved error handling
-- Better event listener management
-- Optimized state updates
-- Enhanced data persistence
-- Fixed popup trigger logic for student completion
-- Added comprehensive debugging console logs
-- Improved student processing state management
-- Enhanced report generation with proper data separation
-- Fixed duplicate student tracking issues
+FILE MENU
+- New, Save, Save As, Share, Load, Restore Last Run
+- CSV export/import carries activity name, theme, background, objective, grouping labels,
+  prompt headers, and all grouping content
+- Sample activity loads from Sample-activity-2025-10-27.csv, which is its source of truth,
+  and is restored to Activity History automatically if deleted
 
-KNOWN ISSUES RESOLVED
-=====================
-1. Fixed: Unable to add prompts or categories
-2. Fixed: ESC key requiring multiple presses
-3. Fixed: Immediate redirect to index.html after ESC
-4. Fixed: "New Round" button breaking A key trigger
-5. Fixed: Generation count bouncing back to 4
-6. Fixed: Dropdown selection not persisting on refresh
-7. Fixed: System not stopping after exhaustion
-8. Fixed: Incorrect generation counting logic
-9. Fixed: Variable scope issues in exhaustion detection
-10. Fixed: Generation count bouncing back to higher numbers
-11. Fixed: System not properly stopping when exhausted
-12. Fixed: Styling inconsistency between control panel and navigation elements
-13. Fixed: Auto-advance causing confusion with student names and prompts
-14. Fixed: Prompt counting not auto-setting to class size
-15. Fixed: Navigation arrows having uneven spacing around name field
-16. Fixed: Student countdown decreasing on navigation without prompt generation
-17. Fixed: Duplicate students appearing in both report sections
-18. Fixed: Missing popup when all students completed after adding new ones
-19. Fixed: Complex mid-session student addition causing countdown confusion
-20. Fixed: Report sections not clearly separating original vs added students
-21. Fixed: A key triggering prompts during popup dialogs
-22. Fixed: Missing mid-session student addition capability
-23. Fixed: No visual distinction between original and added students
-24. Fixed: Report generation not handling asterisk prefixes correctly
-25. Fixed: Completion popup had confusing "Add Students" option
-26. Fixed: Unused showAddStudentsDialog function left in codebase
-27. Fixed: Single student addition dialog only supported one name at a time
-28. Fixed: Name field was glued to left arrow on initial page load
-29. Fixed: App required class list upload to work with individual students
-30. Fixed: Class list persisted in localStorage preventing testing of no-class-list functionality
-31. Fixed: Class list upload not being recognized in sketch.js after persistence removal
-32. Fixed: Complex localStorage class list persistence causing reliability issues
-33. Fixed: Missing forward, back, and + buttons after simplifying class list workflow
-34. Fixed: Unnecessary prompt count setting in editor when completion is based on student list
-35. Fixed: Sample activity not loading all data when selected from Activity History
-36. Fixed: Format mismatch between CSV import and Activity History loading for Sample activity
-37. Fixed: Sample activity missing from Activity History after deletion
-38. Fixed: Up Arrow key behavior - now generates prompts instead of blurring input
-39. Fixed: Missing keyboard instruction display on prompting page
-40. Fixed: Prompt generation allowed without student name entry
-41. Fixed: Up Arrow not properly reading name from p5.js input element
-42. Fixed: Down Arrow not clearing name field when pressed
+LANDING PAGE
+- First-visit welcome popup explaining the objective/prompt/grouping model, with a link
+  into Help & Instructions
+- Shown once, remembered as randoCalrissianWelcomeSeen in localStorage
 
-THEME SYSTEM REMOVAL (LATEST UPDATE)
-====================================
-- Removed all theming functionality to simplify the app
-- Eliminated theme selection UI from editor.html
-- Removed theme-related CSS styling
-- Simplified sketch.js to use default Apple 2-style appearance
-- Removed theme switching with number keys (1-5)
-- Removed theme persistence and loading logic
-- App now uses consistent default styling throughout
+DATA PERSISTENCE
+- localStorage is the source of truth
+- Editor and prompting window sync via a promptDataUpdated custom event, and across tabs
+  via the storage event
+- Auto-save on edit; save paths preserve report data so editing prompts mid-session does
+  not wipe student progress
 
-GENERATION COUNTING & EXHAUSTION FIXES
-======================================
-- Fixed generation count bouncing back to higher numbers
-- Corrected exhaustion detection to properly stop when all options used
-- Fixed variable scope issues in exhaustion detection logic
-- Generation count now properly counts down from total items to 1
-- System now correctly stops and shows popup when exhausted
-- Enhanced debug logging for troubleshooting
 
-SIMPLIFIED SYSTEM (LATEST UPDATE)
-==================================
-- Removed complex exhaust mode system
-- Replaced with simple prompt count limit
-- Removed "available options" section
-- Added centered column counts at top of each prompt column
-- Removed repetition prevention UI elements (always enabled)
-- Simplified generation counting to basic prompt countdown
-
-CLASS LIST MANAGEMENT SYSTEM
-============================
-- Added class list upload functionality in editor
-- Text file upload with one student name per line
-- Auto-population of first student name in sketch app
-- Navigation arrows (< >) for cycling through students
-- Auto-set prompt count to number of students when class list uploaded
-- Manual override capability for prompt count
-- Student name input field in sketch app
-- Auto-advance removed - manual navigation only
-
-APPLE II-STYLE CONTROL PANEL
-============================
-- Created retro terminal control panel in top right
-- Three buttons: SCREENSHOT, CLASS REPORT, RESET REPORT
-- Black background with bright green borders and text
-- VT323 monospace font throughout
-- Consistent terminal aesthetic
-- Screenshot button for individual student records
-- Class report download functionality
-
-NAVIGATION IMPROVEMENTS
+DEVELOPMENT CONVENTIONS
 =======================
-- Arrow key navigation (left/right arrows)
-- Equal spacing around name field and navigation buttons
-- Manual student navigation (no auto-advance)
-- Clear prompts when switching students
-- Reset generation state on navigation
-- ESC key returns to editor
 
-CLASS REPORT SYSTEM
-===================
-- Automatic data collection for each student
-- Clean text format: "Student Name / Prompt Value"
-- Download complete class report as text file
-- Overwrite functionality for redoing students
-- Reset report button to clear all data
-- Screenshot functionality for individual records
+CACHE BUSTING
+- Every <script> tag carries a ?v= query parameter; current value is ?v=20260728a
+- After editing any JS, bump the value on ALL script tags together across editor.html,
+  sketch.html, and index.html (11 tags, one shared value by convention)
+- Mismatched values load a mix of old and new modules and produce confusing bugs
+- The same convention applies to the Sample CSV fetch
 
-PROMPT COUNTING SYSTEM
-======================
-- Auto-sets to class size when class list uploaded
-- Manual override capability
-- Clear UI feedback about auto-setting
-- Updated help text and teacher guidance
+NO BUILD STEP
+- Open the HTML files directly, or serve the folder: python3 -m http.server 8000
+- Anything requiring compilation needs a design decision first
 
-USER WORKFLOW
-=============
-1. Teacher sets up prompts in editor
-2. Teacher uploads class list (optional) - auto-sets prompt count
-3. Teacher clicks "RUN APP" to open sketch
-4. First student name auto-populated (if class list uploaded)
-5. Student generates prompts with 'A' key
-6. Teacher uses arrow keys or buttons to navigate between students
-7. Each student gets fresh prompts (previous prompts clear on navigation)
-8. Teacher can take screenshots for individual student records
-9. Teacher downloads complete class report at any time
-10. Teacher can reset report to start fresh
+DEBUG LOGGING
+- data-manager.js and sketch-refactored.js carry heavy logging, a mix of real diagnostics
+  and residue from specific past bugs
+- Pending a deliberate human pass; do not strip automatically
+- See DESIGN_DECISIONS.md section 3 (Known drift)
 
-UNIQUE STUDENT COUNTDOWN SYSTEM (LATEST UPDATE)
-===============================================
-- Implemented unique student processing system
-- Countdown only decreases when prompts are actually generated
-- Navigation between students doesn't affect countdown
-- Added students only need to be processed (no redoing previous work)
-- End query popup: "Add more students?" with Yes/No options
-- Add students dialog for entering multiple names (one per line)
-- Enhanced report with clear sections and dividing lines
-- Fixed duplicate students in report sections
-- Popup appears when all students processed (including after adding new ones)
-
-MID-SESSION STUDENT ADDITION (LATEST UPDATE)
-=============================================
-- Added + button next to name field for adding students mid-session
-- Simple popup dialog for single student name input
-- Asterisk (*) prefix automatically added to manually added student names
-- Visual distinction between original and added students in navigation
-- Added students appear at end of navigation cycle
-- Count logic includes added students in total count
-- Fixed A key triggering prompts during popup dialogs
-- Enhanced report generation to handle asterisk prefixes correctly
-
-SIMPLIFIED COMPLETION POPUP (LATEST UPDATE)
-===========================================
-- Removed "Add Students" option from completion popup
-- Simplified popup to only show "Download Report" and "Back to Prompting"
-- "Back to Prompting" resets to first student and clears prompts
-- Cleaner, more focused completion workflow
-- Removed unused showAddStudentsDialog function
-
-COMMA-SEPARATED NAME SUPPORT (LATEST UPDATE)
-============================================
-- Added comma-separated name support to + button dialog
-- Enter multiple names like "Matthew, George" to add 2 students at once
-- Smart parsing: trims whitespace and filters empty names
-- Updated instructions and help text for clarity
-- Enhanced success messages to show all added names
-- Maintains asterisk prefix for all added students
-
-INITIAL POSITIONING FIX (LATEST UPDATE)
-=======================================
-- Fixed name field positioning on first load - was glued to left arrow
-- Created centralized positionNameInputAndButtons() function
-- Positioning now happens after class list data is loaded from localStorage
-- Eliminates timing issue where positioning occurred before data was available
-- Name field now correctly centers between arrows on initial load
-
-NO CLASS LIST SUPPORT (LATEST UPDATE)
-=====================================
-- Added support for using app without uploading a class list
-- Name field shows "+ Add student name" placeholder when no class list exists
-- Direct name entry automatically records students in manuallyAddedStudents array
-- Clicking name field when no class list shows add student dialog
-- Students entered directly are properly tracked and included in reports
-- Seamless transition from no class list to class list workflow
-
-CLASS LIST PERSISTENCE REMOVAL (LATEST UPDATE)
-==============================================
-- Removed class list persistence from localStorage
-- Class list now resets to empty on every page refresh
-- Prompt fields and settings still persist across sessions
-- Enables testing of "no class list" functionality
-- Fresh start for each session - no leftover class data
-
-CLASS LIST UPLOAD FIX (LATEST UPDATE)
-=====================================
-- Fixed class list upload not being recognized in sketch.js
-- Class list now properly loads from localStorage when uploaded in editor
-- Class list is cleared from localStorage after loading (no persistence)
-- Uploaded class lists work correctly with navigation buttons
-- Maintains fresh start behavior while supporting uploads
-
-SIMPLIFIED CLASS LIST WORKFLOW (LATEST UPDATE)
-==============================================
-- Moved class list upload directly to sketch.js control panel
-- Removed complex localStorage persistence logic
-- Added "UPLOAD CLASS" button to control panel
-- Class list upload now works directly in sketch.js
-- Much simpler and more reliable workflow
-- No more localStorage complexity or editor dependencies
-
-NAVIGATION BUTTONS RESTORED (LATEST UPDATE)
-===========================================
-- Fixed missing forward, back, and + buttons
-- + button now always visible (even without class list)
-- Navigation arrows show when class list is uploaded
-- Proper button positioning for both scenarios
-- Clean UI layout with all necessary controls
-
-PROMPT COUNT SETTING REMOVED (LATEST UPDATE)
-============================================
-- Removed "number of prompts to generate" setting from editor
-- Completion is now automatically based on student list processing
-- No more manual prompt count configuration needed
-- Cleaner, simpler editor interface
-- Logic handled entirely in sketch.js
-
-EDITOR STYLED LIKE SKETCH (LATEST UPDATE)
-==========================================
-- Applied retro terminal aesthetic to editor.html
-- Black background with green text and borders
-- VT323 monospace font throughout
-- Glowing effects and box shadows
-- Consistent visual experience across app
-- Terminal-style input fields and buttons
-- Enhanced visual feedback and hover effects
-
-ORANGE THEME & CLEAN LAYOUT (LATEST UPDATE)
-===========================================
-- Changed editor theme from green to orange (#FF8C00)
-- Removed all bounding boxes and container backgrounds
-- Clean, minimal layout without visual clutter
-- Clear visual separation between editor (orange) and sketch (green)
-- Maintained terminal aesthetic with cleaner presentation
-- Better focus on content without distracting borders
-
-SOFTER ORANGE & SIMPLIFIED DESIGN (LATEST UPDATE)
-=================================================
-- Toned down orange to softer #D2691E (Chocolate) for better readability
-- Removed circles around category letters (A, B, C, D) for cleaner look
-- Reduced glow effects and shadows for less visual noise
-- More comfortable viewing experience with muted orange tones
-- Cleaner, more professional appearance
-- Better focus on content without distracting visual elements
-
-ALIGNED PROMPT AND CATEGORY FIELDS (LATEST UPDATE)
-==================================================
-- Fixed misalignment between prompt headers and category rows
-- Centered both prompt and category sections for visual consistency
-- Removed left margin offset that caused misalignment
-- Better visual hierarchy and professional layout
-- Improved user experience with properly aligned interface elements
-
-PERFECT COLUMN ALIGNMENT (LATEST UPDATE)
-========================================
-- Fixed prompt headers to align directly over category textareas
-- Changed prompt columns from center-aligned to left-aligned for perfect column structure
-- Ensured both prompt inputs and category textareas use consistent 200px width
-- Centered count displays and delete buttons while keeping inputs left-aligned
-- Created perfect vertical column alignment for professional grid layout
-
-FIXED COMPETING STYLES FOR PERFECT ALIGNMENT (LATEST UPDATE)
-============================================================
-- Identified and fixed competing CSS styles causing offset
-- Added 120px padding-left to prompt headers to match category row structure
-- Category rows: 60px label + 60px gap + 200px textarea = 120px offset
-- Prompt headers now perfectly align with textareas below them
-- Eliminated visual misalignment with precise positioning calculations
-
-CENTER-ALIGNED PROMPT HEADERS (LATEST UPDATE)
-=============================================
-- Fixed visual inconsistency between centered category text and left-aligned prompt headers
-- Changed prompt headers to center alignment to match category text positioning
-- Added 60px padding-left to account for category labels while maintaining center alignment
-- Created consistent visual hierarchy with all elements properly centered
-- Improved overall interface symmetry and professional appearance
-
-FIXED FIELD ALIGNMENT WITH PSEUDO-ELEMENT SPACER (LATEST UPDATE)
-================================================================
-- Fixed misalignment between prompt input fields and category textareas
-- Added ::before pseudo-element with 60px width to match category label space
-- Prompt headers now have same spacing structure as category rows (60px label + 60px gap)
-- Perfect vertical alignment between prompt inputs and textareas below them
-- Eliminated horizontal offset with precise spacing calculations
-
-MOVED PROMPT COUNTS TO BOTTOM (LATEST UPDATE)
-=============================================
-- Moved prompt count displays from top of prompt columns to bottom of category textareas
-- Updated JavaScript to create count displays in textarea containers instead of prompt columns
-- Modified all functions (addNewPrompt, updateCategoryRows, addNewCategory) to include count displays
-- Cleaner layout with counts at the bottom of each column
-- Better visual hierarchy and improved user experience
-
-SINGLE TOTAL COUNT AT BOTTOM (LATEST UPDATE)
-============================================
-- Replaced individual count displays with single total count at bottom of all categories
-- Removed individual count displays from each textarea container
-- Added single "Total Prompts" display at bottom of categories container
-- Updated updatePromptCounts() to calculate grand total across all categories and prompts
-- Cleaner interface with one comprehensive count showing total prompts across all categories
-
-UI IMPROVEMENTS & LEFT ALIGNMENT (LATEST UPDATE)
-===============================================
-- Changed delete buttons from orange circles to orange [x] in brackets
-- Added individual column counts centered under last category field of each column
-- Left-aligned first prompt list without misaligning with category fields
-- Removed center alignment and pseudo-element spacers for cleaner left-aligned layout
-- Individual counts show per-column totals instead of single grand total
-- Better visual hierarchy with left-aligned interface and individual column tracking
-
-PERFECT COLUMN ALIGNMENT WITH OFFSET (LATEST UPDATE)
-===================================================
-- Added 120px padding-left to prompt headers to account for category label space
-- Updated column counts container with same 120px offset for perfect alignment
-- Prompt input fields now align perfectly with textareas below them
-- Category labels (A, B, C, D) + 60px gap = 120px total offset
-- Clean, professional grid layout with perfect vertical column alignment
-
-ADDED TITLE TO PROMPT COUNTS (LATEST UPDATE)
-===========================================
-- Changed prompt count displays to show "Possible selections: X" format
-- Updated updateColumnCounts() function to include descriptive title
-- More informative count displays that clearly indicate what the numbers represent
-- Better user experience with clear labeling of prompt counts
-
-CONVERTED TEACHER TIPS TO DROPDOWN (LATEST UPDATE)
-=================================================
-- Changed "Teacher Tips" to "Prompting Tips" for better terminology
-- Made tips list collapsible dropdown to save interface space
-- Added clickable header with toggle arrow (▼/▲) for expand/collapse
-- Tips list starts collapsed by default for cleaner interface
-- Better space utilization with expandable help section
-
-SETTINGS MANAGEMENT SYSTEM (LATEST UPDATE)
-===========================================
-- Added comprehensive settings control panel in editor (top-right corner)
-- Save current prompt configurations with custom names and timestamps
-- Load previously saved settings from dropdown list with date indicators
-- Delete unwanted settings with confirmation dialog
-- Export settings in multiple formats: JSON (for sharing) and CSV (for archiving)
-- Import settings from both JSON and CSV files with automatic name conflict resolution
-- Settings stored in localStorage with persistent browser caching
-- Orange terminal theme matching editor aesthetic
-- Complete settings management workflow for prompt designers
-- Teacher workflow: Design → Name → Save → Export/Share → Import from colleagues
-
-COMPREHENSIVE UI OVERHAUL & ALIGNMENT FIXES (LATEST UPDATE)
-===========================================================
-- Changed delete buttons from orange circles to orange [x] in brackets format
-- Added individual column counts centered under last category field of each column
-- Left-aligned first prompt list without misaligning with category fields
-- Removed center alignment and pseudo-element spacers for cleaner left-aligned layout
-- Individual counts show per-column totals instead of single grand total
-- Better visual hierarchy with left-aligned interface and individual column tracking
-- Added 120px padding-left to prompt headers to account for category label space
-- Updated column counts container with same 120px offset for perfect alignment
-- Prompt input fields now align perfectly with textareas below them
-- Category labels (A, B, C, D) + 60px gap = 120px total offset
-- Clean, professional grid layout with perfect vertical column alignment
-- Changed prompt count displays to show "Possible selections: X" format
-- Updated updateColumnCounts() function to include descriptive title
-- More informative count displays that clearly indicate what the numbers represent
-- Better user experience with clear labeling of prompt counts
-- Converted "Teacher Tips" to "Prompting Tips" with collapsible dropdown
-- Added clickable header with toggle arrow (▼/▲) for expand/collapse functionality
-- Tips list starts collapsed by default for cleaner interface
-- Better space utilization with expandable help section
-
-ENHANCED STUDENT MANAGEMENT
-===========================
-- Simple + button for mid-session student addition
-- Clean workflow: work with original list, add students as needed
-- Visual indicators (asterisk) distinguish added students
-- No confusion with countdown during mid-session additions
-- Logical student processing: only new students need attention
-- Added students appear at end of navigation cycle
-
-REPORT ENHANCEMENTS
-===================
-- Clear section separation with dividing lines
-- "UPLOADED CLASS LIST" section for original students
-- "ADDED STUDENTS" section for manually added students
-- "STUDENTS WITH NO GENERATED PROMPTS" section
-- Fixed duplicate student entries in report
-- Accurate student counts and categorization
-
-STUDENT INTEREST SELECTION SYSTEM (LATEST UPDATE)
-=================================================
-- Added student interest selection feature in sketch.js control panel
-- Checkbox interface for selecting specific categories (A, B, C, D) based on first prompt type
-- "All Categories" option for using all available categories
-- Individual category checkboxes show first item from each category (e.g., "textiles" for category A)
-- Smart mutual exclusivity logic: selecting individual categories automatically unchecks "All Categories"
-- Smart detection: selecting all individual categories automatically switches to "All Categories" mode
-- Retro-styled checkboxes matching terminal aesthetic (orange borders, filled when selected)
-- Interest selection affects prompt generation by filtering available categories
-- Settings persist across page refreshes via localStorage
-- Optional "Make Prompt 1 selectable interests" mode in editor for hiding first prompt type
-- When interests mode enabled, first prompt type is hidden and content determined by student selections
-- Fixed p5.js vs DOM element method conflicts for proper checkbox functionality
-- Comprehensive debug logging for troubleshooting checkbox interactions
-- Seamless integration with existing randomization logic without disrupting core functionality
-
-COMMA-SEPARATED NAME INPUT SYSTEM (LATEST UPDATE)
-==================================================
-- Implemented comma-separated name input functionality in sketch.js
-- Users can enter multiple student names separated by commas (e.g., "Alec, Marc, Miles")
-- Automatic parsing and validation of comma-separated names with whitespace trimming
-- Smart input field behavior: shows full comma-separated list while tracking current student internally
-- Auto-switch to first name when comma-separated names are entered
-- Dynamic student list growth as names are added to input field
-- Visual student list indicator showing "Student X of Y: [Current Name]"
-- Navigation instructions display all available names for reference
-- Removed plus button and return-key dialogue system for simplified workflow
-- Enhanced user experience with direct name entry and immediate navigation capability
-
-KEYBOARD ARROW NAVIGATION (LATEST UPDATE)
-==========================================
-- Added keyboard support for left/right arrow keys to navigate between comma-separated names
-- Left arrow key (←) navigates to previous student in the list
-- Right arrow key (→) navigates to next student in the list
-- Keyboard navigation works alongside existing mouse button navigation
-- Updated visual instructions to indicate both mouse and keyboard navigation options
-- Seamless integration with existing navigation system using same prevStudent()/nextStudent() functions
-- Enhanced accessibility with multiple navigation methods for different user preferences
-
-REPORT PERSISTENCE & DATE HEADERS (LATEST UPDATE)
-==================================================
-- Implemented persistent report data across editor visits
-- Class report data now persists when returning from editor to sketch
-- Enhanced saveCurrentStateToLocalStorage() to include classReport, manuallyAddedStudents, and totalUniqueStudents
-- Updated loadPromptsFromLocalStorage() to restore report data on page load
-- Added detailed date and time headers to downloadable reports
-- Report format: "CLASS REPORT - [Date] at [Time]" for better record keeping
-- Report only resets on explicit "RESET REPORT" button or closing website
-- Improved data persistence for seamless teacher workflow across sessions
-
-UI LAYOUT REORGANIZATION (LATEST UPDATE)
-=========================================
-- Moved "Edit Prompts" button from top-left corner to control panel in sketch interface
-- Reorganized editor layout: moved function buttons to top of screen
-- Moved OBJECTIVE section above Add Prompt/Add Category buttons
-- Aligned OBJECTIVE section to the left to match Category Labels alignment
-- Moved "Make Prompt 1 selectable interests" checkbox under OBJECTIVE section
-- Improved visual hierarchy and workflow organization
-- Consistent button styling and positioning throughout interface
-- Better space utilization and cleaner layout design
-
-KEYBOARD SHORTCUT IMPROVEMENTS (LATEST UPDATE)
-===============================================
-- Enhanced P and E keyboard shortcuts with input field focus detection
-- P key (editor to sketch) and E key (sketch to editor) now ignore when typing in input fields
-- Prevents accidental navigation when users are actively typing
-- Comprehensive focus detection for INPUT, TEXTAREA, and contentEditable elements
-- Improved user experience by preventing unintended page navigation during data entry
-- Maintains keyboard shortcuts for navigation while respecting user input context
-
-CURRENT STATUS
-==============
-- All major features implemented and working
-- Class list management fully functional
-- Apple II-style control panel implemented
-- Navigation system with arrow keys working (both mouse and keyboard)
-- Class report system with overwrite functionality and persistence
-- Prompt counting auto-sets to class size
-- Clean, consistent Apple 2 retro terminal aesthetic
-- Manual navigation control (no auto-advance)
-- Screenshot and report download capabilities
-- Unique student countdown system implemented
-- Simplified student addition workflow
-- Enhanced report structure with clear sections
-- Perfect column alignment with professional grid layout
-- Individual column counts with descriptive "Possible selections" format
-- Left-aligned interface with optimal space utilization
-- Collapsible prompting tips dropdown for cleaner interface
-- Orange terminal theme for editor with green sketch theme separation
-- Improved delete button styling with bracket format
-- Comprehensive UI overhaul with enhanced user experience
-- Student interest selection system with smart category filtering
-- Comma-separated name input system with automatic parsing
-- Keyboard arrow navigation for enhanced accessibility
-- Report persistence across editor visits with date headers
-- Reorganized UI layout with improved workflow organization
-- Enhanced keyboard shortcuts with input field focus detection
-- Complete sharing/export system with CSV format
-- Activity name preservation through share/load cycle
-- Enhanced student management with proper class upload
-- Enter key support for student name confirmation
-- Improved button hover effects and control panel styling
-- Objective inclusion in class reports for better context
-- Sample activity loading fixed - always loads from CSV with complete data
-- Activity History includes Sample activity with automatic recovery
-- Sample activity behaves identically when loaded from History vs. LOAD button
-- Up Arrow key now generates prompts (same as Enter key)
-- On-screen keyboard instructions displayed on prompting page
-- Clear keyboard control guidance: ← → toggle names, ↑ or Enter run, ↓ enter names
-- Name validation required before prompt generation (error beep if no name)
-- Down Arrow clears name field when pressed for quick reset
-- Enhanced name validation checks multiple sources for reliability
-
-COMPREHENSIVE SHARING/EXPORT SYSTEM (LATEST UPDATE)
-===================================================
-- Implemented complete activity sharing functionality with CSV export/import
-- Export includes all settings: theme, background, objective, criterion labels, prompt1InterestsMode
-- Export includes all content: prompt headers, category data, and activity name
-- Import properly restores all settings including theme/background with dropdown updates
-- Import rebuilds complete UI structure with prompt headers and categories
-- Activity name preservation through entire share/load cycle (no more naming prompts)
-- CSV format includes comprehensive metadata header section
-- Debug logging for troubleshooting export/import issues
-- Automatic Activity History entry with original activity name
-- Fixed CSV parsing logic for proper header and data row recognition
-- Enhanced UI rebuilding logic for complete activity restoration
-- Seamless teacher-to-teacher sharing workflow
-
-STUDENT MANAGEMENT ENHANCEMENTS (LATEST UPDATE)
-================================================
-- Fixed class upload functionality to properly add all names to student list
-- Enhanced CSV/TXT file support for class list uploads
-- Added comprehensive debug logging for class upload troubleshooting
-- Fixed file input timing issues with proper cleanup
-- Improved CSV parsing to handle both comma-separated and line-separated formats
-- Added Enter key support for confirming student names (no more clicking outside field)
-- Fixed student count to count names instead of individual characters
-- Removed redundant student count display (kept only counter under name field)
-- Enhanced hover effects on all buttons with inverted color scheme
-- Improved control panel styling and positioning
-- Fixed class report generation to include all uploaded students
-- Enhanced report persistence and data loading from localStorage
-- Added objective to class reports for better context preservation
-
-CRITICAL MEMORY PERSISTENCE FIX (LATEST UPDATE)
-===============================================
-- Fixed critical data loss issue when navigating between editor and sketch
-- Root cause: Editor's saveChanges() function was overwriting entire localStorage
-- Implemented data preservation logic in all editor save functions
-- Modified saveChanges(), startNewPromptSet(), and initializeDefaultContent() functions
-- Added comprehensive class report data preservation across all editor operations
-- Preserved data includes: classReport, allStudents, drawnStudents, manuallyAddedStudents, totalUniqueStudents, classList, originalClassList, studentName
-- Enhanced goToEditor() function with longer delay and verification logging
-- Added data protection mechanisms to prevent empty arrays from overwriting existing data
-- Fixed logic error in startNewPromptSet() where it was reading from localStorage after clearing it
-- Applied preservation logic to all instances using replace_all for consistency
-- Memory now persists until browser closes or "RESET REPORT" button is pressed
-- Teachers can safely navigate to editor to add/modify prompts without losing student progress
-- Comprehensive debug logging added for troubleshooting data flow
-- Resolved real-world issue where 6 of 6 students would reset to 0 when editing prompts
-
-SAMPLE ACTIVITY LOADING FIX (LATEST UPDATE)
-============================================
-- Fixed Sample activity loading from Activity History to match CSV import behavior
-- Root cause: Format mismatch between CSV parsing and localStorage storage
-- Sample activity now always loads directly from CSV file when selected from Activity History
-- CSV file (Sample-activity-2025-10-27.csv) is now the source of truth for Sample activity
-- Implemented automatic Sample activity recovery in Activity History if deleted
-- Sample activity always appears in Activity History, automatically restored from CSV on every page load
-- Fixed format conversion in ensureSampleInHistory() to match saveActivityWithName() logic exactly
-- Improved category extraction and filtering to preserve all data during format conversion
-- Added comprehensive debug logging for troubleshooting Sample loading issues
-- Updated loadSettingsByName() to detect Sample activity and load from CSV directly
-- Eliminated format conversion issues between CSV format and localStorage format
-- Sample activity now behaves identically when loaded from History vs. LOAD button
-- All prompts, categories, criterion labels, themes, and backgrounds load correctly
-- Enhanced data structure validation and error handling for Sample activity
-- Teachers can now rely on Sample activity always being available with complete data
-
-KEYBOARD CONTROLS ENHANCEMENT (LATEST UPDATE)
-==============================================
-- Changed Up Arrow key to generate prompts (same functionality as Enter key)
-- Up Arrow now triggers prompt generation instead of blurring input field
-- Both Up Arrow and Enter can be used to run/generate prompts
-- Added on-screen keyboard instruction display on prompting page
-- Instructions show: "← → : Toggle names  |  ↑ or Enter : Run  |  ↓ : Enter names"
-- Instructions displayed at bottom center of screen when showInstructions is true
-- Clear visual guidance for users on keyboard controls
-- Updated keyPressed() function comments to reflect new Up Arrow behavior
-- Enhanced user experience with intuitive keyboard navigation
-- All arrow keys work consistently whether input field is focused or not
-
-NAME VALIDATION & KEYBOARD IMPROVEMENTS (LATEST UPDATE)
-========================================================
-- Added name validation requirement before prompt generation
-- Prompt generation now blocked if no student name is entered
-- Error beep sound (200Hz, 150ms) plays when attempting to generate without a name
-- Name validation checks studentName, previousName, and input field value
-- Validation applied to both Up Arrow and Enter key handlers
-- Fixed Up Arrow handler to properly read from p5.js input element (primary source)
-- Up Arrow now correctly validates name from p5.js input before generating prompts
-- Down Arrow now clears name field when pressed (clears both p5.js and DOM inputs)
-- Down Arrow clears studentName and previousName variables on press
-- Down Arrow focuses input field after clearing for immediate name entry
-- Enhanced name validation logic to check multiple sources (p5.js input, DOM input, variables)
-- Improved user experience with clear feedback when name is required
-- Prevents accidental prompt generation without student identification
-
-FUTURE ENHANCEMENTS (SUGGESTED)
-===============================
-- Advanced constraint options
-- Animation improvements
-- Mobile responsiveness
-- User preferences panel
-- Multi-language support
-- Cloud storage integration
-
-TECHNICAL STACK
-===============
-- HTML5/CSS3 for structure and styling
-- Vanilla JavaScript for logic
-- P5.js for creative coding and graphics
-- Local Storage for data persistence
-- Responsive design principles
 
 FILE STRUCTURE
 ==============
 PromptMe App_2025/
-├── assets/ (font files)
-├── editor.html (prompt editor interface)
-├── theme-manager.js (theme & CSS management)
-├── editor-ui-manager.js (UI elements & interactions)
-├── editor-data-manager.js (data persistence & CSV)
-├── editor-settings-manager.js (activity management)
-├── editor-main.js (main orchestrator)
-├── index.html (landing page)
-├── sketch.html (prompt generation interface)
-├── sketch-refactored.js (main orchestrator)
-├── ui-manager.js (UI elements & buttons)
-├── animation-manager.js (animations & sound)
-├── data-manager.js (data persistence)
-├── student-manager.js (student navigation)
-├── prompt-generator.js (prompt generation)
-├── README.md (project documentation)
-└── CHANGELOG.txt (this file)
+|-- index.html                          landing page + welcome popup      (271 lines)
+|-- editor.html                         activity editor                  (2125 lines)
+|-- sketch.html                         prompting window                  (199 lines)
+|-- sketch-test.html                    test harness                       (35 lines)
+|
+|-- Editor modules
+|   |-- editor-main.js                  main orchestrator                 (727 lines)
+|   |-- editor-ui-manager.js            UI elements & forms              (1251 lines)
+|   |-- editor-data-manager.js          data persistence & CSV            (608 lines)
+|   |-- editor-settings-manager.js      activity management              (1449 lines)
+|   |-- editor-prompt-cube.js           phone cube layout & gestures      (450 lines)
+|
+|-- Prompting modules
+|   |-- sketch-refactored.js            main orchestrator                (1426 lines)
+|   |-- ui-manager.js                   UI elements & buttons            (1298 lines)
+|   |-- animation-manager.js            animations & sound                (412 lines)
+|   |-- data-manager.js                 data persistence & reports       (1401 lines)
+|   |-- student-manager.js              student navigation                (203 lines)
+|   |-- prompt-generator.js             draw logic (implements R1-R7)     (664 lines)
+|
+|-- Shared
+|   |-- theme-manager.js                themes & CSS variables            (481 lines)
+|
+|-- Sample-activity-2025-10-27.csv      sample activity (source of truth)
+|
+|-- Documentation
+|   |-- README.md                       teacher-facing guide
+|   |-- RANDOMIZER_LOGIC_SPEC.md        draw behavior spec
+|   |-- DESIGN_DECISIONS.md             visual/UX decisions + future directions
+|   |-- CHANGELOG.txt                   this file
+|   |-- .cursorrules                    how to work on this project
+|   |-- docs/
+|       |-- TROUBLESHOOT_LOCALHOST.md   local server troubleshooting
 
-MODULAR ARCHITECTURE (Version 2025.2)
-=====================================
-Sketch Modules:
-- sketch-refactored.js: Main orchestrator (836 lines)
-- ui-manager.js: UI elements and interactions (671 lines)
-- animation-manager.js: Animations & sound effects (204 lines)
-- data-manager.js: Data persistence (724 lines)
-- student-manager.js: Student navigation (96 lines)
-- prompt-generator.js: Prompt generation logic (331 lines)
+Line counts above are current as of July 2026. If you cite counts, re-measure - stale
+counts are what made this file misleading in the first place.
 
-Editor Modules:
-- editor-main.js: Main orchestrator (342 lines)
-- theme-manager.js: Theme switching (279 lines)
-- editor-ui-manager.js: UI elements & forms (626 lines)
-- editor-data-manager.js: Data persistence (567 lines)
-- editor-settings-manager.js: Activity management (860 lines)
+Module totals: prompting 5404 lines, editor 4485 lines, shared 481 lines.
 
-Benefits:
-- Single Responsibility Principle: Each module has one clear purpose
-- Easier debugging: Locate issues in specific modules
-- Better collaboration: Multiple developers can work simultaneously
-- Improved maintainability: Clear code organization
-- Scalability: Easy to add new features without touching existing code
 
-RECENT UPDATES (Version 2025.2)
-================================
-- Changed 'A' key to UP ARROW for generating prompts in sketch
-- Fixed missing prompts and categories in editor initialization
-- Corrected syntax errors in editor modules
-- Updated file structure to reflect modular architecture
+TECHNICAL STACK
+===============
+- HTML5/CSS3 for structure and styling
+- Vanilla JavaScript for logic (no framework, no build step)
+- p5.js 1.4.0 for creative coding and graphics
+- localStorage for data persistence
+- VT323 (Google Fonts) for the terminal aesthetic
 
-CATEGORY SELECTION FIXES (LATEST UPDATE)
-==========================================
-- Fixed critical bug where category selections were not being saved when individual checkboxes were clicked
-- Root cause: "All Categories" checkbox was not being found by document.getElementById() because ID was only set on p5.js element, not DOM element
-- Fixed by setting checkbox ID on both p5.js element and DOM element in ui-manager.js
-- Improved clearing logic in populateInterestCheckboxes() to properly preserve "All Categories" checkbox during category updates
-- Enhanced checkbox state reading to use both p5.js attribute() method and DOM getAttribute() for reliability
-- Added setTimeout delay before calling updateInterestSelection() to ensure checkbox state is fully updated
-- Fixed stopAnimation error by changing export to clearAnimations (correct function name)
-- Added comprehensive debug logging throughout category selection flow for troubleshooting
-- Category selections now properly persist and filter prompts correctly when individual categories are selected
-- Fixed issue where selectedCategory was not staying consistent across all prompts in a generation
-- Enhanced category filtering logic to ensure selected category exists in ALL prompt types before selection
-- Added validation to prevent category switching during prompt generation
 
-UI CONSISTENCY & DEFAULT STATE FIXES (LATEST UPDATE)
-====================================================
-- Removed all hardcoded category label defaults (sport, entertainment, academic, creative)
-- Category labels now start empty when editor opens with new/default state
-- Fixed initializeDefaultState() to explicitly reset criterionLabels to empty array
-- Updated CSV import function to use empty defaults instead of hardcoded values
-- Editor now starts completely clean with no pre-populated category labels
-- Fixed prompt text size inconsistency when navigating between students
-- Recalled prompts now use same text size (0.05) as animated prompts to prevent enlargement
-- Prevents text from appearing larger when navigating with left/right arrows
-- Changed all [X] delete buttons from red (#FF6B6B) to theme color
-- Delete buttons now match selected theme (green, orange, blue, purple, pink, white, black)
-- Updated all theme definitions to set --delete-color to match --primary-color
-- Consistent visual appearance with delete buttons using theme color throughout interface
-- Updated CSS to use var(--primary-color) instead of var(--delete-color) for delete buttons
-- All delete buttons (.delete-category, .delete-prompt, .settings-item-delete) now use theme color
+DEVELOPMENT HISTORY (CONDENSED)
+===============================
+Earlier revisions of this file recorded every change as its own "(LATEST UPDATE)"
+section, which produced many entries that contradicted each other as features were added
+and then reversed. That history is condensed below; full detail is in git.
 
-This changelog represents the complete development history and current feature set of the PromptMe App as of January 2025.
+ARCHITECTURE
+- Refactored a monolithic sketch.js and editor.js into the modular structure above
+- Modules have grown substantially since the split (see FILE STRUCTURE for real counts)
+
+RANDOMIZER
+- Repetition prevention became always-on rather than a toggle
+- Draw behavior was formalized into RANDOMIZER_LOGIC_SPEC.md (R1-R7, I1-I6)
+- prompt-generator.js comments now cite rule IDs at the implementing code
+- Fixed: in-play state keyed per prompt type across groupings, not per grouping
+- Fixed: in-play refresh only on full-union exhaustion, never on grouping-local empty
+- Fixed: a run locks to one grouping for all prompts
+
+EDITOR UI
+- Retro terminal aesthetic applied; editor orange, prompting window green (D1)
+- Delete buttons render as [x] in brackets and follow the theme color (D4, D5)
+- Column alignment resolved via a 120px offset matching grouping label + gap (D3)
+- Objective section moved above the Add controls
+- Settings/File/Theme consolidated into dropdown menus
+- Phone cube layout added, later gaining swipe gestures
+- Fixed: iOS bug where only one character registered when typing the objective, by
+  replacing width-limiting on input.value with a hidden mirror span and soft trimming
+- Terminology renamed from criteria/category to grouping in user-facing text only
+
+PROMPTING WINDOW
+- Generation key moved from 'A' to UP ARROW, then Enter added; Space became an interrupt
+- Name entry gained comma-separated lists and arrow navigation
+- Names became optional, with auto-labelled "Run 1" unnamed runs
+- RUN restyled as a circular button; RE-RUN / GO TO NEXT states added so a teacher's eye
+  is guided to advance rather than re-run
+- Prompts repositioned lower beneath the objective
+- Recalled prompts use the same text size as animated ones, fixing size jump on navigation
+
+REPORTS
+- Report data persists across editor visits
+- Reports moved from one global pile to per-activity storage with session switching
+- Download gained date/time headers and the objective for context
+- Fixed: data loss where the editor's save path overwrote the whole localStorage payload,
+  resetting student progress mid-session
+- Fixed: duplicate students across report sections
+
+ACTIVITIES
+- Save/load with named activities and Activity History
+- CSV export/import for teacher-to-teacher sharing, preserving activity name
+- Sample activity always loads from its CSV; auto-restored to History if deleted
+- Fixed: cube data being wiped on load, by refreshing the cube before saving
+
+ONBOARDING
+- First-visit welcome popup on the landing page
+- Help & Instructions rewritten to cover prompting concepts, groupings, and all controls
+  on both desktop and phone; deep-linkable via ?help=1
+- App renamed Rando Calrissian in the UI
+
+
+FUTURE DIRECTIONS
+=================
+Captured in DESIGN_DECISIONS.md section 4, not repeated here. Summary: multi-format
+prompts including images (F1), invisible teacher curation extending the paused
+prompt1InterestsMode question (F2), AI that assists curation without replacing teacher
+intent (F3), customizable animations (F4), and low-floor/wide-walls progressive
+disclosure as a cross-cutting constraint (F5).
+
+Do not build against these without confirming scope first.

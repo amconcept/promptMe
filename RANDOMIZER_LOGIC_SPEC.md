@@ -2,6 +2,16 @@
 
 Use this document to verify implementation against desired behaviour. When behaviour is wrong, compare code paths to the rules and invariants below; any mismatch is a bug.
 
+> **Terminology.** This document uses **Category** as the internal/logic term, matching the
+> code identifiers (`category`, `criterion`, `criterionLabels`). The **UI calls the same
+> concept a "Grouping."** That split is deliberate — user-facing wording was updated for
+> teachers while the internal term was left alone so the draw logic isn't destabilized.
+> Read "Category" here as "Grouping" when talking to a teacher.
+
+> **Documented caps.** `MAX_PROMPTS = 4` and `MAX_CATEGORIES = 6` (both declared in
+> `editor-ui-manager.js`) bound every pool discussed below: at most 4 prompt types per run,
+> at most 6 categories per activity. Rules R1–R7 hold for any count within those limits.
+
 ---
 
 ## 1. Glossary (single source of truth)
@@ -31,6 +41,16 @@ Use this document to verify implementation against desired behaviour. When behav
 - **R6** A prompt type is exhausted only when **all** its options (all categories) have been in play at least once. On exhaustion, that type's in-play set is cleared (refresh).
 - **R7** When a category is forced, **all** prompts in the run (including the first) are drawn only from that category's pools. No combined leader pool; category is fixed before any draw.
 
+> **Status of forcing (R7 / I6).** There is currently **no UI path** for a teacher to force
+> a category. The interest/category-selection controls that used to expose it live inside the
+> hidden control panel, and `prompt1InterestsMode` is hardcoded off (see `DESIGN_DECISIONS.md`
+> D9 — an open question, not dead code). R7's code path is still live, but is reached only
+> **structurally**, when a run has exactly one eligible category
+> (`candidateCategories.length === 1` in `prompt-generator.js`). Consequence: scenarios
+> **S6** and **S10** below cannot be exercised as written until forcing is reachable again.
+> Keep the rule and the scenarios — they define required behaviour for when it returns, and
+> the single-eligible-category case must obey them today.
+
 ---
 
 ## 3. Invariants (quick checks)
@@ -55,11 +75,11 @@ Use these to verify behaviour; if the system disagrees, one of the rules or inva
 | S3 | Student A got Item 1 + Thing 3. Student B runs. | Item 1 and Thing 3 not available for B. B gets e.g. Item 3 + Thing 2 (or any valid combo from remaining). |
 | S4 | Student A changes result (randomizer again). | A's old combo (Item 1, Thing 3) goes back to pool. A gets a new combo that is not Item 1 + Thing 3. |
 | S5 | All Items (1,2,3,4,5) have been in play. Next run. | Item pool is refreshed; all five are available again. |
-| S6 | Category 2 forced. Run. | First draw is one of Item 4,5. Thing is one of 6,7,8. No Item 1,2,3 or Thing 1,2,3 in this run. |
+| S6 | Category 2 forced. Run. **(Not currently exercisable — no UI path to force; see R7 status note.)** | First draw is one of Item 4,5. Thing is one of 6,7,8. No Item 1,2,3 or Thing 1,2,3 in this run. |
 | S7 | Cat1: Item 1,2,3 / Thing 1,2,3; Cat2: Item 4,5 / Thing 6,7,8. All Things (1–8) exhausted and refreshed; all Items still in play except Item 1. Student D runs (no forced category). | Leader: one of Item 2,3,4,5 (Item 1 in play). If leader is Item 2 or 3, Thing from 1,2,3; if Item 4 or 5, Thing from 6,7,8. |
 | S8 | Same as S7. Student E runs after D got Item 1 + Thing 4 (so Item 1 and Thing 4 now in play). Thing pool had refreshed so 1,2,3,4,5,6,7,8 available; only Thing 4 in play. | Leader: one of Item 2,3,4,5. Things available per category: Cat1: 1,2,3 (4 in play); Cat2: 5,6,7,8 (4 in play). E gets e.g. Item 3 + Thing 2, or Item 5 + Thing 6. |
 | S9 | Teacher removes Thing 3 from design. Student C had Item 1 + Thing 3; teacher goes back, "removes" for C (change result). C randomizes again. | C's old combo put back (Item 1, Thing 3). Thing 3 no longer in pool (removed). C gets Item 1 + one of remaining Things (e.g. 1,2,4,5,…). No Thing 3. |
-| S10 | Category 1 forced. Item 1,2,3 and Thing 1,2,3 only. Item 1 and Thing 2 in play. Run. | First draw one of Item 2,3. Thing one of 1,3 (not 2). |
+| S10 | Category 1 forced. Item 1,2,3 and Thing 1,2,3 only. Item 1 and Thing 2 in play. Run. **(Not currently exercisable — no UI path to force; but an activity with only Category 1 hits the same path structurally.)** | First draw one of Item 2,3. Thing one of 1,3 (not 2). |
 
 ---
 
@@ -81,8 +101,9 @@ Think of each prompt type as a **hat of slips**. Taken slips stay out until put 
 | **Up / Enter** on empty or new slot (after NEXT) | Draw one combo; those slips leave the hat (in play). |
 | **Up / Enter** again on the **same** finished result | Put that student's slips back; draw again from slips still in the hat (not other students' taken slips). Prefer not the exact same combo (R5). |
 | **Up / Enter** while scramble still running | **Ignored** — wait until the result finishes. |
-| **NEXT / Down** | Confirm current result; open a new empty slot for the next student. Previous slips stay out of the hat. |
+| **GO TO NEXT** button / **Down** | Confirm current result; open a new empty slot for the next student. Previous slips stay out of the hat. |
+| **RUN** button (circular) | Same as Up / Enter. Displays as **RE-RUN** (dimmed) while a finished result is showing, so the eye is guided to GO TO NEXT instead. |
 | **Left / Right** | Browse history. Up on an old slot = re-roll that student (put their slips back, draw from what remains now). |
-| **Editor add/remove prompts** | Pool is the current design. New slips can be drawn; removed slips are no longer drawable. In-play tracking follows the current union (R6). |
+| **Editor add/remove prompts** | Pool is the current design. New slips can be drawn; removed slips are no longer drawable. In-play tracking follows the current union (R4, and I5 for when exhaustion counts as complete). |
 
-Typical desk loop: student Up → wait for result → (optional re-roll Up) → NEXT chime → next student.
+Typical desk loop: student Up / RUN → wait for result → (optional re-roll Up / RE-RUN) → GO TO NEXT → next student.

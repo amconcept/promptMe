@@ -1,45 +1,69 @@
-# PromptMe App
+# Rando Calrissian
 
 **A creative prompt generation tool designed to spark imagination and engagement in educational settings.**
 
----
-
-## What is PromptMe?
-
-PromptMe is a web-based application that helps teachers create structured, randomized prompts for students. Think of it as a digital prompt generator that ensures every student gets unique, varied combinations of ideas to work with—perfect for creative projects, design challenges, artistic exercises, or any activity where you want to provide structured inspiration.
+> Naming note: the app is called **Rando Calrissian** in the UI. The repository folder
+> and some internal identifiers still read `PromptMe` — that's historical, not a second
+> product. Code identifiers are deliberately left alone (see "Terminology" below).
 
 ---
 
-## Why is PromptMe Cool?
+## What is Rando Calrissian?
+
+Rando Calrissian is a web-based application that helps teachers create structured, randomized prompts for students. Think of it as a digital prompt generator that ensures every student gets unique, varied combinations of ideas to work with—perfect for creative projects, design challenges, artistic exercises, or any activity where you want to provide structured inspiration.
+
+Everything runs locally in the browser. There is no server, no build step, and no account — your data stays in your browser's local storage.
+
+---
+
+## Terminology
+
+The app uses **grouping** in everything a teacher sees. The code and the randomizer
+spec use **category** for the same concept.
+
+| You see | Code calls it |
+|---------|---------------|
+| Grouping (A, B, C…) | `category`, `criterion`, `criterionLabels` |
+| Prompt | `promptHeaders`, prompt type |
+
+This split is intentional. `RANDOMIZER_LOGIC_SPEC.md` keeps "Category" as the internal
+logic term, and renaming the identifiers would risk breaking the draw logic, so only the
+user-facing wording changed.
+
+---
+
+## Why is Rando Calrissian Cool?
 
 ### 🎯 **Structured Creativity**
-Instead of giving students a blank page and endless possibility, PromptMe provides organized categories of prompts that work together. For example, a design project might combine:
-- **Category A**: Different materials (wood, fabric, metal)
-- **Category B**: Different functions (storage, seating, lighting)
-- **Category C**: Different styles (modern, vintage, minimalist)
+Instead of giving students a blank page and endless possibility, Rando Calrissian provides organized groupings of prompts that work together. For example, a design project might combine:
+- **Grouping A**: Different materials (wood, fabric, metal)
+- **Grouping B**: Different functions (storage, seating, lighting)
+- **Grouping C**: Different styles (modern, vintage, minimalist)
 
-Each student gets a unique combination, ensuring variety while maintaining structure and focusing on the skills teachers want to develop. This allows teachers to provide customized experiences for diverse learners, including options that incorporate student interests. The system helps avoid repetition and copying while encouraging differentiation, making activities more challenging, customizable, and engaging.
+Each student gets a unique combination, ensuring variety while maintaining structure and focusing on the skills teachers want to develop. This allows teachers to provide customized experiences for diverse learners. The system helps avoid repetition and copying while encouraging differentiation, making activities more challenging, customizable, and engaging.
 
 ### 🎲 **Smart Randomization**
 The app automatically prevents repetition, so students won't get the same prompts until all options have been used. This means every student gets fresh, unique combinations without you having to manually track what's been used.
 
+The exact rules are specified in `RANDOMIZER_LOGIC_SPEC.md` (rules R1–R7, invariants I1–I6). That document is the source of truth for draw behavior.
+
 ### 📊 **Easy Organization**
-Upload your class list once, and the app tracks which students have received prompts. Navigate between students easily, take screenshots of their results, and download a complete class report at any time.
+Enter student names as you go, or paste a comma-separated list. The app tracks who has received prompts, lets you navigate between them, take screenshots, and download a report at any time.
 
 ### 🎨 **Visual Appeal**
-The prompting interface features a retro terminal aesthetic with smooth animations that make the experience engaging and fun. Students watch as their prompts reveal themselves in an exciting, game-like way.
+The prompting interface features a retro terminal aesthetic with smooth animations that make the experience engaging and fun. Students watch as their prompts reveal themselves in an exciting, game-like way. Eight themes are available in the editor (see "Themes").
 
 ### 💾 **Save and Share**
 Create activity templates and save them for future use. Share your prompt sets with other teachers via CSV files. Everything is stored locally in your browser, so your data stays private.
 
 ---
 
-## What Can PromptMe Be Used For?
+## What Can It Be Used For?
 
 ### **Design Projects**
 Create design challenges where students combine different materials, functions, and constraints. Perfect for architecture, product design, or art classes.
 
-**Example**: "Design an object to think with that combines [Material] + [Function] + [Style]"
+**Example**: "Make a gift for a friend that USES [material] AND [tool]"
 
 ### **Creative Writing**
 Generate story prompts with different characters, settings, and plot elements. Each student gets a unique combination to spark their imagination.
@@ -53,179 +77,220 @@ Set up engineering or math challenges with varying constraints and requirements.
 Create vocabulary exercises where students combine different words, contexts, and grammar structures.
 
 ### **Any Structured Activity**
-If you have categories of options that need to be combined in different ways, PromptMe can help you randomize and track them efficiently.
+If you have groupings of options that need to be combined in different ways, Rando Calrissian can help you randomize and track them efficiently.
 
 ---
 
 ## How Does It Work?
 
-PromptMe has two main parts:
+Rando Calrissian has two main parts:
 
-### 1. **The Editor** (Where You Set Up Prompts)
-This is where you design your activity:
+### 1. **The Editor** (`editor.html` — where you set up prompts)
 
-- **Create Categories**: Set up rows (A, B, C, D) that represent different types of options
-- **Add Prompt Columns**: Create columns (Prompt 1, 2, 3, 4) that represent different characteristics or requirements
-- **Fill in Options**: Add specific items to each category. For example, Category A might have "wood, metal, fabric" while Category B has "storage, seating, lighting"
+- **Add Prompts**: Create up to **4** prompt columns (`MAX_PROMPTS`), each with a heading students see, such as USES, WITH, or AND
+- **Add Groupings**: Create up to **6** grouping rows (`MAX_CATEGORIES`), labelled A, B, C… automatically
+- **Fill in Options**: Add one option per line in each cell
 - **Set an Objective**: Write what students should create or accomplish
-- **Save Your Activity**: Give it a name and save it for future use
+- **Save Your Activity**: Use the File menu to name and save it
 
-**Think of it like a grid**: Rows are categories, columns are prompt types, and each cell contains specific options.
+**Think of it like a grid**: rows are groupings, columns are prompts, and each cell holds one option per line.
 
-### 2. **The Prompting Interface** (Where Students Get Prompts)
-This is where the magic happens:
+On a **phone or narrow window**, the grid is replaced by a **cube layout** that shows one prompt at a time — see "The phone cube" below.
 
-- **Enter Student Name**: Type or select a student's name
-- **Generate Prompts**: Press the Up Arrow or Enter key to generate a unique combination
-- **Watch the Animation**: Prompts reveal themselves with a fun scrambling animation
-- **Navigate Students**: Use Left/Right arrows to move between students
-- **Track Progress**: The app remembers what each student received
+### 2. **The Prompting Window** (`sketch.html` — where students get prompts)
 
-**The Result**: Each student gets one item from each category, creating a unique combination like "wood + storage + modern" or "fabric + seating + vintage".
+- **Enter a name** (optional — see "Unnamed runs")
+- **Press RUN**, or the Up Arrow / Enter key, to generate a combination
+- **Watch the animation** as prompts scramble and resolve
+- **Navigate** between students with the ← → arrows
+- **GO TO NEXT** confirms the current result and opens a fresh slot
+
+**The Result**: each student gets one option from each prompt, all drawn from the same grouping — for example "a paperclip + a laser cutter".
 
 ---
 
 ## Quick Start Guide
 
-### For Teachers: Setting Up an Activity
-
 **Try the Sample Activity First!**
-- When you first open the editor, a sample activity called "Sample" is automatically loaded
-- You can see it in the Activity History dropdown in the settings panel (☰ icon)
-- Click "START PROMPTING" to try it out and see how the system works
-- This gives you a great example of how to structure your own activities
+- A sample activity called "Sample" is available in the File menu and is restored automatically if deleted
+- It is loaded from `Sample-activity-2025-10-27.csv`, which is the source of truth for it
+- Run it to see how the system works
 
 1. **Open the Editor**
-   - Open `editor.html` in your web browser
-   - You'll see a grid where you can create prompts
+   - Open `editor.html` in your browser
    - The sample activity loads automatically on first use
 
-2. **Create Your First Prompt Column**
-   - Click "Add Prompt" to create a new column
-   - Give it a name (e.g., "Material", "Function", "Style")
+2. **Create Your First Prompt**
+   - Click **+ Add Prompt** to create a column (max 4)
+   - Give it a heading (e.g. "USES", "AND")
 
-3. **Add Categories**
-   - Click "Add Category" to create a new row
-   - Categories are labeled A, B, C, D automatically
-   - Fill in options for each category in each prompt column
+3. **Add Groupings**
+   - Click **+ Add Grouping** to create a row (max 6)
+   - Groupings are labelled A, B, C… automatically
+   - Fill in options, one per line
 
 4. **Set an Objective**
    - Type what students should create or accomplish
    - This appears at the top of the prompting screen
 
 5. **Save Your Activity**
-   - Click the settings panel (☰ icon in top right)
-   - Click "Save Current Activity"
-   - Give it a name and save
+   - Open the **File** menu (`...` in the top right)
+   - Choose **Save** or **Save As** and give it a name
 
 6. **Start Prompting**
-   - Click "START PROMPTING" button
-   - Enter a student name
-   - Press Up Arrow or Enter to generate prompts
-
-### For Students: Getting Prompts
-
-1. **Enter Your Name**
-   - Type your name in the input field at the bottom
-   - Press Down Arrow to clear and enter a new name
-
-2. **Generate Your Prompts**
-   - Press Up Arrow or Enter to generate your unique combination
-   - Watch as your prompts reveal themselves
-
-3. **Start Creating**
-   - Use the prompts you received to begin your project
-   - Each student gets different prompts, ensuring variety
+   - Click **RUN** / **START PROMPTING**
+   - Optionally enter a student name
+   - Press **RUN**, Up Arrow, or Enter to generate
 
 ---
 
-## Keyboard Controls
+## Controls
 
-### In the Prompting Interface:
+> **Maintainers:** these tables are the only record of the control scheme — the design
+> decision that used to pin it (D7) was retired. They mirror `keyPressed()` in
+> `sketch-refactored.js` and the button wiring in `ui-manager.js`. If you change a binding
+> or a button label, update this section in the same turn, and verify against the code
+> rather than against this table.
 
-- **← → (Left/Right Arrows)**: Navigate between students
-- **↑ (Up Arrow) or Enter**: Generate prompts (requires a name to be entered)
-- **↓ (Down Arrow)**: Clear name field and prepare for new entry
-- **C**: Toggle control panel visibility
-- **ESC**: Return to editor
+### In the Prompting Window
 
-### In the Editor:
+| Control | What it does |
+|---------|--------------|
+| **RUN** button (circular) | Generate prompts. Becomes **RE-RUN** (dimmed) once a result is showing |
+| **GO TO NEXT** button | Confirm the current result and open a fresh slot |
+| **↑ (Up Arrow)** or **Enter** | Generate prompts (same as RUN) |
+| **↓ (Down Arrow)** | Confirm and advance to the next slot |
+| **← → (Left/Right Arrows)** | Navigate between students / browse history |
+| **Space** | Interrupt a scramble in progress and reset it. Does **not** generate |
+| **screenshot** | Save a PNG of the current result |
+| **report** | Download the report for the current activity |
+| **clear** | Clear the report for the current activity |
+| **edit** | Return to the editor |
 
-- **P**: Go to prompting interface (if prompts are set up)
+Pressing Up / Enter again on a finished result **re-rolls** that student: their previous
+options go back into the pool and a new combination is drawn (rule R5). Presses are
+ignored while the scramble animation is still running.
+
+### In the Editor
+
+| Control | What it does |
+|---------|--------------|
+| **P** | Go to the prompting window (ignored while typing in a field) |
+| **File** menu (`...`) | New, Save, Save As, Share, Load, Restore Last Run |
+| **Theme** menu | Choose one of 8 themes |
+| **Help & Instructions** | Open the in-app guide |
+
+### The phone cube
+
+On a phone or narrow window the editor switches to a single-prompt "cube" view:
+
+- **Swipe left / right**, or the **‹ ›** buttons, to move between prompts
+- **Swipe up / down** (outside a text area) to move between groupings
+- **+** adds a prompt or grouping
+- Text areas still scroll normally; the gesture handler locks to one axis so scrolling and taps aren't hijacked
 
 ---
 
 ## Key Features
 
 ### **Smart Repetition Prevention**
-The app automatically tracks which prompts have been used and won't repeat them until all options have been exhausted. This ensures maximum variety.
+Options that have been drawn stay "in play" and can't be drawn again until they're put back or the pool for that prompt is exhausted, at which point it refreshes. Tracking is per prompt, across all groupings. See `RANDOMIZER_LOGIC_SPEC.md`.
 
-### **Class List Management**
-Upload a text file with student names (one per line), and the app will:
-- Auto-populate the first student's name
-- Allow easy navigation between students
-- Track which students have received prompts
-- Generate a class report with all results
+### **Unnamed runs**
+Student names are **optional**. If no name is entered, runs are labelled automatically as "Run 1", "Run 2", and so on. Naming can be required per activity via the `requireStudentNames` setting; the default is off, so a teacher can start prompting immediately.
+
+### **Student names**
+Type a name, or paste several separated by commas ("Alec, Marc, Miles") to build a list you can navigate with ← →. A counter under the field shows your position in the list.
+
+### **Per-activity reports**
+Results are stored **per activity**, not in one shared pile. Switching activities saves the session you're leaving and restores the one you're entering, so two activities never mix their results. **Restore Last Run** in the File menu reopens the most recent session. Reports persist across trips to the editor and are only cleared by **clear**.
 
 ### **Activity History**
-Save multiple activity templates and switch between them easily. Each activity remembers:
-- All your prompts and categories
-- Your objective
-- Theme and background settings
-- Whether categories are selectable
+Save multiple activity templates and switch between them. Each activity remembers its prompts, groupings, grouping labels, objective, theme, and background.
 
 ### **Export and Share**
-Save your activities as CSV files to share with other teachers. Import activities created by others to use in your classroom.
+Save activities as CSV to share with other teachers, and import CSVs created by others. The CSV carries a metadata header (activity name, theme, background, objective, grouping labels) plus all prompt and grouping content.
 
 ### **Reports and Screenshots**
 - Take screenshots of individual student results
-- Download a complete class report showing all students and their prompts
-- Reports include the objective and are formatted for easy reading
+- Download a report showing all students and their prompts
+- Reports include the objective and activity settings for context
+
+### **Themes**
+Eight themes ship with the app: Windows, Macintosh, Green CRT, Orange CRT, Blue CRT, Purple CRT, Pink CRT, and Black. The choice is saved per activity and carried through CSV export/import. Theming is live, maintained infrastructure — see decision **D8** in `DESIGN_DECISIONS.md`, which treats it as the foundation for letting teachers restyle the app as their own room.
+
+### **Welcome popup**
+First-time visitors to `index.html` get a one-time welcome explaining the idea, the difference between prompts and groupings, and a link into Help & Instructions. It is shown once and remembered in local storage (`randoCalrissianWelcomeSeen`).
+
+### **Help & Instructions**
+The editor has a built-in guide covering how prompting works, prompts vs groupings, classroom uses, and every control on both desktop and phone. Link straight to it with `editor.html?help=1`.
 
 ---
 
 ## Tips for Best Results
 
-### **Organize Your Categories Logically**
-Think about how categories relate to each other. For example:
-- **Category A**: Difficulty levels (Easy, Medium, Hard)
-- **Category B**: Topics (Science, Art, History)
-- **Category C**: Formats (Essay, Presentation, Poster)
+### **Organize Your Groupings Logically**
+Groupings let you keep combinations compatible, or differentiate by age, experience, interests, or support needs. For example:
+- **Grouping A**: beginner-friendly materials and tools
+- **Grouping B**: advanced materials and tools
+
+Because a run locks to a single grouping, options in the same grouping should make sense together.
 
 ### **Use Clear, Specific Options**
-Instead of vague terms, use specific, actionable items:
-- ✅ Good: "Design a chair using reclaimed wood"
-- ❌ Less useful: "Make something with wood"
+- ✅ Good: "a laser cutter"
+- ❌ Less useful: "a tool"
 
 ### **Test Your Activity First**
-Before using with students, test it yourself to make sure the combinations make sense and work well together.
+Before using with students, run it yourself to make sure the combinations make sense.
 
 ### **Save Frequently**
-Save your activities with descriptive names so you can reuse them later or share them with colleagues.
+Save activities with descriptive names so you can reuse or share them later.
 
 ---
 
 ## Example Use Case
 
-**Scenario**: A design teacher wants students to create furniture designs.
+**Scenario**: A design teacher wants students to design a gift.
 
 1. **In the Editor**:
-   - Creates Prompt 1: "Material" (wood, metal, fabric, plastic)
-   - Creates Prompt 2: "Function" (seating, storage, lighting, workspace)
-   - Creates Prompt 3: "Style" (modern, vintage, minimalist, industrial)
-   - Sets Objective: "Design a piece of furniture that combines your assigned material, function, and style"
-   - Saves as "Furniture Design Challenge"
+   - Prompt 1: "USES" (a paperclip, rope, colour paper, an elastic)
+   - Prompt 2: "AND" (a laser cutter, a 3D printer, an embroidery machine, a vinyl cutter)
+   - Objective: "Make a gift for a friend that:"
+   - Saves as "Gift Design Challenge"
 
-2. **In the Prompting Interface**:
-   - Student "Alex" enters name and generates prompts
-   - Gets: "wood + seating + modern"
-   - Student "Sam" gets: "metal + storage + industrial"
-   - Each student gets a unique combination
+2. **In the Prompting Window**:
+   - Student "Alex" runs and gets "a paperclip + a laser cutter"
+   - Student "Sam" runs and gets "rope + a vinyl cutter"
+   - Neither of those four options can come up again until the pools refresh
 
 3. **Result**:
-   - All students work on the same type of project
-   - But each has different constraints, ensuring variety
-   - Teacher can track who got what and download a report
+   - All students work on the same kind of project with different constraints
+   - The teacher can track who got what and download a report
+
+---
+
+## For Developers
+
+**Stack**: HTML5/CSS3, vanilla JavaScript, and p5.js for the prompting window. **No build step** — open the HTML files directly, or serve the folder (`python3 -m http.server 8000`).
+
+**Storage**: `localStorage` is the source of truth. Editor and prompting window sync through a `promptDataUpdated` custom event and the `storage` event across tabs.
+
+### Cache busting
+
+Every `<script>` tag carries a `?v=` query parameter, currently `?v=20260728a`. Browsers
+aggressively cache these files, so **after editing any JS you must bump the value on all
+script tags together**, across `editor.html`, `sketch.html`, and `index.html`. Mismatched
+values load a mix of old and new modules, which produces confusing bugs. All 11 script
+tags share one value by convention.
+
+### Companion documents
+
+| Document | Purpose |
+|----------|---------|
+| `RANDOMIZER_LOGIC_SPEC.md` | Required randomizer behavior (R1–R7, I1–I6, scenarios S1–S10) |
+| `DESIGN_DECISIONS.md` | Why visual/UX choices are the way they are (active D1–D5, D8, D9; D6 and D7 retired), plus future directions |
+| `CHANGELOG.txt` | Development history |
+| `docs/TROUBLESHOOT_LOCALHOST.md` | Local server troubleshooting |
 
 ---
 
@@ -233,7 +298,7 @@ Save your activities with descriptive names so you can reuse them later or share
 
 ### Creative Commons License
 
-**PromptMe App** by **Alec Mathewson**
+**Rando Calrissian** by **Alec Mathewson**
 
 This work is licensed under a [Creative Commons Attribution 4.0 International License](http://creativecommons.org/licenses/by/4.0/).
 
@@ -251,7 +316,6 @@ Under the following terms:
 - Designer: Peter Hull
 - License: SIL Open Font License (OFL)
 - Used throughout the application interface for the retro terminal aesthetic
-- Attribution: The VT323 font provides the distinctive retro computer terminal appearance
 
 **p5.js Library (Animation & Graphics)**
 - Source: p5.js Foundation
@@ -262,8 +326,6 @@ Under the following terms:
 
 ### Application Copyright
 
-PromptMe App © 2025 by Alec Mathewson
+Rando Calrissian © 2025–2026 by Alec Mathewson
 
 This application is designed for educational use. The source code, user interface, and original content are protected by copyright and licensed under Creative Commons Attribution 4.0 International License.
-
-
