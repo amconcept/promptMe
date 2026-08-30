@@ -4,7 +4,12 @@
 .env.*
 node_modules/
 .vscode/
-.cursor/
+# Cursor workspace junk; keep shared rules and slash commands
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
+!.cursor/commands/
+!.cursor/commands/**
 *.swp
 .idea/
 *.zip

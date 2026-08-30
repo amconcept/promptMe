@@ -1,11 +1,36 @@
 // Editor Data Manager - Handles data persistence and CSV operations
 // Responsible for: Saving/loading data, CSV export/import, localStorage management
 
+// D-018: empty headings stay unlabeled. Categories can't use "" as a key twice,
+// so a blank column is stored as __blank_0, __blank_1, … and never drawn on the card.
+const BLANK_PROMPT_HEADER_PREFIX = '__blank_';
+function isUnlabeledPromptHeader(header) {
+    const t = String(header == null ? '' : header).trim();
+    if (!t) return true;
+    if (t.indexOf(BLANK_PROMPT_HEADER_PREFIX) === 0) return true;
+    // Old save path invented "PROMPT 1" when the field was empty
+    return /^PROMPT\s+\d+$/i.test(t);
+}
+function promptHeaderStorageKey(rawLabel, columnIndex) {
+    const t = String(rawLabel == null ? '' : rawLabel).trim();
+    if (!t || isUnlabeledPromptHeader(t)) return BLANK_PROMPT_HEADER_PREFIX + columnIndex;
+    return t;
+}
+function promptHeaderEditorValue(storageKey) {
+    return isUnlabeledPromptHeader(storageKey) ? '' : String(storageKey == null ? '' : storageKey);
+}
+window.isUnlabeledPromptHeader = isUnlabeledPromptHeader;
+window.promptHeaderStorageKey = promptHeaderStorageKey;
+window.promptHeaderEditorValue = promptHeaderEditorValue;
+
 // Save changes to localStorage (editor prompts/categories; working report and usedPrompts preserved)
 let _saveChangesFlushing = false;
 function saveChanges() {
-    // Sync cube fields into the hidden grid before reading DOM (guard against re-entry)
-    if (!_saveChangesFlushing && typeof flushPromptCube === 'function') {
+    // D-010: only copy cube → grid when the cube is the live editor. On desktop
+    // the cube fields still exist but are empty/hidden; flushing them here
+    // overwrote the grid ~0.6s after typing (auto-save).
+    const cubeIsLive = typeof isCubeLayout === 'function' && isCubeLayout();
+    if (!_saveChangesFlushing && cubeIsLive && typeof flushPromptCube === 'function') {
         _saveChangesFlushing = true;
         try {
             flushPromptCube();
@@ -38,19 +63,20 @@ function saveChanges() {
     const promptCount = headers.length;
 
     headers.forEach((header, columnIndex) => {
-        const headerText = header.value.trim() || `PROMPT ${columnIndex + 1}`;
+        const headerText = promptHeaderStorageKey(header.value, columnIndex);
         data.categories[headerText] = {};
         criterionInputs.forEach((criterionInput, rowIndex) => {
             const categoryLabel = criterionInput.value.trim() || `Category ${rowIndex + 1}`;
             const textareaIndex = rowIndex * promptCount + columnIndex;
             const textarea = textareas[textareaIndex];
-            if (textarea && textarea.value.trim()) {
-                const prompts = textarea.value.split('\n')
-                    .map(line => line.trim())
-                    .filter(line => line.length > 0);
-                if (prompts.length > 0) {
-                    data.categories[headerText][categoryLabel] = prompts;
-                }
+            // D-015: include img: tokens from data-image-ids so picture-only cells still save
+            const lines = (typeof getPromptLinesFromTextarea === 'function')
+                ? getPromptLinesFromTextarea(textarea)
+                : (textarea && textarea.value.trim()
+                    ? textarea.value.split('\n').map((line) => line.trim()).filter((line) => line.length > 0)
+                    : []);
+            if (textarea && lines.length > 0) {
+                data.categories[headerText][categoryLabel] = lines;
             }
         });
     });
@@ -167,7 +193,7 @@ function loadSavedData() {
             Object.entries(data.categories).forEach(([header]) => {
                 addNewPrompt();
                 const headerInputs = document.querySelectorAll('.header-input');
-                headerInputs[headerInputs.length - 1].value = header;
+                headerInputs[headerInputs.length - 1].value = promptHeaderEditorValue(header);
             });
 
             // Add categories and fill in prompts using new grid structure
@@ -228,6 +254,9 @@ function loadSavedData() {
             if (window.refreshPromptCube) {
                 window.refreshPromptCube();
             }
+            if (typeof window.hydrateAllPromptImageFields === 'function') {
+                window.hydrateAllPromptImageFields();
+            }
         }, 200);
                 
                 console.log('Successfully loaded saved data');
@@ -280,9 +309,7 @@ function exportSettings() {
     // Collect prompt headers
     const headerInputs = document.querySelectorAll('.header-input');
     headerInputs.forEach(header => {
-        if (header.value.trim()) {
-            currentData.promptHeaders.push(header.value.trim());
-        }
+        currentData.promptHeaders.push(header.value.trim());
     });
     
     // Collect all category data using new grid structure
@@ -298,8 +325,11 @@ function exportSettings() {
         for (let colIndex = 0; colIndex < promptCount; colIndex++) {
             const textareaIndex = rowIndex * promptCount + colIndex;
             const textarea = textareas[textareaIndex];
-            if (textarea && textarea.value.trim()) {
-                categoryData.push(textarea.value.trim().split('\n').filter(line => line.trim()));
+            if (textarea) {
+                const lines = (typeof getPromptLinesFromTextarea === 'function')
+                    ? getPromptLinesFromTextarea(textarea)
+                    : (textarea.value.trim() ? textarea.value.trim().split('\n').filter((line) => line.trim()) : []);
+                categoryData.push(lines);
             } else {
                 categoryData.push([]);
             }
@@ -327,7 +357,7 @@ function exportSettings() {
     if (headers.length === 0) {
         // Generate default headers based on category data
         const maxColumns = Math.max(...Object.values(currentData.categories).map(arr => Array.isArray(arr) ? arr.length : 0), 1);
-        headers = Array.from({length: maxColumns}, (_, i) => `PROMPT ${i + 1}`);
+        headers = Array.from({length: maxColumns}, () => '');
     }
     csvContent += `Category,${headers.join(',')}\n`;
     
@@ -510,7 +540,9 @@ function importSettings() {
                             const newHeaderInputs = document.querySelectorAll('.header-input');
                             const lastHeader = newHeaderInputs[newHeaderInputs.length - 1];
                             if (lastHeader) {
-                                lastHeader.value = headerName;
+                                lastHeader.value = (typeof promptHeaderEditorValue === 'function')
+                                    ? promptHeaderEditorValue(headerName)
+                                    : headerName;
                                 console.log('DEBUG: Set header value:', headerName);
                             }
                         });
@@ -560,6 +592,9 @@ function importSettings() {
                         // Sync cube from grid before save so flush doesn't wipe loaded cells
                         if (window.refreshPromptCube) {
                             window.refreshPromptCube();
+                        }
+                        if (typeof window.hydrateAllPromptImageFields === 'function') {
+                            window.hydrateAllPromptImageFields();
                         }
                         
                         // Save to main promptCategories localStorage

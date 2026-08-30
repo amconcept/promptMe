@@ -28,7 +28,10 @@ function isLabelEditableOnCube() {
     return cubeCriterionIndex === 0;
 }
 
-/** Write cube fields into hidden grid (no save — callers decide) */
+/** Write cube fields into hidden grid (no save — callers decide).
+ *  D-010: call this only when the cube is the source of truth (phone layout,
+ *  or the moment of leaving it). Auto-save must not call this on desktop —
+ *  the hidden cube is empty there and would wipe the grid. */
 function flushPromptCube() {
     const headers = document.querySelectorAll('.header-input');
     const textareas = document.querySelectorAll('.textarea-container textarea');
@@ -51,6 +54,7 @@ function flushPromptCube() {
     const ta = textareas[c * promptCount + p];
     if (ta && promptsArea) {
         ta.value = promptsArea.value;
+        ta.dataset.imageIds = promptsArea.dataset.imageIds || '';
     }
 }
 
@@ -173,6 +177,9 @@ function loadPromptCube() {
     const ta = textareas[c * promptCount + p];
     if (promptsArea) {
         promptsArea.value = ta ? ta.value : '';
+        promptsArea.dataset.imageIds = ta ? (ta.dataset.imageIds || '') : '';
+        if (typeof hydrateTextareaImages === 'function') hydrateTextareaImages(promptsArea);
+        if (typeof refreshPromptImageThumbs === 'function') refreshPromptImageThumbs(promptsArea);
     }
 
     updateCubeChrome();

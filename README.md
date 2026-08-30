@@ -87,10 +87,10 @@ Rando Calrissian has two main parts:
 
 ### 1. **The Editor** (`editor.html` — where you set up prompts)
 
-- **Add Prompts**: Create up to **4** prompt columns (`MAX_PROMPTS`), each with a heading students see, such as USES, WITH, or AND
+- **Add Prompts**: Create up to **4** prompt columns (`MAX_PROMPTS`), each with an optional heading students see, such as USES, WITH, or AND. Leave the heading blank and it will not appear on the card.
 - **Add Groupings**: Create up to **6** grouping rows (`MAX_CATEGORIES`), labelled A, B, C… automatically
-- **Fill in Options**: Add one option per line in each cell
-- **Set an Objective**: Write what students should create or accomplish
+- **Fill in Options**: Add one option per line in each cell. You can also drop or paste a PNG or JPG onto the list (under 2MB). Pictures chatter like a scramble, then appear on the card.
+- **Set an Objective** (optional): Write what students should create or accomplish. You can Skip and still run if you have prompts.
 - **Save Your Activity**: Use the File menu to name and save it
 
 **Think of it like a grid**: rows are groupings, columns are prompts, and each cell holds one option per line.
@@ -101,7 +101,7 @@ On a **phone or narrow window**, the grid is replaced by a **cube layout** that 
 
 - **Enter a name** (optional — see "Unnamed runs")
 - **Press RUN**, or the Up Arrow / Enter key, to generate a combination
-- **Watch the animation** as prompts scramble and resolve
+- **Watch the animation** as prompts scramble and resolve. Short lists (1–3 words) reveal letter by letter; longer sentences (4+ words) finish in about a second and wrap to fit the card. The scramble borrows another option’s length so you can’t read the answer from how long the spinning text is. A picture option uses the same beep clock with flickering dots, then appears.
 - **Navigate** between students with the ← → arrows
 - **GO TO NEXT** confirms the current result and opens a fresh slot
 
@@ -129,9 +129,9 @@ On a **phone or narrow window**, the grid is replaced by a **cube layout** that 
    - Groupings are labelled A, B, C… automatically
    - Fill in options, one per line
 
-4. **Set an Objective**
-   - Type what students should create or accomplish
-   - This appears at the top of the prompting screen
+4. **Set an Objective** (optional)
+   - Type what students should create or accomplish — it appears at the top of the prompting screen
+   - If you skip it, you can still run as long as you have prompts. The editor will ask once; choose **Skip** to proceed
 
 5. **Save Your Activity**
    - Open the **File** menu (`...` in the top right)
@@ -175,7 +175,7 @@ ignored while the scramble animation is still running.
 
 | Control | What it does |
 |---------|--------------|
-| **P** | Go to the prompting window (ignored while typing in a field) |
+| **P** | Go to the prompting window if the activity has data; if it doesn’t, go to `index.html`. Ignored while typing in a field |
 | **File** menu (`...`) | New, Save, Save As, Share, Load, Restore Last Run |
 | **Theme** menu | Choose one of 8 themes |
 | **Help & Instructions** | Open the in-app guide |
@@ -209,7 +209,7 @@ Results are stored **per activity**, not in one shared pile. Switching activitie
 Save multiple activity templates and switch between them. Each activity remembers its prompts, groupings, grouping labels, objective, theme, and background.
 
 ### **Export and Share**
-Save activities as CSV to share with other teachers, and import CSVs created by others. The CSV carries a metadata header (activity name, theme, background, objective, grouping labels) plus all prompt and grouping content.
+Save activities as CSV to share with other teachers, and import CSVs created by others. The CSV carries a metadata header (activity name, theme, background, objective, grouping labels) plus all prompt and grouping content. PNG/JPG files are **not** in the CSV (they stay in this browser); reports list pictures as `[image]`.
 
 ### **Reports and Screenshots**
 - Take screenshots of individual student results
@@ -273,22 +273,28 @@ Save activities with descriptive names so you can reuse or share them later.
 
 **Stack**: HTML5/CSS3, vanilla JavaScript, and p5.js for the prompting window. **No build step** — open the HTML files directly, or serve the folder (`python3 -m http.server 8000`).
 
-**Storage**: `localStorage` is the source of truth. Editor and prompting window sync through a `promptDataUpdated` custom event and the `storage` event across tabs.
+**Storage**: `localStorage` is the source of truth for activity text and `img:` tokens.
+The actual PNG/JPG files live in IndexedDB (`promptMeImages`, object store `blobs`).
+Editor and prompting window sync through a `promptDataUpdated` custom event and the
+`storage` event across tabs.
 
 ### Cache busting
 
-Every `<script>` tag carries a `?v=` query parameter, currently `?v=20260728a`. Browsers
-aggressively cache these files, so **after editing any JS you must bump the value on all
-script tags together**, across `editor.html`, `sketch.html`, and `index.html`. Mismatched
-values load a mix of old and new modules, which produces confusing bugs. All 11 script
-tags share one value by convention.
+Fourteen local module `<script>` tags carry `?v=20260830l` (seven on `editor.html`,
+seven on `sketch.html`). After editing any of those modules, bump that value on **all
+fourteen together**. Mismatched values load a mix of old and new files.
+
+`theme-manager.js` is loaded on `editor.html`, `sketch.html`, and `index.html` with
+**no** `?v=`. `index.html` has no other local modules. `sketch.html` also loads p5.js
+from a CDN (untagged). The Sample activity CSV fetch uses the same `?v=20260830l`
+value as the tagged modules.
 
 ### Companion documents
 
 | Document | Purpose |
 |----------|---------|
 | `RANDOMIZER_LOGIC_SPEC.md` | Required randomizer behavior (R1–R7, I1–I6, scenarios S1–S10) |
-| `DESIGN_DECISIONS.md` | Why visual/UX choices are the way they are (active D1–D5, D8, D9; D6 and D7 retired), plus future directions |
+| `DESIGN_DECISIONS.md` | Why visual/UX choices are the way they are (D1–D23: D6 and D7 retired; D16 superseded by D17), plus future directions |
 | `CHANGELOG.txt` | Development history |
 | `docs/TROUBLESHOOT_LOCALHOST.md` | Local server troubleshooting |
 

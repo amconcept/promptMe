@@ -1,0 +1,52 @@
+---
+description: How to maintain DESIGN_DECISIONS.md as the durable record of why the app is built this way
+alwaysApply: true
+---
+
+# DESIGN_DECISIONS.md
+
+`DESIGN_DECISIONS.md` (repo root) is the durable record of **why** things are the way
+they are. Treat it as a hard requirement, not optional bookkeeping.
+
+## Division of labour
+
+| Doc | Answers | Lifespan |
+|---|---|---|
+| `DESIGN_DECISIONS.md` | Why we chose this, what we rejected | Permanent |
+| `CHANGELOG.txt` | What changed, when | Append-only history |
+| `README.md` | How a teacher uses the app | Rewritten as UI changes |
+| `RANDOMIZER_LOGIC_SPEC.md` | Required randomizer behaviour (R#/I#) | Permanent |
+
+Never record a decision in `CHANGELOG.txt` instead of here.
+
+## When to add an entry
+
+Add one before/with the code change whenever you:
+
+- disable or hide a feature without deleting it (e.g. `prompt1InterestsMode`)
+- keep a subsystem the docs claim was removed (e.g. theming)
+- pick a value that looks arbitrary (`MAX_PROMPTS = 4`, `MAX_CATEGORIES = 6`)
+- diverge user-facing wording from code identifiers ("grouping" vs `criterion`)
+- work around a platform bug (iOS mirror-span objective input)
+- choose a storage shape (`localStorage`-first, per-activity `activityReports`)
+
+## Entry format
+
+```markdown
+## D-012 — Interests mode hidden, not removed
+**Date:** 2026-07-28 · **Status:** Active · **Touches:** editor.html, prompt-generator.js
+
+**Decision** Keep `prompt1InterestsMode` implemented but hidden and hardcoded `false`.
+**Why** Teacher-selectable groupings confused first-time users; downstream draw logic
+still depends on the flag, so deleting it would destabilise R7.
+**Rejected** Full removal (too invasive), exposing it in the UI (the original problem).
+**Consequence** Dead debug logging remains in sketch-refactored.js; revisit with the wizard.
+```
+
+Rules: sequential `D-###`, never renumber, never delete. Superseding an entry means a
+new one plus flipping the old `Status:` to `Superseded by D-###`.
+
+## Verify before you write
+
+Never state a line count, file list, or "removed" claim without checking the code first.
+Unverifiable claims are what made `CHANGELOG.txt` untrustworthy — do not repeat it here.

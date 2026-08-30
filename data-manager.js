@@ -13,6 +13,26 @@ let promptedStudentsOrder = []; // Track the order of students who have been pro
 // Export to window for use in other modules
 window.promptedStudentsOrder = promptedStudentsOrder;
 
+// D-018: blank prompt headings are not labels. Same helpers as editor-data-manager.js.
+const BLANK_PROMPT_HEADER_PREFIX = '__blank_';
+function isUnlabeledPromptHeader(header) {
+    const t = String(header == null ? '' : header).trim();
+    if (!t) return true;
+    if (t.indexOf(BLANK_PROMPT_HEADER_PREFIX) === 0) return true;
+    return /^PROMPT\s+\d+$/i.test(t);
+}
+function promptHeaderEditorValue(storageKey) {
+    return isUnlabeledPromptHeader(storageKey) ? '' : String(storageKey == null ? '' : storageKey);
+}
+function promptHeaderStorageKey(rawLabel, columnIndex) {
+    const t = String(rawLabel == null ? '' : rawLabel).trim();
+    if (!t || isUnlabeledPromptHeader(t)) return BLANK_PROMPT_HEADER_PREFIX + columnIndex;
+    return t;
+}
+window.isUnlabeledPromptHeader = isUnlabeledPromptHeader;
+window.promptHeaderEditorValue = promptHeaderEditorValue;
+window.promptHeaderStorageKey = promptHeaderStorageKey;
+
 // Clean up any corrupted data in localStorage
 function cleanupCorruptedData() {
     try {
@@ -846,7 +866,14 @@ function downloadClassReport() {
         classReport.forEach(student => {
             reportText += `${student.name}\n`;
             student.prompts.forEach(prompt => {
-                reportText += `  ${prompt.label}: ${prompt.value}\n`;
+                const shown = (typeof formatPromptValueForReport === 'function')
+                    ? formatPromptValueForReport(prompt.value)
+                    : prompt.value;
+                if (typeof isUnlabeledPromptHeader === 'function' && isUnlabeledPromptHeader(prompt.label)) {
+                    reportText += `  ${shown}\n`;
+                } else {
+                    reportText += `  ${prompt.label}: ${shown}\n`;
+                }
             });
             reportText += '\n';
         });
@@ -887,7 +914,7 @@ function downloadClassReport() {
         reportText += `Prompt 1 Interests Mode: ${prompt1InterestsMode ? 'Yes' : 'No'}\n`;
         reportText += `Criterion Labels: ${(criterionLabels || []).join(', ')}\n\n`;
         if (headers.length > 0 && parsed.categories) {
-            reportText += `Category,${headers.join(',')}\n`;
+            reportText += `Category,${headers.map((h) => (isUnlabeledPromptHeader(h) ? '' : h)).join(',')}\n`;
             const firstHeader = headers[0];
             const catLabels = Object.keys(parsed.categories[firstHeader] || {});
             catLabels.forEach(catLabel => {
@@ -1154,22 +1181,23 @@ function loadActivityAndReportIntoPromptCategories(activityName, reportData) {
         data.objective = settings.objective || '';
         data.prompt1InterestsMode = settings.prompt1InterestsMode === true;
         data.criterionLabels = Array.isArray(settings.criterionLabels) ? settings.criterionLabels : ['', '', '', ''];
-        const headers = (settings.promptHeaders && settings.promptHeaders.length) ? settings.promptHeaders : ['PROMPT 1'];
+        const headers = (settings.promptHeaders && settings.promptHeaders.length) ? settings.promptHeaders : [''];
         data.categories = {};
         headers.forEach((header, colIndex) => {
-            data.categories[header] = {};
+            const key = promptHeaderStorageKey(header, colIndex);
+            data.categories[key] = {};
             if (settings.categories && typeof settings.categories === 'object') {
                 Object.keys(settings.categories).forEach(catLabel => {
                     const columnPrompts = settings.categories[catLabel] && settings.categories[catLabel][colIndex];
                     if (columnPrompts && columnPrompts.length) {
-                        data.categories[header][catLabel] = columnPrompts;
+                        data.categories[key][catLabel] = columnPrompts;
                     }
                 });
             }
         });
         console.log('DEBUG: Loaded session from editor history:', activityName);
     } else {
-        data.categories = { 'PROMPT 1': {} };
+        data.categories = { '__blank_0': {} };
         console.log('DEBUG: Activity not in history, using report data only; open editor to set prompts.');
     }
     localStorage.setItem('promptCategories', JSON.stringify(data));
@@ -1216,7 +1244,7 @@ function handleClassReportUpload(event) {
                             background: settings.background || 'black',
                             prompt1InterestsMode: !!settings.prompt1InterestsMode,
                             criterionLabels: Array.isArray(settings.criterionLabels) ? settings.criterionLabels : ['', '', '', ''],
-                            promptHeaders: Array.isArray(settings.promptHeaders) ? settings.promptHeaders : ['PROMPT 1'],
+                            promptHeaders: Array.isArray(settings.promptHeaders) ? settings.promptHeaders : [''],
                             categories: settings.categories || {},
                             timestamp: settings.timestamp || new Date().toISOString()
                         };
@@ -1387,7 +1415,7 @@ function parseClassReport(reportText) {
                 background,
                 prompt1InterestsMode,
                 criterionLabels: Array.isArray(criterionLabels) && criterionLabels.length ? criterionLabels : ['', '', '', ''],
-                promptHeaders: promptHeaders.length ? promptHeaders : ['PROMPT 1'],
+                promptHeaders: promptHeaders.length ? promptHeaders : [''],
                 categories,
                 timestamp: new Date().toISOString()
             };

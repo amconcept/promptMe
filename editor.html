@@ -23,7 +23,7 @@
             --background-color: #001100;
             --text-color: #00FF00;
             --border-color: #003300;
-            --delete-color: var(--primary-color); /* Use theme color - matches primary color */
+            --delete-color: var(--primary-color); /* D5: follows theme primary, not a warning red */
             --frame-color: #00FF00;
             --frame-border: #00FF00;
             --frame-background: #001100;
@@ -420,6 +420,72 @@
         .textarea-container {
             min-width: var(--column-width);
             max-width: var(--column-width);
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            /* D-019: container is the visible box so thumbs sit inside the same border */
+            border: 1px solid var(--frame-border);
+            border-radius: 4px;
+            background-color: var(--frame-background);
+            box-shadow: inset 0 0 3px var(--primary-shadow-light);
+        }
+        .textarea-container:focus-within,
+        .textarea-container.is-drop-target {
+            border-color: var(--primary-hover);
+            box-shadow: 0 0 5px var(--primary-shadow), inset 0 0 3px var(--primary-shadow-light);
+        }
+        .textarea-container textarea {
+            border: none;
+            box-shadow: none;
+            background: transparent;
+            border-radius: 0;
+        }
+        .textarea-container textarea:focus {
+            outline: none;
+            border: none;
+            box-shadow: none;
+        }
+
+        /* D-015/D-019: thumbs live inside the prompt box */
+        .prompt-image-thumbs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 0 12px 12px 12px;
+        }
+        .prompt-image-thumbs[hidden] {
+            display: none;
+        }
+        .prompt-image-chip {
+            position: relative;
+            width: 52px;
+            height: 52px;
+            flex-shrink: 0;
+            border: 1px solid var(--primary-color);
+            background: var(--background-color);
+            overflow: hidden;
+        }
+        .prompt-image-chip img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            pointer-events: none;
+        }
+        .prompt-image-chip-remove {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 16px;
+            height: 16px;
+            padding: 0;
+            border: 1px solid var(--primary-color);
+            background: var(--background-color);
+            color: var(--primary-color);
+            font-family: 'VT323', monospace;
+            font-size: 14px;
+            line-height: 14px;
+            cursor: pointer;
         }
 
         .prompt-count-display {
@@ -505,7 +571,7 @@
         /* Delete buttons */
         .delete-category, .delete-prompt {
             background: transparent;
-            color: var(--primary-color); /* Use theme color instead of red */
+            color: var(--delete-color); /* D5: follows theme primary */
             border: none;
             font-size: 18px;
             cursor: pointer;
@@ -1789,7 +1855,7 @@
             display: none !important;
         }
 
-        .prompt-cube.cube-flash .cube-prompts {
+        .prompt-cube.cube-flash .cube-prompt-box {
             box-shadow: 0 0 0 2px var(--primary-color);
         }
 
@@ -1815,19 +1881,31 @@
         }
 
         .cube-prompt-header:focus,
-        .cube-prompts:focus {
+        .cube-prompt-box:focus-within {
             outline: none;
             border-color: var(--primary-hover);
             box-shadow: 0 0 6px var(--primary-shadow);
         }
 
+        .cube-prompt-box {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            border: 1px solid var(--primary-color);
+            background: var(--frame-background);
+        }
+        .cube-prompt-box:focus-within,
+        .cube-prompt-box.is-drop-target {
+            border-color: var(--primary-hover);
+            box-shadow: 0 0 6px var(--primary-shadow);
+        }
         .cube-prompts {
             flex: 1;
             width: 100%;
             min-height: 200px;
             resize: none;
-            border: 1px solid var(--primary-color);
-            background: var(--frame-background);
+            border: none;
+            background: transparent;
             color: var(--frame-color);
             font-family: 'VT323', monospace;
             font-size: 18px;
@@ -1836,6 +1914,9 @@
             user-select: text;
             -webkit-user-select: text;
             touch-action: pan-y;
+        }
+        .cube-prompt-box .prompt-image-thumbs {
+            margin: 0;
         }
 
         .cube-prompts-caption {
@@ -1986,9 +2067,12 @@
                                 <button type="button" class="cube-rail-btn" id="cube-cat-add" onclick="cubeAddCategory()" aria-label="Add grouping">+</button>
                             </div>
                         </div>
-                        <textarea id="cube-prompts" class="cube-prompts" placeholder=""></textarea>
+                        <div class="cube-prompt-box">
+                            <textarea id="cube-prompts" class="cube-prompts" placeholder=""></textarea>
+                            <div id="cube-image-thumbs" class="prompt-image-thumbs" hidden></div>
+                        </div>
                     </div>
-                    <div class="cube-prompts-caption">list your prompts in the box</div>
+                    <div class="cube-prompts-caption">list your prompts in the box — drop PNG or JPG</div>
                 </div>
 
                 <div class="cube-footer">
@@ -2117,10 +2201,12 @@
         </div>
     </div>
 
-    <script src="editor-ui-manager.js?v=20260728a"></script>
-    <script src="editor-prompt-cube.js?v=20260728a"></script>
-    <script src="editor-data-manager.js?v=20260728a"></script>
-    <script src="editor-settings-manager.js?v=20260728a"></script>
-    <script src="editor-main.js?v=20260728a"></script>
+    <script src="image-store.js?v=20260830l"></script>
+    <script src="editor-image-prompts.js?v=20260830l"></script>
+    <script src="editor-ui-manager.js?v=20260830l"></script>
+    <script src="editor-prompt-cube.js?v=20260830l"></script>
+    <script src="editor-data-manager.js?v=20260830l"></script>
+    <script src="editor-settings-manager.js?v=20260830l"></script>
+    <script src="editor-main.js?v=20260830l"></script>
 </body>
 </html>

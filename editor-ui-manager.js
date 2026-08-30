@@ -212,7 +212,7 @@ function addPromptToExistingCategories() {
         textareaContainer.className = 'textarea-container';
         
         const textarea = document.createElement('textarea');
-        textarea.placeholder = 'Enter prompts (one per line)';
+        textarea.placeholder = 'one per line, or drop PNG/JPG';
         
         // Add event listeners for auto-resizing
         textarea.addEventListener('input', () => {
@@ -308,7 +308,7 @@ function addNewCategory() {
         textareaContainer.className = 'textarea-container';
         
         const textarea = document.createElement('textarea');
-        textarea.placeholder = 'Enter prompts (one per line)';
+        textarea.placeholder = 'one per line, or drop PNG/JPG';
         
         // Add event listeners for auto-resizing
         textarea.addEventListener('input', () => {
@@ -540,10 +540,10 @@ function updateColumnCounts() {
         for (let categoryIndex = 0; categoryIndex < categoriesCount; categoryIndex++) {
             const textareaIndex = categoryIndex * promptCount + columnIndex;
             const textarea = textareas[textareaIndex];
-            if (textarea && textarea.value.trim()) {
-                const items = textarea.value.split('\n')
-                    .map(item => item.trim())
-                    .filter(item => item.length > 0);
+            if (textarea) {
+                const items = (typeof getPromptLinesFromTextarea === 'function')
+                    ? getPromptLinesFromTextarea(textarea)
+                    : textarea.value.split('\n').map((item) => item.trim()).filter((item) => item.length > 0);
                 totalItems += items.length;
             }
         }
@@ -808,10 +808,13 @@ function showInstructionsPopup() {
         <div style="margin-bottom: 22px;">
             <strong style="color: var(--primary-hover); font-size: 18px;">The idea</strong>
             <p style="margin: 10px 0; color: var(--primary-color);">
-                Write one objective. Add up to four prompts with labels such as <strong>USES</strong>, <strong>WITH</strong>, or <strong>AND</strong>.
+                Write one objective, or Skip if you don’t have one yet. Add up to four prompts with labels such as <strong>USES</strong>, <strong>WITH</strong>, or <strong>AND</strong> — or leave a heading blank and it will not show on the card.
             </p>
             <p style="margin: 10px 0; color: var(--primary-color);">
-                Under each prompt, list options one per line. Optional groupings <strong>A, B, C…</strong> can organize matching options across prompts.
+                Prompts are required to run. The objective is optional — if you skip it, the prompting window still generates from your lists.
+            </p>
+            <p style="margin: 10px 0; color: var(--primary-color);">
+                Under each prompt, list options one per line. You can also drop or paste a <strong>PNG or JPG</strong> onto the list (pictures chatter like a scramble, then appear on the card). Optional groupings <strong>A, B, C…</strong> can organize matching options across prompts.
             </p>
             <p style="margin: 10px 0; color: var(--primary-color);">
                 When you run the activity, Rando selects one option from each prompt, always from the same grouping. It avoids repeats until every option in a list has been used.
@@ -1243,6 +1246,9 @@ function attachTextareaEventListeners() {
             setTimeout(autoResizeTextareasInRows, 10);
         });
     });
+    if (typeof window.hydrateAllPromptImageFields === 'function') {
+        window.hydrateAllPromptImageFields();
+    }
     
     // Initial resize after attaching listeners
     setTimeout(autoResizeTextareasInRows, 10);

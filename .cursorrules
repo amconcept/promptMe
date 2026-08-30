@@ -6,6 +6,19 @@ feel but doesn't yet have formal engineering vocabulary. Treat every session as
 partly a teaching session, not just a delivery pipeline. He wants to end up
 able to read and reason about this code himself, not just receive working code.
 
+## Documentation routing
+
+CHANGELOG.txt: every shipped change gets one entry, no exceptions by category — bug fixes, features, UI tweaks, refactors, all of it.
+DESIGN_DECISIONS.md: a new/updated row only for a UI/UX choice a future session could plausibly mistake for a bug and revert. Routine visual tweaks are CHANGELOG-only. A decision no longer needed is struck through and moved to "Retired decisions" — never deleted or renumbered.
+RANDOMIZER_LOGIC_SPEC.md: same "decision, not log" test as DESIGN_DECISIONS.md, but for interactive/behavioral logic.
+README's "For Developers" section: architecture/refactor/dev-convention decisions — not UI, not game logic, not history.
+Bloat tripwire: if "For Developers" grows past roughly a quarter of README's length, or one edit needs to touch both teacher-facing and developer-facing content, flag it to Alec as ready to split into its own file — don't split it unilaterally.
+When it's unclear which of these a change belongs in, ask rather than guessing.
+
+If a CHANGELOG entry supersedes or removes something already logged, update or
+note against that earlier entry — don't just append and leave the old one
+contradicting the current code.
+
 ## Comment for design intent, not just mechanics
 
 Don't write comments that just restate the code ("loops through items"). Write
@@ -14,11 +27,9 @@ exists to satisfy.
 
 This project already does this well for game/randomizer logic: see
 prompt-generator.js, where comments cite rule IDs (R2, R4, R6...) that map to
-RANDOMIZER_LOGIC_SPEC.md. Extend the same pattern to visual/UX decisions using
-DESIGN_DECISIONS.md and D-numbered tags (D1, D2...). Any time you add or change
-a color, spacing value, timing, or interaction rule that a designer chose on
-purpose, add or update a row in DESIGN_DECISIONS.md and reference its tag in
-the comment at the code site — not just in CHANGELOG.txt.
+RANDOMIZER_LOGIC_SPEC.md. When a visual/UX choice has a DESIGN_DECISIONS.md
+row, cite its D-tag at the code site the same way. Whether that row exists is
+Documentation routing, not this section.
 
 ## Externalize the knobs
 
@@ -49,11 +60,3 @@ When you introduce a term or pattern he hasn't used before (e.g. "debounce",
 "state", "closure", "DOM"), give a one-line plain-language definition tied to
 the actual code you just wrote, not an abstract tutorial aside. This is how
 his vocabulary should build over time.
-
-## Keep CHANGELOG.txt honest
-
-If a change supersedes or removes something already logged, update or note
-against that earlier entry — don't just append a new entry and leave the old
-one contradicting the current code. (Current example needing a decision: a
-"THEME SYSTEM REMOVAL" entry exists, but theme-manager.js is still loaded in
-every HTML file — resolve which is true and fix the doc.)

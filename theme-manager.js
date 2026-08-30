@@ -13,7 +13,7 @@ const themes = {
         '--background-color': '#1A0A00',
         '--text-color': '#FF8800',
         '--border-color': '#331100',
-        '--delete-color': '#FF6B6B',
+        '--delete-color': 'var(--primary-color)', // D5: same as chrome, not a warning red
         '--frame-color': '#FF8800',
         '--frame-border': '#FF8800',
         '--frame-background': '#1A0A00'
@@ -28,7 +28,7 @@ const themes = {
         '--background-color': '#000011',
         '--text-color': '#00BFFF',
         '--border-color': '#001133',
-        '--delete-color': '#FF6B6B',
+        '--delete-color': 'var(--primary-color)', // D5: same as chrome, not a warning red
         '--frame-color': '#00BFFF',
         '--frame-border': '#00BFFF',
         '--frame-background': '#000011'
@@ -43,7 +43,7 @@ const themes = {
         '--background-color': '#000080',
         '--text-color': '#FFFFFF',
         '--border-color': '#4169E1',
-        '--delete-color': '#FF6B6B',
+        '--delete-color': 'var(--primary-color)', // D5: same as chrome, not a warning red
         '--frame-color': '#FFFFFF',
         '--frame-border': '#FFFFFF',
         '--frame-background': '#000080'
@@ -58,7 +58,7 @@ const themes = {
         '--background-color': '#001100',
         '--text-color': '#00FF00',
         '--border-color': '#003300',
-        '--delete-color': '#FF6B6B',
+        '--delete-color': 'var(--primary-color)', // D5: same as chrome, not a warning red
         '--frame-color': '#00FF00',
         '--frame-border': '#00FF00',
         '--frame-background': '#001100'
@@ -73,7 +73,7 @@ const themes = {
         '--background-color': '#110011',
         '--text-color': '#BF00FF',
         '--border-color': '#220022',
-        '--delete-color': '#FF6B6B',
+        '--delete-color': 'var(--primary-color)', // D5: same as chrome, not a warning red
         '--frame-color': '#BF00FF',
         '--frame-border': '#BF00FF',
         '--frame-background': '#110011'
@@ -88,7 +88,7 @@ const themes = {
         '--background-color': '#1A000A',
         '--text-color': '#FF1493',
         '--border-color': '#330011',
-        '--delete-color': '#FF6B6B',
+        '--delete-color': 'var(--primary-color)', // D5: same as chrome, not a warning red
         '--frame-color': '#FF1493',
         '--frame-border': '#FF1493',
         '--frame-background': '#1A000A'
@@ -103,7 +103,7 @@ const themes = {
         '--background-color': '#F5F5F5',
         '--text-color': '#000000',
         '--border-color': '#E0E0E0',
-        '--delete-color': '#FF6B6B',
+        '--delete-color': 'var(--primary-color)', // D5: same as chrome, not a warning red
         '--frame-color': '#000000',
         '--frame-border': '#000000',
         '--frame-background': '#F5F5F5'
@@ -118,7 +118,7 @@ const themes = {
         '--background-color': '#000000',
         '--text-color': '#FFFFFF',
         '--border-color': '#333',
-        '--delete-color': '#FF6B6B',
+        '--delete-color': 'var(--primary-color)', // D5: same as chrome, not a warning red
         '--frame-color': '#FFFFFF',
         '--frame-border': '#FFFFFF',
         '--frame-background': '#000000'

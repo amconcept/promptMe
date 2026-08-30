@@ -3,7 +3,7 @@ RANDO CALRISSIAN - CHANGELOG & FEATURES
 (formerly "PromptMe App" - repo folder and some code identifiers still use the old name)
 
 Version: 2026.7
-Last Updated: July 2026
+Last Updated: August 2026
 
 OVERVIEW
 --------
@@ -16,7 +16,7 @@ combinations without repetition. Three components:
 
 Companion documents (read these first):
 - RANDOMIZER_LOGIC_SPEC.md - required draw behavior (R1-R7, I1-I6, scenarios S1-S10)
-- DESIGN_DECISIONS.md      - why visual/UX choices are what they are (D1-D9) + future directions
+- DESIGN_DECISIONS.md      - why visual/UX choices are what they are (D1-D23) + future directions
 - README.md                - how a teacher uses the app
 - .cursorrules             - how to work on this project
 
@@ -46,7 +46,7 @@ RETRACTED: "THEME SYSTEM REMOVAL"
 RETRACTED: module line counts under "MODULAR ARCHITECTURE (Version 2025.2)"
    Every count was roughly half the current size. Corrected under FILE STRUCTURE below.
    The claims that sketch modules total 2862 lines and editor modules 2674 lines were
-   also wrong; actual totals are 5404 and 4516.
+   also wrong; actual totals are 5770 and 4920 (re-measured August 2026; see FILE STRUCTURE).
 
 RETRACTED: "assets/ (font files)" in the file structure
    That directory does not exist. Fonts load from Google Fonts via <link>.
@@ -68,9 +68,9 @@ REMOVED FROM THIS FILE: features that no longer exist
    - Prompt count input in the editor
    - Class list upload (editor section, and the later "UPLOAD CLASS" control-panel button)
    - "+" button for mid-session students, and the asterisk (*) added-student system
-     (defensive asterisk-stripping remains in data-manager.js / student-manager.js, but
-     nothing can add an asterisk anymore, so those branches never fire; retired as
-     DESIGN_DECISIONS.md D6)
+     (defensive asterisk-stripping remains in data-manager.js lines 565-566, 768, 884
+     and student-manager.js line 163, but nothing can add an asterisk anymore, so those
+     branches never fire; retired as DESIGN_DECISIONS.md D6)
    - "Prompting Tips" collapsible dropdown
    - Visible "Possible selections: X" count displays (now a title tooltip only)
    - 'A' key to generate (superseded by UP ARROW / Enter, and the RUN button)
@@ -89,9 +89,14 @@ CURRENT FEATURE SET
 ACTIVITY DESIGN (EDITOR)
 - Up to 4 prompts (MAX_PROMPTS) and 6 groupings (MAX_CATEGORIES)
 - One objective per activity, shown at the top of the prompting window
-- Options entered one per line per cell
-- Desktop grid layout; phone/narrow layout switches to a single-prompt cube
+- Options entered one per line per cell; drop or paste PNG/JPG onto a cell (D-015)
+- Image thumbs sit inside the prompt box; drop from another window is captured (D-019)
+- Dropped files are PNG/JPG if their first bytes say so; remote http(s) URLs are never fetched (D-020)
+- Finder drop: box lights while a file is held over it; dragenter is claimed so Safari delivers the file (D-021)
+- Prompt headings are optional; a blank heading is omitted on the card (D-018)
+- Desktop grid layout; phone/narrow layout switches to a single-prompt cube (D-023)
 - Eight themes, saved per activity
+- Delete `[ X ]` uses the theme primary color, not a separate red (D5)
 - Help & Instructions popup, deep-linkable via editor.html?help=1
 
 PHONE CUBE EDITOR (editor-prompt-cube.js)
@@ -109,6 +114,7 @@ PROMPTING WINDOW
   LEFT/RIGHT navigate students and browse history, SPACE interrupts a scramble in
   progress (it does not generate)
 - Generate presses during the scramble animation are ignored
+- Image options chatter on the scramble beep, then appear on the card (D-017)
 - Re-running a finished result puts that student's options back and draws again (R5)
 - Controls: screenshot, report, clear, edit
 
@@ -132,12 +138,13 @@ REPORTS (PER ACTIVITY)
 - "Restore Last Run" in the File menu reopens the most recent session
 - Reports survive trips to the editor and are cleared only by "clear"
 - Downloaded report includes date/time header, the objective, and activity settings
+- Image options print as [image] (files are not in the report)
 - Screenshots save a PNG of an individual result
 
 FILE MENU
 - New, Save, Save As, Share, Load, Restore Last Run
 - CSV export/import carries activity name, theme, background, objective, grouping labels,
-  prompt headers, and all grouping content
+  prompt headers, and all grouping content (image files are not in the CSV; see D-015)
 - Sample activity loads from Sample-activity-2025-10-27.csv, which is its source of truth,
   and is restored to Activity History automatically if deleted
 
@@ -147,7 +154,8 @@ LANDING PAGE
 - Shown once, remembered as randoCalrissianWelcomeSeen in localStorage
 
 DATA PERSISTENCE
-- localStorage is the source of truth
+- localStorage is the source of truth for activity text and `img:` tokens
+- PNG/JPG blobs live in IndexedDB (`promptMeImages`); they are not stored in localStorage
 - Editor and prompting window sync via a promptDataUpdated custom event, and across tabs
   via the storage event
 - Auto-save on edit; save paths preserve report data so editing prompts mid-session does
@@ -158,11 +166,21 @@ DEVELOPMENT CONVENTIONS
 =======================
 
 CACHE BUSTING
-- Every <script> tag carries a ?v= query parameter; current value is ?v=20260728a
-- After editing any JS, bump the value on ALL script tags together across editor.html,
-  sketch.html, and index.html (11 tags, one shared value by convention)
+- Fourteen local module <script> tags carry ?v=20260830l (seven on editor.html, seven
+  on sketch.html). After editing any of those modules, bump that value on all fourteen
+  together. theme-manager.js is loaded on editor.html, sketch.html, and index.html with
+  no ?v=; index.html has no other local modules.
 - Mismatched values load a mix of old and new modules and produce confusing bugs
-- The same convention applies to the Sample CSV fetch
+- The Sample activity CSV fetch uses the same ?v= value as the tagged modules
+
+DOCUMENTATION ROUTING
+- CHANGELOG.txt: every shipped change gets an entry (bugs, features, UI tweaks, refactors)
+- DESIGN_DECISIONS.md: a row only for a UI/UX choice a future session could mistake for a
+  bug and revert. Routine visual tweaks are CHANGELOG-only. Retired decisions are struck
+  through, never deleted or renumbered.
+- RANDOMIZER_LOGIC_SPEC.md: same "decision, not log" test for draw/interactive logic
+- README "For Developers": architecture and dev conventions, not UI, game logic, or history
+- /review (.cursor/commands/review.md) compares those four docs to the code; report only
 
 NO BUILD STEP
 - Open the HTML files directly, or serve the folder: python3 -m http.server 8000
@@ -179,29 +197,35 @@ FILE STRUCTURE
 ==============
 PromptMe App_2025/
 |-- index.html                          landing page + welcome popup      (271 lines)
-|-- editor.html                         activity editor                  (2125 lines)
-|-- sketch.html                         prompting window                  (199 lines)
+|-- editor.html                         activity editor                  (2211 lines)
+|-- sketch.html                         prompting window                  (200 lines)
 |-- sketch-test.html                    test harness                       (35 lines)
 |
 |-- Editor modules
-|   |-- editor-main.js                  main orchestrator                 (727 lines)
-|   |-- editor-ui-manager.js            UI elements & forms              (1251 lines)
-|   |-- editor-data-manager.js          data persistence & CSV            (608 lines)
-|   |-- editor-settings-manager.js      activity management              (1449 lines)
-|   |-- editor-prompt-cube.js           phone cube layout & gestures      (450 lines)
+|   |-- editor-main.js                  main orchestrator                 (728 lines)
+|   |-- editor-ui-manager.js            UI elements & forms              (1257 lines)
+|   |-- editor-data-manager.js          data persistence & CSV            (643 lines)
+|   |-- editor-settings-manager.js      activity management              (1452 lines)
+|   |-- editor-prompt-cube.js           phone cube layout & gestures      (457 lines)
+|   |-- editor-image-prompts.js         drop/paste PNG/JPG onto cells     (383 lines)
 |
 |-- Prompting modules
-|   |-- sketch-refactored.js            main orchestrator                (1426 lines)
+|   |-- sketch-refactored.js            main orchestrator                (1564 lines)
 |   |-- ui-manager.js                   UI elements & buttons            (1298 lines)
-|   |-- animation-manager.js            animations & sound                (412 lines)
-|   |-- data-manager.js                 data persistence & reports       (1401 lines)
+|   |-- animation-manager.js            animations & sound                (612 lines)
+|   |-- data-manager.js                 data persistence & reports       (1429 lines)
 |   |-- student-manager.js              student navigation                (203 lines)
 |   |-- prompt-generator.js             draw logic (implements R1-R7)     (664 lines)
 |
 |-- Shared
 |   |-- theme-manager.js                themes & CSS variables            (481 lines)
+|   |-- image-store.js                  IndexedDB blobs + img: tokens     (179 lines)
 |
 |-- Sample-activity-2025-10-27.csv      sample activity (source of truth)
+|
+|-- .cursor/
+|   |-- rules/                          project rules (.mdc)
+|   |-- commands/                       slash commands (/review)
 |
 |-- Documentation
 |   |-- README.md                       teacher-facing guide
@@ -212,10 +236,10 @@ PromptMe App_2025/
 |   |-- docs/
 |       |-- TROUBLESHOOT_LOCALHOST.md   local server troubleshooting
 
-Line counts above are current as of July 2026. If you cite counts, re-measure - stale
+Line counts above are current as of August 2026. If you cite counts, re-measure - stale
 counts are what made this file misleading in the first place.
 
-Module totals: prompting 5404 lines, editor 4485 lines, shared 481 lines.
+Module totals: prompting 5770 lines, editor 4920 lines, shared 660 lines.
 
 
 TECHNICAL STACK
@@ -223,7 +247,7 @@ TECHNICAL STACK
 - HTML5/CSS3 for structure and styling
 - Vanilla JavaScript for logic (no framework, no build step)
 - p5.js 1.4.0 for creative coding and graphics
-- localStorage for data persistence
+- localStorage for activity text and `img:` tokens; IndexedDB for PNG/JPG blobs
 - VT323 (Google Fonts) for the terminal aesthetic
 
 
@@ -246,14 +270,14 @@ RANDOMIZER
 - Fixed: a run locks to one grouping for all prompts
 
 EDITOR UI
-- Retro terminal aesthetic applied; editor orange, prompting window green (D1)
+- Retro terminal aesthetic applied; theme is a shared saved preference (windows if none), not a fixed editor-orange / sketch-green split (D1)
 - Delete buttons render as [x] in brackets and follow the theme color (D4, D5)
 - Column alignment resolved via a 120px offset matching grouping label + gap (D3)
 - Objective section moved above the Add controls
 - Settings/File/Theme consolidated into dropdown menus
-- Phone cube layout added, later gaining swipe gestures
+- Phone cube layout added, later gaining swipe gestures (D-023)
 - Fixed: iOS bug where only one character registered when typing the objective, by
-  replacing width-limiting on input.value with a hidden mirror span and soft trimming
+  replacing width-limiting on input.value with a hidden mirror span and soft trimming (D-022)
 - Terminology renamed from criteria/category to grouping in user-facing text only
 
 PROMPTING WINDOW
@@ -264,6 +288,10 @@ PROMPTING WINDOW
   is guided to advance rather than re-run
 - Prompts repositioned lower beneath the objective
 - Recalled prompts use the same text size as animated ones, fixing size jump on navigation
+- Skip with no objective now runs the prompting window; RUN only waits if prompts are missing (D-011)
+- Sentence prompts (4+ words) reveal in about a second, wrap instead of shrinking unreadably, and tick per word (D-012)
+- Scramble no longer matches the chosen prompt’s length; it borrows another option from the same list so the silhouette doesn’t give the answer away (D-013)
+- Sentence reveal is word-by-word at 880Hz, distinct from the 440Hz letter scramble (D-014)
 
 REPORTS
 - Report data persists across editor visits
@@ -278,6 +306,9 @@ ACTIVITIES
 - CSV export/import for teacher-to-teacher sharing, preserving activity name
 - Sample activity always loads from its CSV; auto-restored to History if deleted
 - Fixed: cube data being wiped on load, by refreshing the cube before saving
+  (that load-path fix was incomplete: desktop auto-save still flushed the hidden
+  empty cube over the grid ~0.6s after typing, so prompt-list text vanished.
+  D-010: saveChanges flushes cube → grid only while cube layout is live.)
 
 ONBOARDING
 - First-visit welcome popup on the landing page
@@ -289,9 +320,9 @@ ONBOARDING
 FUTURE DIRECTIONS
 =================
 Captured in DESIGN_DECISIONS.md section 4, not repeated here. Summary: multi-format
-prompts including images (F1), invisible teacher curation extending the paused
-prompt1InterestsMode question (F2), AI that assists curation without replacing teacher
-intent (F3), customizable animations (F4), and low-floor/wide-walls progressive
-disclosure as a cross-cutting constraint (F5).
+prompts (F1; local PNG/JPG shipped as D-015, hosted still open), invisible teacher
+curation extending the paused prompt1InterestsMode question (F2), AI that assists
+curation without replacing teacher intent (F3), customizable animations (F4), and
+low-floor/wide-walls progressive disclosure as a cross-cutting constraint (F5).
 
 Do not build against these without confirming scope first.

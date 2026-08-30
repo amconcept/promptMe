@@ -44,6 +44,106 @@ const DEFAULT_COLORS = {
 };
 const DEFAULT_FONT = 'VT323';
 
+// D-012: wrap-first sizing for sentence prompts (4+ words). Floor stops the card from shrinking type unreadably.
+const CARD_FIT = {
+    MIN_PROMPT_SIZE: 20,
+    MIN_PROMPT_SIZE_PHONE: 18,
+    SENTENCE_PROMPT_SIZE: 32,
+    SENTENCE_PROMPT_SIZE_PHONE: 30,
+    WORD_LINE_HEIGHT: 1.14,
+    SENTENCE_LINE_HEIGHT: 1.08,
+    // D-015: fitted PNG/JPG slot under the prompt label
+    IMAGE_SLOT: 110,
+    IMAGE_SLOT_PHONE: 88,
+    // D-017: dots flicker per scramble tick (brightness comes from animation, not a sine wave)
+    IMAGE_DOT_COUNT: 3,
+    IMAGE_DOT_RADIUS: 5,
+    IMAGE_DOT_GAP: 16,
+    IMAGE_DOT_DIM: 0.18,
+    IMAGE_DOT_BRIGHT: 1.05
+};
+
+// p5.Image cache for img: tokens (D-015). Values: Image | 'loading' | 'fail'
+const promptImageCache = {};
+
+function prefetchPromptImage(token) {
+    if (typeof isImagePromptToken !== 'function' || !isImagePromptToken(token)) return;
+    if (promptImageCache[token] || typeof loadImage !== 'function') return;
+    if (typeof getPromptImageRecord !== 'function') return;
+    promptImageCache[token] = 'loading';
+    const id = imageIdFromToken(token);
+    getPromptImageRecord(id).then((rec) => {
+        if (!rec || !rec.blob) {
+            promptImageCache[token] = 'fail';
+            return;
+        }
+        const url = URL.createObjectURL(rec.blob);
+        loadImage(url, (img) => {
+            promptImageCache[token] = img;
+            URL.revokeObjectURL(url);
+        }, () => {
+            promptImageCache[token] = 'fail';
+            URL.revokeObjectURL(url);
+        });
+    }).catch(() => {
+        promptImageCache[token] = 'fail';
+    });
+}
+window.prefetchPromptImage = prefetchPromptImage;
+
+function promptImageSlotHeight(phone) {
+    return phone ? CARD_FIT.IMAGE_SLOT_PHONE : CARD_FIT.IMAGE_SLOT;
+}
+
+function isPromptImageEntry(entry) {
+    const t = ((entry && (entry.layout || entry.display)) || '').toString().trim();
+    return typeof isImagePromptToken === 'function' && isImagePromptToken(t);
+}
+
+/** Per-tick flicker — same 50ms / 440Hz clock as letter scramble (D-017). */
+function drawImageWaitDots(cx, y, slotH, rgb, flicker) {
+    const n = (window.TIMING && window.TIMING.IMAGE_DOT_COUNT) || CARD_FIT.IMAGE_DOT_COUNT;
+    const radius = CARD_FIT.IMAGE_DOT_RADIUS;
+    const gap = CARD_FIT.IMAGE_DOT_GAP;
+    const dim = CARD_FIT.IMAGE_DOT_DIM;
+    const bright = CARD_FIT.IMAGE_DOT_BRIGHT;
+    const totalW = (n - 1) * gap;
+    const startX = cx - totalW / 2;
+    const cy = y + slotH / 2;
+    noStroke();
+    ellipseMode(CENTER);
+    for (let i = 0; i < n; i++) {
+        const raw = (flicker && flicker.length) ? flicker[i % flicker.length] : Math.random();
+        const a = dim + (bright - dim) * raw;
+        fill((rgb.r || 180) * a, (rgb.g || 180) * a, (rgb.b || 180) * a);
+        circle(startX + i * gap, cy, radius * 2);
+    }
+}
+
+/** Draw a prompt picture fitted in the slot; returns the slot height used. */
+function drawFittedPromptImage(token, cx, y, maxW, slotH, rgb) {
+    prefetchPromptImage(token);
+    const cached = promptImageCache[token];
+    if (cached && cached !== 'loading' && cached !== 'fail' && cached.width) {
+        const scale = Math.min(maxW / cached.width, slotH / cached.height);
+        const dw = cached.width * scale;
+        const dh = cached.height * scale;
+        imageMode(CORNER);
+        image(cached, cx - dw / 2, y + (slotH - dh) / 2, dw, dh);
+        return slotH;
+    }
+    // Missing blob or still loading — don't print the img: token
+    const r = (rgb && rgb.r) || 180;
+    const g = (rgb && rgb.g) || 180;
+    const b = (rgb && rgb.b) || 180;
+    fill(r * 0.7, g * 0.7, b * 0.7);
+    textStyle(NORMAL);
+    textAlign(CENTER, CENTER);
+    text(cached === 'loading' ? '…' : '[image]', cx, y + slotH / 2);
+    textAlign(CENTER, TOP);
+    return slotH;
+}
+
 function debugLog(...args) {
     if (DEBUG) {
         console.log(...args);
@@ -723,7 +823,7 @@ function takeScreenshot() {
     draw();  // Redraw with instructions and student count (prompts still in currentPrompts, so they display)
 }
 
-// Themed popup (same style as editor) for missing objective/prompts
+// Themed popup (same style as editor) for missing prompts
 function showThemedMessage(message) {
     const existing = document.getElementById('sketch-themed-message');
     if (existing) existing.remove();
@@ -796,7 +896,8 @@ function getAutoRunName() {
     return candidate;
 }
 
-// Returns { missingObjective, missingPrompts } from current categories
+// Returns { missingObjective, missingPrompts } from current categories.
+// D-011: missingObjective is informational — triggerPromptRun only blocks on missingPrompts.
 function getMissingEditorData() {
     const promptHeaders = categories && Object.keys(categories).filter(cat => cat !== 'objective' && cat !== 'prompt1InterestsMode');
     const hasPromptHeaders = Array.isArray(promptHeaders) && promptHeaders.length > 0;
@@ -1043,22 +1144,33 @@ function draw() {
         if (prompt && typeof prompt === 'object') {
             return {
                 display: (prompt.revealed || '') + (prompt.rotating || ''),
-                layout: prompt.final || ((prompt.revealed || '') + (prompt.rotating || ''))
+                layout: prompt.final || ((prompt.revealed || '') + (prompt.rotating || '')),
+                imageWait: !!prompt.imageWait,
+                dotFlicker: prompt.dotFlicker || null
             };
         }
-        return { display: prompt || '', layout: prompt || '' };
+        return { display: prompt || '', layout: prompt || '', imageWait: false };
     });
     const fieldName = (window.getResultNameFieldValue && window.getResultNameFieldValue()) || '';
     const displayName = (studentName || previousName || fieldName || '').trim();
 
-    // Type sizes — start roomy, then scale down so content never spills out of the locked card
+    // Type sizes — start roomy, then wrap-first for sentences, then scale down with a floor (D-012)
     const PROMPT_TO_LABEL_RATIO = 1.35;
+    const sentenceHeavy = promptValueTexts.some(entry => {
+        const t = (entry && (entry.layout || entry.display)) || '';
+        return typeof isSentencePrompt === 'function' && isSentencePrompt(t);
+    });
+    const lineHeightRatio = sentenceHeavy ? CARD_FIT.SENTENCE_LINE_HEIGHT : CARD_FIT.WORD_LINE_HEIGHT;
+    const minPromptSize = chrome.phone ? CARD_FIT.MIN_PROMPT_SIZE_PHONE : CARD_FIT.MIN_PROMPT_SIZE;
     let promptSize = chrome.phone ? Math.min(width * 0.068, 48) : Math.min(width * 0.048, 42);
+    if (sentenceHeavy) {
+        promptSize = Math.min(promptSize, chrome.phone ? CARD_FIT.SENTENCE_PROMPT_SIZE_PHONE : CARD_FIT.SENTENCE_PROMPT_SIZE);
+    }
     let labelSize = promptSize / PROMPT_TO_LABEL_RATIO;
     let objectiveSize = labelSize;
     let nameSize = Math.max(18, Math.min(chrome.phone ? 32 : 30, promptSize * 0.75));
     let nameRowHeight = Math.max(32, nameSize * 1.25);
-    let promptLineH = promptSize * 1.14;
+    let promptLineH = promptSize * lineHeightRatio;
     let labelLineH = labelSize * 1.08;
     let objectiveLineH = objectiveSize * 1.1;
     let labelGap = labelSize * 0.1;
@@ -1137,33 +1249,42 @@ function draw() {
             total += wrapTextToWidth(objectiveText.toUpperCase(), MAX_PROMPT_WIDTH).length * objectiveLineH + objectiveToPromptGap;
         }
         for (let i = 0; i < headersToDraw.length; i++) {
-            total += labelLineH + labelGap;
+            if (!(typeof isUnlabeledPromptHeader === 'function' && isUnlabeledPromptHeader(headersToDraw[i]))) {
+                total += labelLineH + labelGap;
+            }
             textSize(promptSize);
             textStyle(BOLD);
             const entry = promptValueTexts[i] || { display: '', layout: '' };
-            const lines = wrapTextToWidth(entry.layout || entry.display || '', MAX_PROMPT_WIDTH);
-            total += lines.length * promptLineH;
+            if (isPromptImageEntry(entry)) {
+                total += promptImageSlotHeight(chrome.phone);
+            } else {
+                const lines = wrapTextToWidth(entry.layout || entry.display || '', MAX_PROMPT_WIDTH);
+                total += Math.max(1, lines.length) * promptLineH;
+            }
             if (i < headersToDraw.length - 1) total += promptBlockGap;
         }
         textStyle(NORMAL);
         return total;
     }
 
-    // Scale type down so up to 4 prompts stay inside the locked card (no spill)
+    // Scale type down so up to 4 prompts stay inside the locked card (no spill).
+    // D-012: never shrink below minPromptSize — extra length wraps instead of going tiny.
     let contentH = measureContentHeight();
     if (contentH > availableHeight && availableHeight > 40 && contentH > 0) {
         const s = availableHeight / contentH;
-        promptSize *= s;
-        labelSize *= s;
-        objectiveSize *= s;
-        nameSize = Math.max(16, nameSize * s);
+        const nextPrompt = Math.max(minPromptSize, promptSize * s);
+        const promptScale = nextPrompt / promptSize;
+        promptSize = nextPrompt;
+        labelSize *= promptScale;
+        objectiveSize *= promptScale;
+        nameSize = Math.max(16, nameSize * promptScale);
         nameRowHeight = Math.max(28, nameSize * 1.25);
-        promptLineH = promptSize * 1.14;
+        promptLineH = promptSize * lineHeightRatio;
         labelLineH = labelSize * 1.08;
         objectiveLineH = objectiveSize * 1.1;
         labelGap = labelSize * 0.1;
         promptBlockGap = labelSize * 0.35;
-        objectiveToPromptGap = Math.max(8, objectiveToPromptGap * s);
+        objectiveToPromptGap = Math.max(8, objectiveToPromptGap * promptScale);
         innerTop = cardY + padY + nameRowHeight;
         innerBottom = cardY + cardHeight - padY;
         availableHeight = innerBottom - innerTop;
@@ -1231,7 +1352,7 @@ function draw() {
     }
 
     // Light feedback: show GENERATING… in the card until the first prompt text appears
-    const hasPromptDisplay = promptValueTexts.some(p => (p.display || '').length > 0);
+    const hasPromptDisplay = promptValueTexts.some(p => (p.display || '').length > 0 || p.imageWait);
     if ((isGenerating || isAnimating) && !hasPromptDisplay) {
         const pulse = 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(millis() / 280));
         fill(primaryRgb.r * pulse, primaryRgb.g * pulse, primaryRgb.b * pulse);
@@ -1250,12 +1371,16 @@ function draw() {
             const entry = promptValueTexts[i] || { display: '', layout: '' };
             const displayText = entry.display || '';
             const layoutText = entry.layout || displayText;
-            fill(primaryRgb.r * .8, primaryRgb.g * .8, primaryRgb.b * .8);
-            textSize(labelSize);
-            textStyle(NORMAL);
-            textAlign(CENTER, TOP);
-            text((header || '').toUpperCase(), centerX, contentY);
-            contentY += labelLineH + labelGap;
+            // D-018: skip the heading row when the teacher left the prompt label blank
+            const showLabel = !(typeof isUnlabeledPromptHeader === 'function' && isUnlabeledPromptHeader(header));
+            if (showLabel) {
+                fill(primaryRgb.r * .8, primaryRgb.g * .8, primaryRgb.b * .8);
+                textSize(labelSize);
+                textStyle(NORMAL);
+                textAlign(CENTER, TOP);
+                text((header || '').toUpperCase(), centerX, contentY);
+                contentY += labelLineH + labelGap;
+            }
             fill(
                 min(primaryRgb.r * promptBrightness, 255),
                 min(primaryRgb.g * promptBrightness, 255),
@@ -1264,12 +1389,30 @@ function draw() {
             textSize(promptSize);
             textStyle(BOLD);
             textAlign(CENTER, TOP);
-            // Line breaks follow final prompt, not scramble width (prevents bounce)
-            const lines = linesForPrompt(displayText, layoutText, MAX_PROMPT_WIDTH);
-            for (let li = 0; li < lines.length; li++) {
-                text(lines[li], centerX, contentY + li * promptLineH);
+            // D-015/D-016: pictures skip scramble; dots while waiting, then the image
+            if (typeof isImagePromptToken === 'function' && isImagePromptToken(layoutText || displayText)) {
+                const slotH = promptImageSlotHeight(chrome.phone);
+                if (entry.imageWait) {
+                    drawImageWaitDots(centerX, contentY, slotH, primaryRgb, entry.dotFlicker);
+                    contentY += slotH;
+                } else {
+                    contentY += drawFittedPromptImage(
+                        layoutText || displayText,
+                        centerX,
+                        contentY,
+                        MAX_PROMPT_WIDTH,
+                        slotH,
+                        primaryRgb
+                    );
+                }
+            } else {
+                // Line breaks follow final prompt, not scramble width (prevents bounce)
+                const lines = linesForPrompt(displayText, layoutText, MAX_PROMPT_WIDTH);
+                for (let li = 0; li < lines.length; li++) {
+                    text(lines[li], centerX, contentY + li * promptLineH);
+                }
+                contentY += lines.length * promptLineH;
             }
-            contentY += lines.length * promptLineH;
             if (i < headersToDraw.length - 1) contentY += promptBlockGap;
         });
         textStyle(NORMAL);
@@ -1383,17 +1526,12 @@ function triggerPromptRun() {
     if (resultNameEl) resultNameEl.blur();
 
     const missing = getMissingEditorData();
-    if (missing.missingObjective || missing.missingPrompts) {
+    // D-011: objective is optional after Skip. Only missing prompts block a run.
+    if (missing.missingPrompts) {
         if (audioCtx && window.playSound) {
             window.playSound({ FREQUENCY: 200, DURATION: 150 });
         }
-        let msg = 'Waiting for user to input objective and prompts.';
-        if (missing.missingObjective && !missing.missingPrompts) {
-            msg = 'Waiting for user to input objective.';
-        } else if (!missing.missingObjective && missing.missingPrompts) {
-            msg = 'Waiting for user to input prompts.';
-        }
-        showThemedMessage(msg);
+        showThemedMessage('Waiting for user to input prompts.');
         return;
     }
 

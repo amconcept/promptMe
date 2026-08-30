@@ -180,7 +180,9 @@ function saveCurrentActivityAsLastRun() {
     
     // Build categories structure
     headers.forEach((header, columnIndex) => {
-        const headerText = header.value.trim() || `PROMPT ${columnIndex + 1}`;
+        const headerText = (typeof promptHeaderStorageKey === 'function')
+            ? promptHeaderStorageKey(header.value, columnIndex)
+            : (header.value.trim() || ('__blank_' + columnIndex));
         currentData.categories[headerText] = {};
         
         // Get textareas for this column
@@ -369,9 +371,7 @@ function saveCurrentActivity() {
     // Collect prompt headers
     const headerInputs = document.querySelectorAll('.header-input');
     headerInputs.forEach(header => {
-        if (header.value.trim()) {
-            currentData.promptHeaders.push(header.value.trim());
-        }
+        currentData.promptHeaders.push(header.value.trim());
     });
     
     // Collect all category data using new grid structure
@@ -459,9 +459,7 @@ function saveActivityWithName(settingsName) {
     // Collect prompt headers
     const headerInputs = document.querySelectorAll('.header-input');
     headerInputs.forEach(header => {
-        if (header.value.trim()) {
-            currentData.promptHeaders.push(header.value.trim());
-        }
+        currentData.promptHeaders.push(header.value.trim());
     });
     
     // Collect all category data using new grid structure
@@ -759,7 +757,7 @@ async function loadSettingsByName(settingsName) {
     if (settingsName === 'Sample') {
         console.log('Loading Sample - reloading from CSV to ensure latest data');
         try {
-            const response = await fetch('Sample-activity-2025-10-27.csv?v=20260726u');
+            const response = await fetch('Sample-activity-2025-10-27.csv?v=20260830l');
             const csvText = await response.text();
             
             // Parse CSV and populate UI directly (same as importSettings)
@@ -1047,7 +1045,9 @@ async function loadSettingsByName(settingsName) {
             settings.promptHeaders.forEach(headerName => {
                 addNewPrompt();
                 const headerInputs = document.querySelectorAll('.header-input');
-                headerInputs[headerInputs.length - 1].value = headerName;
+                headerInputs[headerInputs.length - 1].value = (typeof promptHeaderEditorValue === 'function')
+                    ? promptHeaderEditorValue(headerName)
+                    : headerName;
             });
         } else if (settings.categories && Object.keys(settings.categories).length > 0) {
             // Fallback: create generic prompts based on first category data
@@ -1057,7 +1057,7 @@ async function loadSettingsByName(settingsName) {
             for (let i = 0; i < firstCategoryData.length; i++) {
                 addNewPrompt();
                 const headerInputs = document.querySelectorAll('.header-input');
-                headerInputs[headerInputs.length - 1].value = `PROMPT ${i + 1}`;
+                headerInputs[headerInputs.length - 1].value = '';
             }
         }
         
@@ -1137,6 +1137,9 @@ async function loadSettingsByName(settingsName) {
         // the active cell with stale empty cube text and drops a whole prompt column.
         if (typeof window.refreshPromptCube === 'function') {
             window.refreshPromptCube();
+        }
+        if (typeof window.hydrateAllPromptImageFields === 'function') {
+            window.hydrateAllPromptImageFields();
         }
 
         // IMPORTANT: Use saveChanges() to properly save to promptCategories

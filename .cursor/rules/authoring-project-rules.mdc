@@ -1,0 +1,49 @@
+---
+description: Conventions for writing and maintaining project rules in .cursor/rules/
+alwaysApply: true
+---
+
+# Authoring project rules
+
+Rules in `.cursor/rules/` are enforced strictly: treat them as constraints, and ask
+before deviating rather than using judgment silently.
+
+## Before adding a rule
+
+1. **Verify the convention exists in code.** A rule describes what the codebase already
+   does, or a decision recorded in `DESIGN_DECISIONS.md`. Do not encode aspirations.
+2. **Check it isn't already covered** by another rule or by the global user rules
+   (Python/JS preference, React when beneficial, SVG, memory/graphics care, comments).
+3. **Pair it with a decision entry** if the rule reflects a real choice — the rule states
+   the constraint, `DESIGN_DECISIONS.md` states why.
+
+## File conventions
+
+- One concern per file, kebab-case name describing the concern: `cache-busting.mdc`
+- Under 50 lines. Split rather than expand.
+- `alwaysApply: true` only for repo-wide invariants; otherwise set `globs` to the
+  narrowest pattern that works (`*.html`, `prompt-generator.js`)
+- Show the wrong and right form concretely:
+
+```markdown
+# ❌ Bumping one script tag
+<script src="ui-manager.js?v=20260728a"></script>
+<script src="data-manager.js?v=20260728b"></script>
+
+# ✅ All tags move together
+<script src="ui-manager.js?v=20260728b"></script>
+<script src="data-manager.js?v=20260728b"></script>
+```
+
+## Maintenance
+
+- A rule contradicted by the code is a bug: fix the rule or the code, never leave both.
+- Deleting a feature means deleting its rule in the same change.
+- Do not stack revisions inside a rule the way `CHANGELOG.txt` stacks
+  "(LATEST UPDATE)" sections. Edit the rule in place; history lives in git.
+
+## This project's non-negotiables
+
+Vanilla JS + p5.js, **no build step** — anything requiring compilation needs a decision
+entry first. `localStorage` is the source of truth. User-facing text says "grouping";
+code identifiers stay `criterion`/`category`.

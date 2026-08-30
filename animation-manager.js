@@ -3,20 +3,38 @@
 
 let scrambleInterval = null;
 let revealInterval = null;
+let imageRevealTimeout = null;
 let isAnimating = false;
 
-// Animation timing
+// Animation timing (D-012 knobs — tune by feel)
 const TIMING = {
     SCRAMBLE_SPEED: 50,
     REVEAL_SPEED: 50,
     SCRAMBLE_CYCLES: 15,
-    PAUSE_BETWEEN: 200
+    PAUSE_BETWEEN: 200,
+    // 4+ whitespace-separated tokens = a sentence; 1–3 stay "word" mode
+    SENTENCE_WORD_MIN: 4,
+    // One very long token (no spaces) still gets sentence timing
+    SENTENCE_CHAR_MIN: 28,
+    SENTENCE_REVEAL_TARGET_MS: 1000,
+    SENTENCE_SCRAMBLE_CYCLES: 8,
+    // D-014: one word per tick; spacing is independent of letter scramble (50ms)
+    SENTENCE_WORD_REVEAL_MIN_MS: 90,
+    SENTENCE_WORD_REVEAL_MAX_MS: 180,
+    // D-017: pictures use the scramble clock (50ms + 440Hz); dots flicker per tick
+    IMAGE_SCRAMBLE_CYCLES: 15,
+    IMAGE_DOT_COUNT: 3,
+    // D-013: scramble uses a decoy shape, not the chosen prompt's length
+    SCRAMBLE_DECOY_MIN: 6,
+    SCRAMBLE_DECOY_MAX: 18
 }
 
 // Sound settings
 const SOUND = {
     SCRAMBLE: { FREQUENCY: 440, DURATION: 15 },
     REVEAL: { FREQUENCY: 600, DURATION: 25 },
+    // D-014: word-land pitch — octave-plus above scramble (440) so sentences don't share the letter chatter
+    WORD_REVEAL: { FREQUENCY: 880, DURATION: 40 },
     FINAL: { FREQUENCY: 1200, DURATION: 100 },
     RETURN_TO_FIELD: { FREQUENCY: 800, DURATION: 50 }, // New sound for returning to name field
     CLICK: { FREQUENCY: 550, DURATION: 12, TYPE: 'square', VOLUME: 0.30 }, // Mac SE-style click (significantly increased volume)
@@ -24,12 +42,70 @@ const SOUND = {
     VOLUME: 0.20 // Increased default volume
 };
 
+/** Split on whitespace; "a laser cutter" is 3 words, "make a gift for a friend" is 6. */
+function countPromptWords(text) {
+    const t = String(text == null ? '' : text).trim();
+    if (!t) return 0;
+    return t.split(/\s+/).filter(Boolean).length;
+}
+
+/** D-012: 1–3 words play as words; 4+ words (or one very long token) play as a sentence. */
+function isSentencePrompt(text) {
+    const t = String(text == null ? '' : text).trim();
+    if (!t) return false;
+    if (typeof isImagePromptToken === 'function' && isImagePromptToken(t)) return false;
+    if (countPromptWords(t) >= TIMING.SENTENCE_WORD_MIN) return true;
+    return t.length >= TIMING.SENTENCE_CHAR_MIN;
+}
+
+/** Per-prompt plan: word mode keeps 1 char / 50ms; sentences land one word at a time (D-014). */
+function getRevealPlan(finalText) {
+    const text = String(finalText == null ? '' : finalText);
+    const sentence = isSentencePrompt(text);
+    if (!sentence) {
+        return {
+            sentence: false,
+            byWord: false,
+            charsPerTick: 1,
+            intervalMs: TIMING.REVEAL_SPEED,
+            scrambleCycles: TIMING.SCRAMBLE_CYCLES
+        };
+    }
+    const words = Math.max(1, countPromptWords(text));
+    const intervalMs = Math.max(
+        TIMING.SENTENCE_WORD_REVEAL_MIN_MS,
+        Math.min(
+            TIMING.SENTENCE_WORD_REVEAL_MAX_MS,
+            Math.round(TIMING.SENTENCE_REVEAL_TARGET_MS / words)
+        )
+    );
+    return {
+        sentence: true,
+        byWord: true,
+        charsPerTick: 1,
+        intervalMs: intervalMs,
+        scrambleCycles: TIMING.SENTENCE_SCRAMBLE_CYCLES
+    };
+}
+
+/** Next index after the following word (and its trailing space). */
+function nextWordEndIndex(text, fromIndex) {
+    if (fromIndex >= text.length) return text.length;
+    let i = fromIndex;
+    while (i < text.length && /\s/.test(text.charAt(i))) i++;
+    if (i >= text.length) return text.length;
+    while (i < text.length && !/\s/.test(text.charAt(i))) i++;
+    if (i < text.length && /\s/.test(text.charAt(i))) i++;
+    return i;
+}
+
 // Scramble glyphs — letter-sized (not block ▓/█ which are wider/taller and force wrap + bounce)
 function getRotatingChars() {
     return 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789#*+'.split('');
 }
 
-/** Build scramble string matching finalText length; keep spaces/punctuation so width ≈ final. */
+/** Build scramble glyphs from a template. Spaces/punctuation stay so wrap stays stable;
+ *  letters spin. D-013: scramble phase uses a decoy template, not the chosen prompt. */
 function buildScrambleSegment(source, fromIndex, toIndex) {
     const rotatingChars = getRotatingChars();
     let out = '';
@@ -37,7 +113,7 @@ function buildScrambleSegment(source, fromIndex, toIndex) {
     for (let i = fromIndex; i < end; i++) {
         const ch = source.charAt(i);
         if (/\s/.test(ch)) {
-            out += ch; // preserve whitespace so layout matches final reveal
+            out += ch;
         } else if (/[.,;:!?'"()\-]/.test(ch)) {
             out += ch;
         } else {
@@ -45,6 +121,57 @@ function buildScrambleSegment(source, fromIndex, toIndex) {
         }
     }
     return out;
+}
+
+/** All option strings for one prompt column (every grouping). */
+function getPromptPoolStrings(promptType) {
+    let data = null;
+    try {
+        if (typeof categories !== 'undefined' && categories) data = categories[promptType];
+    } catch (e) { /* ignore */ }
+    if (!data && typeof window !== 'undefined' && window.categories) {
+        data = window.categories[promptType];
+    }
+    if (!data) {
+        try {
+            const parsed = JSON.parse(localStorage.getItem('promptCategories') || '{}');
+            data = parsed.categories && parsed.categories[promptType];
+        } catch (e) { /* ignore */ }
+    }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return [];
+    const out = [];
+    Object.keys(data).forEach((row) => {
+        if (row === 'objective' || row === 'prompt1InterestsMode') return;
+        const arr = data[row];
+        if (!Array.isArray(arr)) return;
+        arr.forEach((s) => {
+            const t = String(s == null ? '' : s).trim();
+            if (t) out.push(t);
+        });
+    });
+    return out;
+}
+
+/** Pick another option's shape so scramble length ≠ the chosen word when the list allows it. */
+function pickScrambleDecoyTemplate(promptType, chosenText) {
+    const chosen = String(chosenText == null ? '' : chosenText);
+    const pool = getPromptPoolStrings(promptType);
+    // D-015: never scramble an img: token — that's a picture, not a letter silhouette
+    const others = pool.filter((s) => {
+        if (s === chosen) return false;
+        if (typeof isImagePromptToken === 'function' && isImagePromptToken(s)) return false;
+        return true;
+    });
+    if (others.length) {
+        return others[Math.floor(Math.random() * others.length)];
+    }
+    const minL = TIMING.SCRAMBLE_DECOY_MIN;
+    const maxL = TIMING.SCRAMBLE_DECOY_MAX;
+    let n = minL + Math.floor(Math.random() * (maxL - minL + 1));
+    if (chosen.length && n === chosen.length) {
+        n = n === maxL ? minL : n + 1;
+    }
+    return 'X'.repeat(Math.max(1, n));
 }
 
 // Play sound effect
@@ -189,7 +316,60 @@ function startScrambleAnimation(finalText, category, promptType, selectedCategor
     }
     
     let scrambleCycles = 0;
-    let charIndex = 0;
+    const plan = getRevealPlan(finalText);
+
+    // D-015/D-017: pictures don't scramble letters — flicker dots on the scramble clock, then land
+    if (typeof isImagePromptToken === 'function' && isImagePromptToken(finalText)) {
+        if (scrambleInterval) clearInterval(scrambleInterval);
+        if (revealInterval) clearInterval(revealInterval);
+        if (imageRevealTimeout) {
+            clearTimeout(imageRevealTimeout);
+            imageRevealTimeout = null;
+        }
+        isAnimating = true;
+        if (!window.currentPrompts) window.currentPrompts = {};
+        if (typeof window.prefetchPromptImage === 'function') {
+            window.prefetchPromptImage(finalText);
+        }
+        const dotCount = TIMING.IMAGE_DOT_COUNT;
+        let imageCycles = 0;
+        const tickImageScramble = function () {
+            if (shouldStop) {
+                if (scrambleInterval) clearInterval(scrambleInterval);
+                scrambleInterval = null;
+                return;
+            }
+            imageCycles++;
+            if (imageCycles > TIMING.IMAGE_SCRAMBLE_CYCLES) {
+                clearInterval(scrambleInterval);
+                scrambleInterval = null;
+                window.currentPrompts[category] = {
+                    revealed: finalText,
+                    rotating: '',
+                    final: finalText
+                };
+                playSound(SOUND.FINAL);
+                finishPromptReveal(finalText, category, promptType, selectedCategory);
+                return;
+            }
+            const flicker = [];
+            for (let i = 0; i < dotCount; i++) flicker.push(Math.random());
+            window.currentPrompts[category] = {
+                revealed: '',
+                rotating: '',
+                final: finalText,
+                imageWait: true,
+                dotFlicker: flicker
+            };
+            playSound(SOUND.SCRAMBLE);
+        };
+        tickImageScramble();
+        scrambleInterval = setInterval(tickImageScramble, TIMING.SCRAMBLE_SPEED);
+        return;
+    }
+
+    // D-013: decoy from the same column so spinning glyphs don't silhouette the answer
+    const decoyTemplate = pickScrambleDecoyTemplate(promptType || category, finalText);
     
     // Clear any existing intervals
     if (scrambleInterval) clearInterval(scrambleInterval);
@@ -205,7 +385,7 @@ function startScrambleAnimation(finalText, category, promptType, selectedCategor
             return;
         }
         
-        let scrambledText = buildScrambleSegment(finalText, 0, finalText.length);
+        let scrambledText = buildScrambleSegment(decoyTemplate, 0, decoyTemplate.length);
         
         // Access currentPrompts from window (defined in sketch-refactored.js)
         if (!window.currentPrompts) {
@@ -214,18 +394,18 @@ function startScrambleAnimation(finalText, category, promptType, selectedCategor
         window.currentPrompts[category] = {
             revealed: '',
             rotating: scrambledText,
-            final: finalText // layout/wrap uses this so scramble never changes line count
+            final: decoyTemplate // wrap to the decoy, not the chosen prompt (D-013)
         };
         
         playSound(SOUND.SCRAMBLE);
         scrambleCycles++;
         
-        if (scrambleCycles >= TIMING.SCRAMBLE_CYCLES) {
+        if (scrambleCycles >= plan.scrambleCycles) {
             clearInterval(scrambleInterval);
             
             // Start reveal after pause
             setTimeout(() => {
-                startRevealAnimation(finalText, category, promptType, selectedCategory);
+                startRevealAnimation(finalText, category, promptType, selectedCategory, plan);
             }, TIMING.PAUSE_BETWEEN);
         }
     }, TIMING.SCRAMBLE_SPEED);
@@ -233,8 +413,9 @@ function startScrambleAnimation(finalText, category, promptType, selectedCategor
 
 // Start reveal animation
 // promptType and selectedCategory are passed through so we can mark prompt as used when animation completes
-function startRevealAnimation(finalText, category, promptType, selectedCategory) {
+function startRevealAnimation(finalText, category, promptType, selectedCategory, plan) {
     let charIndex = 0;
+    plan = plan || getRevealPlan(finalText);
     
     revealInterval = setInterval(() => {
         if (shouldStop) {
@@ -243,8 +424,11 @@ function startRevealAnimation(finalText, category, promptType, selectedCategory)
         }
         
         if (charIndex < finalText.length) {
-            const revealed = finalText.substring(0, charIndex + 1);
-            const rotating = buildScrambleSegment(finalText, charIndex + 1, finalText.length);
+            const nextIndex = plan.byWord
+                ? nextWordEndIndex(finalText, charIndex)
+                : Math.min(finalText.length, charIndex + plan.charsPerTick);
+            const revealed = finalText.substring(0, nextIndex);
+            const rotating = buildScrambleSegment(finalText, nextIndex, finalText.length);
             
             // Access currentPrompts from window (defined in sketch-refactored.js)
             if (!window.currentPrompts) {
@@ -256,12 +440,23 @@ function startRevealAnimation(finalText, category, promptType, selectedCategory)
                 final: finalText
             };
             
-            charIndex++;
-            playSound(SOUND.REVEAL);
+            // D-014: sentences ping WORD_REVEAL (880Hz); letter mode keeps REVEAL (600Hz). Scramble stays 440Hz.
+            if (plan.byWord) {
+                playSound(SOUND.WORD_REVEAL);
+            } else {
+                playSound(SOUND.REVEAL);
+            }
+            charIndex = nextIndex;
         } else {
             clearInterval(revealInterval);
             playSound(SOUND.FINAL);
-            
+            finishPromptReveal(finalText, category, promptType, selectedCategory);
+        }
+    }, plan.intervalMs);
+}
+
+/** After a prompt (text or image) has landed — pending/in-play bookkeeping, then next column. */
+function finishPromptReveal(finalText, category, promptType, selectedCategory) {
             // Add to pending prompts (not committed until student changes)
             // This allows regeneration for the same student without depleting options
             if (promptType && finalText) {
@@ -365,8 +560,6 @@ function startRevealAnimation(finalText, category, promptType, selectedCategory)
                     }, 500); // Small delay to ensure generation is fully complete
                 }
             }, TIMING.PAUSE_BETWEEN);
-        }
-    }, TIMING.REVEAL_SPEED);
 }
 
 // Clear all animations
@@ -378,6 +571,10 @@ function clearAnimations() {
     if (revealInterval) {
         clearInterval(revealInterval);
         revealInterval = null;
+    }
+    if (imageRevealTimeout) {
+        clearTimeout(imageRevealTimeout);
+        imageRevealTimeout = null;
     }
     isAnimating = false;
 }
@@ -410,3 +607,6 @@ window.startScrambleAnimation = startScrambleAnimation;
 window.clearAnimations = clearAnimations; // Export clearAnimations (was incorrectly named stopAnimation)
 window.playSound = playSound; // Export playSound for use in other files
 window.SOUND = SOUND; // Export SOUND for use in other files
+window.TIMING = TIMING;
+window.countPromptWords = countPromptWords;
+window.isSentencePrompt = isSentencePrompt;

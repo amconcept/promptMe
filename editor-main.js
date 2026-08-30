@@ -14,10 +14,10 @@ function openSketchFromEditor() {
     } else {
         sessionStorage.setItem('promptMeEditorLayout', 'grid');
     }
-    window.location.href = 'sketch.html?from=editor&v=20260726f';
+    window.location.href = 'sketch.html?from=editor&v=20260830l';
 }
 
-// Quick test function - navigate to sketch. Blocks if prompts missing; offers Skip if only objective missing.
+// Quick test function - navigate to sketch. Blocks if prompts missing; offers Skip if only objective missing (D-011).
 function quickTest() {
     if (window.playClickSound) {
         window.playClickSound();
@@ -48,7 +48,7 @@ function quickTest() {
         }
         return;
     }
-    // Objective missing but prompts exist: show "Missing objective" with Skip to proceed or Cancel to stay.
+    // Objective missing but prompts exist: warn, Skip proceeds anyway (D-011).
     if (missingObjective) {
         if (window.showMissingObjectiveWithSkip) {
             window.showMissingObjectiveWithSkip(() => openSketchFromEditor());
@@ -74,10 +74,11 @@ function checkIfHasData() {
         if (header.value.trim().length > 0) return true;
     }
     
-    // Check if any textareas have content
+    // Check if any textareas have content (including image-only cells, D-015)
     const textareas = document.querySelectorAll('textarea');
     for (let textarea of textareas) {
         if (textarea.value.trim().length > 0) return true;
+        if (textarea.dataset && textarea.dataset.imageIds) return true;
     }
     
     // Check if criterion labels have content
@@ -96,7 +97,7 @@ async function ensureSampleInHistory() {
         
         // Load the CSV and add to history
         try {
-            const response = await fetch('Sample-activity-2025-10-27.csv?v=20260726u');
+            const response = await fetch('Sample-activity-2025-10-27.csv?v=20260830l');
             const csvText = await response.text();
             const sampleActivity = parseCSVToActivity(csvText);
             
@@ -164,7 +165,7 @@ async function loadDefaultActivity() {
     // Try to load from CSV file
     let defaultActivity;
     try {
-        const response = await fetch('Sample-activity-2025-10-27.csv?v=20260726u');
+        const response = await fetch('Sample-activity-2025-10-27.csv?v=20260830l');
         const csvText = await response.text();
         defaultActivity = parseCSVToActivity(csvText);
         console.log('Loaded Sample activity from CSV file');
@@ -374,7 +375,7 @@ function populateDefaultActivity(data) {
             const headerDiv = document.createElement('div');
             headerDiv.className = 'prompt-column';
             headerDiv.innerHTML = `
-                <input type="text" class="header-input" placeholder="Enter Prompt ${index + 1}" value="${headerName}">
+                <input type="text" class="header-input" placeholder="Enter Prompt ${index + 1}" value="${(typeof promptHeaderEditorValue === 'function' ? promptHeaderEditorValue(headerName) : headerName).replace(/"/g, '&quot;')}">
                 ${index > 0 ? '<button class="delete-prompt" onclick="deletePrompt(this)">[ X ]</button>' : ''}
             `;
             promptHeadersEl.appendChild(headerDiv);
@@ -688,7 +689,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (hasData) {
                 console.log('P pressed in editor - going to sketch to test');
                 saveChanges();
-                window.location.href = 'sketch.html?v=20260726f';
+                window.location.href = 'sketch.html?v=20260830l';
             } else {
                 console.log('P pressed in editor - no data, going to index');
                 window.location.href = 'index.html';
