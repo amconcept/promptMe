@@ -86,6 +86,7 @@ Routine visual tweaks are CHANGELOG-only (see Documentation routing in `.cursorr
 | D56 | Editor `...` panel order: **FILE** (top), Help & Instructions, **Customize** (advanced, under Help), Activity History. Label is **FILE**, not File. | Alec: Customize is too prominent; Rando should be as simple to operate as possible. Restoring Customize to the top would look like a “missing” first item. | `editor.html` `#settings-panel` |
 | D57 | Share quotes CSV cells (RFC 4180). Pictures download as a zip (`activity.csv` + `media/<id>.png\|jpg`) after SHARE / CANCEL. No pictures → plain `.csv`. Load accepts `.csv` or `.zip`. Not base64 in the CSV. | Commas in sentences were split on Load. D-015 forbade binaries in the CSV; a folder-with-media pack is the share path. | `activity-pack.js`; `exportSettings` / `importSettings` |
 | D58 | Empty Custom film does **not** play Default Pattern. RUN uses letter scramble (pictures: flicker dots). Default Pattern still plays the geometric film. | Substituting the factory blobs made Reset All / a blank custom look like the default animation. | `revealUsesPixelFilm()`; `startScrambleAnimation()` |
+| D59 | Leftover-card **frame** is its own Tune knob (0–8px, 0 = none). Chrome Stroke size stays 1–6. Missing `cardStroke` on an old overlay keeps the old outline (`strokeWidth + 3`). | Stroke size could not turn the prompting-page card border off (it always added 3px). | `--card-stroke-width`; `sketchCardStroke()` |
 
 ---
 
@@ -280,7 +281,7 @@ still holds as a general principle. It just doesn't need a D-row pinning specifi
 **Decision** Each of the 8 factory presets can be tuned: ink (primary), paper (background), stroke color, stroke size (1–6px), glow (shadow alpha), font family (a short list; VT323 remains the default), font size (12–28px), and font style (regular / italic / bold / bold italic). Edits are stored per preset id in `localStorage` key `themeCustomizations`. `resolveThemeCss()` starts from the factory `themes` object and overlays knobs; it does not mutate the factory. **Factory** clears only that preset’s overlay. Not written into activity CSV (an activity snapshot is D-033). The Customize page chrome and the 8 cards show the look; the leftover-card mock under Tune was removed as duplicate (D-033).
 **Why** Alec: teachers should restyle a chosen look as their room, not only pick a canned swatch; they need to see those changes on Customize because they affect the other windows. Keeping overlays separate means factory Windows/Green CRT stay recoverable.
 **Rejected** A ninth “Custom” preset (hides which room you started from); putting knobs into the factory objects (un-resettable); exposing every CSS variable (F5 — low floor).
-**Consequence** Do not “simplify” by writing ink/paper back into `const themes`. Glow derives `--primary-shadow*` from ink + the glow knob. Stroke size sets `--stroke-width` / `--panel-stroke-width` / `--card-stroke-width`. Font loads extra Google Fonts on demand. Size/style set `--ui-font-size` / `--ui-font-style` / `--ui-font-weight`. Ink/paper/stroke wells are curated swatches (D-030), not the OS color picker.
+**Consequence** Do not “simplify” by writing ink/paper back into `const themes`. Glow derives `--primary-shadow*` from ink + the glow knob. Stroke size sets `--stroke-width` / `--panel-stroke-width`. Leftover-card outline is `--card-stroke-width` (D-059), not chrome stroke + 3. Font loads extra Google Fonts on demand. Size/style set `--ui-font-size` / `--ui-font-style` / `--ui-font-weight`. Ink/paper/stroke wells are curated swatches (D-030), not the OS color picker.
 
 ---
 
@@ -601,6 +602,16 @@ still holds as a general principle. It just doesn't need a D-row pinning specifi
 **Why** Alec: when custom animation is empty do not put default; we can just scramble text.
 **Rejected** Playing empty paper tiles as a film (the result would show through immediately). Substituting `makeGeometricFrame` whenever custom has no paint (looked like the default animation came back after Reset All).
 **Consequence** Do not “fix” empty Custom by falling back to geometric decoy. Parked frames past `frameCount` still do not count as paint (D-041).
+
+---
+
+## D-059 — Leftover-card frame is its own knob (0 = none)
+**Date:** 2026-10-14 · **Status:** Active · **Touches:** theme-manager.js, theme.html, theme-page.js, sketch-refactored.js
+
+**Decision** Customize Tune has **Card frame** (0–8px). **0** draws no outline around the leftover card on the prompting window. Chrome **Stroke size** stays 1–6px for buttons and panels. Factory / unsaved looks keep the old 4px card outline (`strokeWidth + 3`). **Save look** / **Use on [activity]** store `cardStroke` with the other knobs.
+**Why** Alec: want to be able to remove the frame / border on the prompting page. Stroke size could not do that because the card was always 3px thicker than chrome.
+**Rejected** Setting Stroke size to 0 (would also strip editor/Customize button borders). Deleting the card outline for everyone.
+**Consequence** Do not map `--card-stroke-width` back to `strokeWidth + 3`. `sketchCardStroke()` must treat `0` as none, not as “missing, use 4.”
 
 ---
 

@@ -17,7 +17,7 @@ combinations without repetition. Four components:
 
 Companion documents (read these first):
 - RANDOMIZER_LOGIC_SPEC.md - required draw behavior (R1-R7, I1-I6, scenarios S1-S10)
-- DESIGN_DECISIONS.md      - why visual/UX choices are the way they are (D1-D58) + future directions
+- DESIGN_DECISIONS.md      - why visual/UX choices are the way they are (D1-D59) + future directions
 - README.md                - how a teacher uses the app
 - .cursorrules             - how to work on this project
 
@@ -96,7 +96,7 @@ ACTIVITY DESIGN (EDITOR)
 - Prompt headings are optional; a blank heading is omitted on the card (D-018)
 - Desktop grid layout; phone/narrow layout switches to a single-prompt cube (D-023)
 - Eight themes, chosen on the Customize page (`theme.html`), saved per activity (D-024)
-- Each preset can be tuned (ink, paper, stroke, glow, font family, size, style) in this browser; factory palettes stay resettable. Ink/paper/stroke use four short web-color palettes (Pastel, Primary, Neon, Shades) spanning the Tune panel (D-030, D-033). The 8 cards are leftover-card thumbnails: **Save look** stamps the mix on that card, **Factory** recalls the original recipe, **Use on [activity]** stamps the look onto the open activity (D-033). Customize chrome shows the live look (D-026)
+- Each preset can be tuned (ink, paper, stroke, leftover-card frame 0–8px, glow, font family, size, style) in this browser; factory palettes stay resettable. Card frame 0 removes the prompting-page outline (D-059). Ink/paper/stroke use four short web-color palettes (Pastel, Primary, Neon, Shades) spanning the Tune panel (D-030, D-033). The 8 cards are leftover-card thumbnails: **Save look** stamps the mix on that card, **Factory** recalls the original recipe, **Use on [activity]** stamps the look onto the open activity (D-033). Customize chrome shows the live look (D-026)
 - Hidden `#theme-select` remains in the editor for legacy save/load reads; the visible Theme dropdown is gone
 - Reveal animation: fill overlay (default geometric decoy, or a custom drawing) that **loops until STOP** (D-047). STOP plays a rapid gated low-tone glitch, then paper tiles lift over the result, then the land note (D-048). Teacher picks grid size (6–20) and frame count (2–12); a new animation starts at 6×6 with 2 frames (D-032). Lowering Frames parks extra drawings so raising it brings them back (D-041). Sketch plays those frames on the same 120ms clock as Customize Play (D-035). Each film frame plays a pentatonic note (C-1 through C3, or mute); click the name under a thumbnail to cycle (D-040, D-042, D-049). Land (Customize) is the ping when the prompts appear (D-046); default C2. Custom drawings play as painted (D-044). Custom frames sit centered above the draw grid; drag to reorder; Shift-click a range; Shift while drawing flips pen/eraser; Clear Frame / Reset All (D-031). Square cells centered in the card; empty cells are page background (D-028). One leftover-card preview for both modes; pixel palette defaults to theme ink (D-027). Copy to Next duplicates a frame onto the next slot. Saved in localStorage (`revealAnimation`) and downloadable as JSON; the prompting window plays it (D-025)
 - Delete `[ X ]` uses the theme primary color, not a separate red (D5)
@@ -175,7 +175,7 @@ DEVELOPMENT CONVENTIONS
 =======================
 
 CACHE BUSTING
-- Twenty-three local module <script> tags carry ?v=20260830az (nine on editor.html, ten
+- Twenty-three local module <script> tags carry ?v=20260830ba (nine on editor.html, ten
   on sketch.html, three on theme.html, one on index.html). After editing any of those
   modules, bump that value on all twenty-three together. theme-manager.js is tagged on
   every page so Macintosh paper-on-ink (D-050) cannot load from a stale untagged copy.
@@ -340,6 +340,7 @@ PROMPTING WINDOW
 - Editor … menu: FILE is first; Customize sits under Help & Instructions as an advanced item (D-056)
 - Share quotes CSV cells so commas in sentences survive Load. Pictures share as a zip folder (activity.csv + media/) after a SHARE/CANCEL warning; Load accepts .csv or .zip (D-057)
 - Empty Custom film does not play Default Pattern; RUN scrambles text (D-058)
+- Leftover-card outline on the prompting window is a Tune knob (Card frame 0–8px; 0 = none) (D-059)
 - Film scale runs C-1 through C3, then mute (D-049)
 - Land note on Customize designs the final ping (D-046)
 

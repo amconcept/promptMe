@@ -109,7 +109,7 @@ On a **phone or narrow window**, the grid is replaced by a **cube layout** that 
 
 ### 3. **Customize** (`theme.html` — themes and reveal animation)
 
-Opened from **Customize** in the editor `...` menu (under Help & Instructions — advanced). Pick one of 8 leftover-card thumbnails (the page re-skins immediately). Tune ink, paper, stroke, glow, font family, size, and style. **Save look** stamps that mix onto the selected thumbnail; **Factory** recalls the original recipe; **Use on [activity]** stamps it onto the open activity. Choose the default geometric reveal, or draw your own (grid 6×6–20×20, 2–12 frames; a new animation starts at 6×6 with 2 frames). An empty custom drawing does not play the default pattern — the prompting window scrambles text instead. The film saves with the open activity. **Restore defaults** returns to the factory geometric film. Download the animation as a JSON file to recall it on another machine.
+Opened from **Customize** in the editor `...` menu (under Help & Instructions — advanced). Pick one of 8 leftover-card thumbnails (the page re-skins immediately). Tune ink, paper, stroke, leftover-card frame (0 = none), glow, font family, size, and style. **Save look** stamps that mix onto the selected thumbnail; **Factory** recalls the original recipe; **Use on [activity]** stamps it onto the open activity. Choose the default geometric reveal, or draw your own (grid 6×6–20×20, 2–12 frames; a new animation starts at 6×6 with 2 frames). An empty custom drawing does not play the default pattern — the prompting window scrambles text instead. The film saves with the open activity. **Restore defaults** returns to the factory geometric film. Download the animation as a JSON file to recall it on another machine.
 
 ---
 
@@ -223,7 +223,7 @@ Share from FILE to give another teacher the activity. Sentences with commas stay
 ### **Themes**
 Eight themes ship with the app: Windows, Macintosh, Green CRT, Orange CRT, Blue CRT, Purple CRT, Pink CRT, and Black. Open **Customize** from the editor `...` menu under Help & Instructions (`theme.html`) — not a dropdown on that panel. The choice is saved per activity and carried through CSV export/import.
 
-Each preset can be tuned on that page: ink, paper, stroke color, stroke size, glow, font family, font size, and font style. Ink, paper, and stroke are four short palettes (Pastel, Primary, Neon, Shades) that span the Tune panel — named web colors, not the full system picker (**D-030**, **D-033**). The eight cards are leftover-card thumbnails: **Save look** stamps the mix on the selected card, **Factory** recalls that card’s original recipe, **Use on [activity]** stamps the look onto the open activity so opening it later recalls it (**D-033**). Tweaks stay with that preset in this browser (**D-026**).
+Each preset can be tuned on that page: ink, paper, stroke color, stroke size, leftover-card **frame** (0 = none), glow, font family, font size, and font style. Ink, paper, and stroke are four short palettes (Pastel, Primary, Neon, Shades) that span the Tune panel — named web colors, not the full system picker (**D-030**, **D-033**). The eight cards are leftover-card thumbnails: **Save look** stamps the mix on the selected card, **Factory** recalls that card’s original recipe, **Use on [activity]** stamps the look onto the open activity so opening it later recalls it (**D-033**). Tweaks stay with that preset in this browser (**D-026**).
 
 On the same page you can keep the default geometric reveal, or draw a custom animation. Two sliders set **grid size** (6–20 squares on a side) and **frames** (2–12 drawings). A new animation starts at 6×6 with 2 frames; an animation already saved in this browser keeps the size you last used. Lowering **Frames** parks the extra drawings; raising it brings them back (**D-041**). **Reset All** is what actually throws those parked drawings away. The frames sit in a centered row above the drawing grid; drag a thumbnail to reorder. Under each thumbnail is a note name — C-1 through C3 (pentatonic C D E G A at each octave), or **mute**. Click it to cycle. Those pitches always sound complementary; the number after the letter is how many octaves above this app’s C, and **-1** is one octave below (**D-042**, **D-049**). Shift-click selects a range of frames; hold Shift while drawing to flip pen and eraser. **Clear Frame** empties the selected frame(s); **Reset All** empties the whole sequence. The leftover-card window at the top of that section previews both modes (silently). **Play** on a custom animation hears those notes — the same ones the prompting window uses (**D-040**). **Land** (next to Grid / Frames) is the ping when the prompts appear, from the same scale (**D-046**). **Copy to Next** duplicates the outlined drawing onto the next slot (not the tone). The pixel palette starts on **Theme ink** so strokes follow the current look; other swatches stay that color. The animation is saved in this browser and **with the open activity**, and can be downloaded as a JSON file. **Restore defaults** returns to the factory geometric film (6×6, 2 frames). Empty Custom does not play that factory film — RUN scrambles letters instead (**D-058**). Drawn Custom and Default Pattern still play as saved (**D-025**, **D-027**, **D-031**, **D-032**, **D-055**).
 
@@ -288,11 +288,11 @@ Editor and prompting window sync through a `promptDataUpdated` custom event and 
 
 ### Cache busting
 
-Twenty-three local module `<script>` tags carry `?v=20260830az` (nine on `editor.html`,
+Twenty-three local module `<script>` tags carry `?v=20260830ba` (nine on `editor.html`,
 ten on `sketch.html`, three on `theme.html`, one on `index.html`). After editing any of those modules, bump that value on **all
 twenty-three together**. Mismatched values load a mix of old and new files.
 
-`sketch.html` also loads p5.js from a CDN (untagged). The Sample activity CSV fetch uses the same `?v=20260830az`
+`sketch.html` also loads p5.js from a CDN (untagged). The Sample activity CSV fetch uses the same `?v=20260830ba`
 value as the tagged modules.
 
 ### Companion documents
@@ -300,7 +300,7 @@ value as the tagged modules.
 | Document | Purpose |
 |----------|---------|
 | `RANDOMIZER_LOGIC_SPEC.md` | Required randomizer behavior (R1–R7, I1–I6, scenarios S1–S10) |
-| `DESIGN_DECISIONS.md` | Why visual/UX choices are the way they are (D1–D58: D6 and D7 retired; D16 superseded by D17; D29 superseded by D32; D34 superseded by D36; D43 superseded by D49), plus future directions |
+| `DESIGN_DECISIONS.md` | Why visual/UX choices are the way they are (D1–D59: D6 and D7 retired; D16 superseded by D17; D29 superseded by D32; D34 superseded by D36; D43 superseded by D49), plus future directions |
 | `CHANGELOG.txt` | Development history |
 | `docs/TROUBLESHOOT_LOCALHOST.md` | Local server troubleshooting |
 

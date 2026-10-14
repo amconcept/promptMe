@@ -14,7 +14,7 @@ function openSketchFromEditor() {
     } else {
         sessionStorage.setItem('promptMeEditorLayout', 'grid');
     }
-    window.location.href = 'sketch.html?from=editor&v=20260830az';
+    window.location.href = 'sketch.html?from=editor&v=20260830ba';
 }
 
 // Quick test function - navigate to sketch. Blocks if prompts missing; offers Skip if only objective missing (D-011).
@@ -97,7 +97,7 @@ async function ensureSampleInHistory() {
         
         // Load the CSV and add to history
         try {
-            const response = await fetch('Sample-activity-2025-10-27.csv?v=20260830az');
+            const response = await fetch('Sample-activity-2025-10-27.csv?v=20260830ba');
             const csvText = await response.text();
             const sampleActivity = parseCSVToActivity(csvText);
             
@@ -165,7 +165,7 @@ async function loadDefaultActivity() {
     // Try to load from CSV file
     let defaultActivity;
     try {
-        const response = await fetch('Sample-activity-2025-10-27.csv?v=20260830az');
+        const response = await fetch('Sample-activity-2025-10-27.csv?v=20260830ba');
         const csvText = await response.text();
         defaultActivity = parseCSVToActivity(csvText);
         console.log('Loaded Sample activity from CSV file');
@@ -635,7 +635,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (hasData) {
                 console.log('P pressed in editor - going to sketch to test');
                 saveChanges();
-                window.location.href = 'sketch.html?v=20260830az';
+                window.location.href = 'sketch.html?v=20260830ba';
             } else {
                 console.log('P pressed in editor - no data, going to index');
                 window.location.href = 'index.html';

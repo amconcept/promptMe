@@ -143,6 +143,10 @@ const THEME_CUSTOM_KEY = 'themeCustomizations';
 const THEME_KNOB_DEFAULTS = {
     glow: 0.3,
     strokeWidth: 1,
+    // D-059: leftover-card outline on the prompting window. 0 = none.
+    cardStroke: 4,
+    cardStrokeMin: 0,
+    cardStrokeMax: 8,
     font: 'VT323',
     fontSize: 18,
     fontStyle: 'regular'
@@ -299,16 +303,30 @@ function getThemeKnobs(themeName) {
     const fontStyle = styleIds.indexOf(custom.fontStyle) >= 0 ? custom.fontStyle : THEME_KNOB_DEFAULTS.fontStyle;
     let fontSize = (typeof custom.fontSize === 'number') ? custom.fontSize : THEME_KNOB_DEFAULTS.fontSize;
     fontSize = Math.max(12, Math.min(28, Math.round(fontSize)));
+    const strokeWidth = (typeof custom.strokeWidth === 'number') ? custom.strokeWidth : THEME_KNOB_DEFAULTS.strokeWidth;
+    // Older looks had no cardStroke knob — keep the leftover-card outline they already had (stroke + 3).
+    const cardStrokeRaw = (typeof custom.cardStroke === 'number')
+        ? custom.cardStroke
+        : (Math.round(strokeWidth) + 3);
     return {
         primary: normalizeHex(custom.primary || factory['--primary-color'], '#ffffff'),
         background: normalizeHex(custom.background || factory['--background-color'], '#000000'),
         stroke: normalizeHex(custom.stroke || factory['--border-color'], '#333333'),
         glow: (typeof custom.glow === 'number') ? custom.glow : THEME_KNOB_DEFAULTS.glow,
-        strokeWidth: (typeof custom.strokeWidth === 'number') ? custom.strokeWidth : THEME_KNOB_DEFAULTS.strokeWidth,
+        strokeWidth: strokeWidth,
+        cardStroke: clampThemeCardStroke(cardStrokeRaw),
         font: font,
         fontSize: fontSize,
         fontStyle: fontStyle
     };
+}
+
+function clampThemeCardStroke(n) {
+    const v = Math.round(Number(n));
+    const min = THEME_KNOB_DEFAULTS.cardStrokeMin;
+    const max = THEME_KNOB_DEFAULTS.cardStrokeMax;
+    if (!Number.isFinite(v)) return THEME_KNOB_DEFAULTS.cardStroke;
+    return Math.max(min, Math.min(max, v));
 }
 
 function setThemeKnobs(themeName, patch) {
@@ -344,6 +362,7 @@ function commitThemeLook(themeName) {
         stroke: knobs.stroke,
         glow: knobs.glow,
         strokeWidth: knobs.strokeWidth,
+        cardStroke: knobs.cardStroke,
         font: knobs.font,
         fontSize: knobs.fontSize,
         fontStyle: knobs.fontStyle
@@ -459,6 +478,7 @@ function resolveThemeCss(themeName) {
     const knobs = getThemeKnobs(themeName);
     const glow = Math.max(0, Math.min(0.7, knobs.glow));
     const strokePx = Math.max(1, Math.min(6, Math.round(knobs.strokeWidth)));
+    const cardPx = clampThemeCardStroke(knobs.cardStroke);
     const spec = themeFontSpec(knobs.font);
     const styleSpec = themeFontStyleSpec(knobs.fontStyle);
     const css = {};
@@ -484,7 +504,8 @@ function resolveThemeCss(themeName) {
     css['--ui-font-weight'] = styleSpec.cssWeight;
     css['--stroke-width'] = strokePx + 'px';
     css['--panel-stroke-width'] = Math.max(2, strokePx) + 'px';
-    css['--card-stroke-width'] = (strokePx + 3) + 'px';
+    // D-059: leftover-card outline is its own knob (0 = none), not chrome stroke + 3.
+    css['--card-stroke-width'] = cardPx + 'px';
     return css;
 }
 
@@ -837,6 +858,8 @@ window.THEME_PRESET_LABELS = THEME_PRESET_LABELS;
 window.THEME_FONTS = THEME_FONTS;
 window.THEME_FONT_STYLES = THEME_FONT_STYLES;
 window.THEME_SWATCH_GROUPS = THEME_SWATCH_GROUPS;
+window.THEME_KNOB_DEFAULTS = THEME_KNOB_DEFAULTS;
+window.clampThemeCardStroke = clampThemeCardStroke;
 window.themes = themes;
 window.getThemeKnobs = getThemeKnobs;
 window.setThemeKnobs = setThemeKnobs;

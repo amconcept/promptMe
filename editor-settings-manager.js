@@ -787,7 +787,7 @@ async function loadSettingsByName(settingsName) {
     if (settingsName === 'Sample') {
         console.log('Loading Sample - reloading from CSV to ensure latest data');
         try {
-            const response = await fetch('Sample-activity-2025-10-27.csv?v=20260830az');
+            const response = await fetch('Sample-activity-2025-10-27.csv?v=20260830ba');
             const csvText = await response.text();
             const parsed = (typeof parseActivityCsv === 'function')
                 ? parseActivityCsv(csvText)

@@ -67,7 +67,9 @@ function sketchCardStroke() {
     try {
         const raw = getComputedStyle(document.documentElement).getPropertyValue('--card-stroke-width').trim();
         const n = parseFloat(raw);
-        return (Number.isFinite(n) && n > 0) ? n : 4;
+        // D-059: 0 is a real choice (no leftover-card frame). Missing CSS still means factory 4.
+        if (Number.isFinite(n) && n >= 0) return n;
+        return 4;
     } catch (e) {
         return 4;
     }
@@ -1662,11 +1664,14 @@ function draw() {
     fill(frameRgb.r, frameRgb.g, frameRgb.b);
     rect(cardX, cardY, cardWidth, cardHeight, cornerRadius);
 
-    stroke(primaryRgb.r, primaryRgb.g, primaryRgb.b);
-    strokeWeight(sketchCardStroke());
-    noFill();
-    rect(cardX, cardY, cardWidth, cardHeight, cornerRadius);
-    noStroke();
+    const cardStrokeW = sketchCardStroke();
+    if (cardStrokeW > 0) {
+        stroke(primaryRgb.r, primaryRgb.g, primaryRgb.b);
+        strokeWeight(cardStrokeW);
+        noFill();
+        rect(cardX, cardY, cardWidth, cardHeight, cornerRadius);
+        noStroke();
+    }
 
     // Name is the DOM input in the card row. Only paint on canvas for screenshots (saveCanvas skips DOM).
     if (window._drawCardNameOnCanvas && displayName) {

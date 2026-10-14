@@ -757,6 +757,12 @@ function fillThemeKnobs() {
         const val = document.getElementById('knob-stroke-width-val');
         if (val) val.textContent = knobs.strokeWidth + 'px';
     }
+    const cardStroke = document.getElementById('knob-card-stroke');
+    if (cardStroke) {
+        cardStroke.value = String(knobs.cardStroke);
+        const val = document.getElementById('knob-card-stroke-val');
+        if (val) val.textContent = knobs.cardStroke === 0 ? 'none' : (knobs.cardStroke + 'px');
+    }
     if (glow) {
         glow.value = String(Math.round(knobs.glow * 100));
         const val = document.getElementById('knob-glow-val');
@@ -900,6 +906,7 @@ function setColorSlot(slot) {
 
 function bindThemeKnobs() {
     const strokeWidth = document.getElementById('knob-stroke-width');
+    const cardStroke = document.getElementById('knob-card-stroke');
     const glow = document.getElementById('knob-glow');
     const font = document.getElementById('knob-font');
     const fontStyle = document.getElementById('knob-font-style');
@@ -918,6 +925,17 @@ function bindThemeKnobs() {
             const val = document.getElementById('knob-stroke-width-val');
             if (val) val.textContent = n + 'px';
             applyKnobPatch({ strokeWidth: n });
+        });
+    }
+    if (cardStroke) {
+        cardStroke.addEventListener('input', function () {
+            const parsed = Number(cardStroke.value);
+            const n = (typeof clampThemeCardStroke === 'function')
+                ? clampThemeCardStroke(parsed)
+                : (Number.isFinite(parsed) ? parsed : 4);
+            const val = document.getElementById('knob-card-stroke-val');
+            if (val) val.textContent = n === 0 ? 'none' : (n + 'px');
+            applyKnobPatch({ cardStroke: n });
         });
     }
     if (glow) {
