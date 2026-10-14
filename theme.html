@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Customize</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <script src="theme-manager.js?v=20260830az"></script>
+    <style>
+        :root {
+            --primary-color: #FFFFFF;
+            --primary-hover: #E0E0E0;
+            --primary-shadow: rgba(255, 255, 255, 0.3);
+            --primary-shadow-hover: rgba(255, 255, 255, 0.5);
+            --primary-shadow-light: rgba(255, 255, 255, 0.1);
+            --accent-color: #C0C0C0;
+            --background-color: #000080;
+            --on-primary-color: var(--background-color);
+            --text-color: #FFFFFF;
+            --border-color: #4169E1;
+            --delete-color: var(--primary-color);
+            --frame-color: #FFFFFF;
+            --frame-border: #FFFFFF;
+            --frame-background: #000080;
+            --ui-font: 'VT323', monospace;
+            --ui-font-size: 18px;
+            --ui-font-style: normal;
+            --ui-font-weight: 400;
+            --stroke-width: 1px;
+            --panel-stroke-width: 2px;
+            --card-stroke-width: 4px;
+            --palette-swatch: 28px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: var(--ui-font, 'VT323', monospace);
+            font-size: var(--ui-font-size, 18px);
+            font-style: var(--ui-font-style, normal);
+            font-weight: var(--ui-font-weight, 400);
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 12px;
+            min-height: 100vh;
+        }
+
+        .theme-page {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 0 0 48px;
+        }
+
+        .theme-page-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            min-height: 40px;
+            margin-bottom: 14px;
+        }
+
+        .theme-page-title {
+            color: var(--primary-color);
+            font-size: calc(var(--ui-font-size, 18px) * 1.78);
+            letter-spacing: 2px;
+            margin: 0;
+            font-weight: var(--ui-font-weight, 400);
+            font-style: var(--ui-font-style, normal);
+        }
+
+        /* Same control chrome as editor.html (1px, radius 4, VT323 18px, 36px tall) */
+        .theme-chrome-btn {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            height: 36px;
+            padding: 0 14px;
+            font-family: var(--ui-font, 'VT323', monospace);
+            font-size: var(--ui-font-size, 18px);
+            font-style: var(--ui-font-style, normal);
+            font-weight: var(--ui-font-weight, 400);
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+
+        .theme-chrome-btn:hover,
+        .theme-chrome-btn.is-active {
+            background-color: var(--primary-color);
+            color: var(--on-primary-color, var(--background-color));
+            -webkit-text-fill-color: var(--on-primary-color, var(--background-color));
+        }
+
+        .theme-back {
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .theme-section {
+            margin-bottom: 22px;
+        }
+
+        .theme-section h2 {
+            color: var(--primary-color);
+            font-size: calc(var(--ui-font-size, 18px) * 1.1);
+            letter-spacing: 1px;
+            font-weight: var(--ui-font-weight, 400);
+            font-style: var(--ui-font-style, normal);
+            margin: 0 0 8px;
+            text-transform: uppercase;
+        }
+
+        .theme-hint {
+            color: var(--primary-color);
+            opacity: 0.8;
+            font-size: 0.85em;
+            margin: 6px 0 0;
+            line-height: 1.25;
+        }
+
+        .theme-preset-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .theme-preset-card {
+            background: transparent;
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            padding: 6px 5px 7px;
+            cursor: pointer;
+            font-family: var(--ui-font, 'VT323', monospace);
+            color: var(--primary-color);
+            position: relative;
+            text-align: center;
+        }
+
+        .theme-preset-card.is-active {
+            border-width: 2px;
+            box-shadow: 0 0 10px var(--primary-shadow);
+        }
+
+        .theme-preset-saved {
+            position: absolute;
+            top: 4px;
+            right: 5px;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            display: none;
+        }
+
+        .theme-preset-card.has-saved .theme-preset-saved {
+            display: block;
+        }
+
+        .theme-preset-swatch {
+            border: 1px solid;
+            border-radius: 10px;
+            height: 52px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            margin-bottom: 4px;
+            padding: 4px 6px;
+            box-sizing: border-box;
+        }
+
+        .theme-preset-mini-name {
+            font-size: 10px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            opacity: 0.85;
+            line-height: 1;
+        }
+
+        .theme-preset-mini-plus {
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        .theme-preset-label {
+            font-size: 13px;
+            line-height: 1.15;
+        }
+
+        .theme-toggle {
+            display: inline-flex;
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 14px;
+        }
+
+        .theme-toggle button {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            border: none;
+            border-right: 1px solid var(--primary-color);
+            height: 36px;
+            padding: 0 16px;
+            font-family: var(--ui-font, 'VT323', monospace);
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .theme-toggle button:last-child {
+            border-right: none;
+        }
+
+        .theme-toggle button.is-active {
+            background-color: var(--primary-color);
+            color: var(--on-primary-color, var(--background-color));
+            -webkit-text-fill-color: var(--on-primary-color, var(--background-color));
+        }
+
+        /* Panel/monitor chrome — same as settings-panel (D-024 page, reused here) */
+        .theme-monitor {
+            border: 2px solid var(--primary-color);
+            border-radius: 0;
+            box-shadow: 0 0 12px var(--primary-shadow);
+            background-color: var(--background-color);
+            padding: 16px;
+        }
+
+        .theme-monitor canvas {
+            display: block;
+            margin: 0 auto;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        .theme-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 12px 0;
+        }
+
+        .film-strip {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            overflow-x: visible;
+            padding-bottom: 8px;
+            margin: 0 auto 12px;
+        }
+
+        .film-slot {
+            flex: 0 0 auto;
+            width: 56px;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 2px;
+        }
+
+        .film-frame {
+            flex: 0 0 auto;
+            width: 56px;
+            padding: 4px;
+            border: 1px solid var(--primary-color);
+            background: transparent;
+            cursor: grab;
+            font-family: var(--ui-font, 'VT323', monospace);
+            color: var(--primary-color);
+            user-select: none;
+            touch-action: none;
+        }
+
+        .film-frame.is-selected {
+            box-shadow: 0 0 8px var(--primary-shadow-hover);
+            border-width: 2px;
+        }
+
+        .film-frame.is-editing {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+        }
+
+        .film-frame.is-playhead {
+            outline: 1px dashed var(--primary-color);
+            outline-offset: 2px;
+        }
+
+        .film-frame.is-drop-target,
+        .film-slot.is-drop-target .film-frame {
+            box-shadow: 0 0 0 2px var(--primary-color);
+        }
+
+        .film-strip.is-reordering .film-frame {
+            cursor: grabbing;
+        }
+
+        .film-frame canvas {
+            width: 46px;
+            height: 46px;
+            display: block;
+        }
+
+        .film-frame span,
+        .film-num {
+            display: block;
+            text-align: center;
+            font-size: 13px;
+            margin-top: 2px;
+        }
+
+        .film-note {
+            min-height: 22px;
+            padding: 0 2px;
+            border: 1px solid var(--primary-color);
+            background: transparent;
+            color: var(--primary-color);
+            font-family: var(--ui-font, 'VT323', monospace);
+            font-size: 12px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        .theme-shape-knobs .film-note {
+            width: 100%;
+            min-height: 28px;
+            margin-top: 4px;
+        }
+
+        .film-note.is-mute {
+            opacity: 0.55;
+        }
+
+        .film-note:hover,
+        .film-note:focus {
+            box-shadow: 0 0 6px var(--primary-shadow-hover);
+        }
+
+        #draw-grid {
+            width: min(360px, 100%);
+            height: auto;
+            aspect-ratio: 1;
+            cursor: crosshair;
+            touch-action: none;
+        }
+
+        .theme-file-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .is-hidden {
+            display: none !important;
+        }
+
+        #reveal-preview {
+            width: min(420px, 100%);
+            height: auto;
+            aspect-ratio: 4 / 3;
+        }
+
+        .pixel-palette {
+            display: flex;
+            flex-wrap: nowrap;
+            justify-content: center;
+            gap: 4px;
+            align-items: center;
+            margin: 8px 0 4px;
+        }
+
+        .pixel-swatch {
+            width: var(--palette-swatch, 18px);
+            height: var(--palette-swatch, 18px);
+            flex: 0 0 var(--palette-swatch, 18px);
+            padding: 0;
+            border: 1px solid var(--primary-color);
+            border-radius: 2px;
+            cursor: pointer;
+            background: var(--background-color);
+            box-sizing: border-box;
+        }
+
+        .pixel-swatch.is-active {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 1px;
+        }
+
+        .theme-knob-panel {
+            margin-top: 0;
+            padding: 10px 12px 12px;
+        }
+
+        .theme-knob-title {
+            color: var(--primary-color);
+            font-size: 16px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin: 0 0 8px;
+        }
+
+        .theme-knob-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 8px 12px;
+            align-items: end;
+        }
+
+        .theme-shape-knobs {
+            grid-template-columns: 1fr 1fr;
+            max-width: 480px;
+            margin: 0 0 10px;
+        }
+
+        .theme-knob {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 15px;
+            color: var(--primary-color);
+        }
+
+        .theme-color-row {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px 10px;
+            margin-bottom: 8px;
+        }
+
+        .theme-color-chip {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            background: transparent;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            color: var(--primary-color);
+            font-family: inherit;
+            font-size: 14px;
+            text-align: left;
+        }
+
+        .theme-color-chip-face {
+            display: block;
+            height: 28px;
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .theme-color-chip.is-active .theme-color-chip-face {
+            box-shadow: 0 0 8px var(--primary-shadow-hover);
+            border-width: 2px;
+        }
+
+        .theme-swatch-groups {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+        .theme-swatch-groups .theme-chrome-btn {
+            height: 32px;
+            padding: 0 10px;
+        }
+
+        /* D-033: tiles grow to the Tune panel width — not a short centered strip. */
+        .theme-swatch-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(var(--palette-swatch, 28px), 1fr));
+            gap: 4px;
+            width: 100%;
+            margin: 0 0 8px;
+        }
+
+        .theme-web-swatch {
+            width: 100%;
+            height: auto;
+            min-height: var(--palette-swatch, 28px);
+            aspect-ratio: 1;
+            padding: 0;
+            border: 1px solid var(--primary-color);
+            border-radius: 2px;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+
+        .theme-web-swatch.is-selected {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 1px;
+        }
+
+        .theme-knob select {
+            height: 36px;
+            background: var(--background-color);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            font-family: var(--ui-font, 'VT323', monospace);
+            font-size: 16px;
+        }
+
+        .theme-knob input[type="range"] {
+            width: 100%;
+            accent-color: var(--primary-color);
+        }
+
+        .theme-knob-value {
+            opacity: 0.75;
+            font-size: 14px;
+        }
+
+        .theme-knob-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .theme-look-status {
+            color: var(--primary-color);
+            opacity: 0.85;
+            font-size: 0.85em;
+            margin: 6px 0 0;
+            min-height: 1.2em;
+        }
+
+        .theme-chrome-btn.is-disabled {
+            opacity: 0.35;
+            pointer-events: none;
+        }
+
+        @media (max-width: 720px) {
+            :root {
+                --palette-swatch: 36px;
+            }
+            .theme-preset-grid {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 6px;
+            }
+            .theme-preset-swatch {
+                height: 44px;
+                border-radius: 8px;
+            }
+            .theme-back {
+                position: static;
+                transform: none;
+                margin-bottom: 8px;
+            }
+            .theme-page-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .theme-chrome-btn {
+                min-height: 40px;
+            }
+        }
+    </style>
+    <script>
+        if (typeof applyThemeFromStorage === 'function') applyThemeFromStorage();
+    </script>
+</head>
+<body>
+    <div class="theme-page">
+        <div class="theme-page-bar">
+            <button type="button" class="theme-chrome-btn theme-back" id="back-to-editor">← Back to Editor</button>
+            <h1 class="theme-page-title">Customize</h1>
+        </div>
+
+        <section class="theme-section">
+            <h2>Themes</h2>
+            <div class="theme-preset-grid" id="theme-preset-grid"></div>
+            <div class="theme-monitor theme-knob-panel" id="theme-knob-panel">
+                <div class="theme-knob-title" id="knob-heading">Tune this theme</div>
+                <div class="theme-color-row" role="group" aria-label="Color target">
+                    <button type="button" class="theme-color-chip is-active" id="chip-primary" data-slot="primary" aria-pressed="true">
+                        <span>Ink</span>
+                        <span class="theme-color-chip-face" id="chip-primary-face" aria-hidden="true"></span>
+                    </button>
+                    <button type="button" class="theme-color-chip" id="chip-background" data-slot="background" aria-pressed="false">
+                        <span>Paper</span>
+                        <span class="theme-color-chip-face" id="chip-background-face" aria-hidden="true"></span>
+                    </button>
+                    <button type="button" class="theme-color-chip" id="chip-stroke" data-slot="stroke" aria-pressed="false">
+                        <span>Stroke</span>
+                        <span class="theme-color-chip-face" id="chip-stroke-face" aria-hidden="true"></span>
+                    </button>
+                </div>
+                <div class="theme-swatch-groups" id="theme-swatch-groups" role="tablist" aria-label="Color palettes"></div>
+                <div class="theme-swatch-grid" id="theme-swatch-grid" role="listbox" aria-label="Web colors"></div>
+                <div class="theme-knob-grid">
+                    <label class="theme-knob">Stroke size <span class="theme-knob-value" id="knob-stroke-width-val">1px</span>
+                        <input type="range" id="knob-stroke-width" min="1" max="6" step="1" value="1" aria-label="Stroke size">
+                    </label>
+                    <label class="theme-knob">Glow <span class="theme-knob-value" id="knob-glow-val">30%</span>
+                        <input type="range" id="knob-glow" min="0" max="70" step="1" value="30" aria-label="Glow">
+                    </label>
+                    <label class="theme-knob">Font
+                        <select id="knob-font" aria-label="Font"></select>
+                    </label>
+                    <label class="theme-knob">Style
+                        <select id="knob-font-style" aria-label="Font style"></select>
+                    </label>
+                    <label class="theme-knob">Font size <span class="theme-knob-value" id="knob-font-size-val">18px</span>
+                        <input type="range" id="knob-font-size" min="12" max="28" step="1" value="18" aria-label="Font size">
+                    </label>
+                </div>
+                <div class="theme-knob-actions">
+                    <button type="button" class="theme-chrome-btn" id="knob-save">Save look</button>
+                    <button type="button" class="theme-chrome-btn" id="knob-reset">Factory</button>
+                    <button type="button" class="theme-chrome-btn" id="knob-apply">Use on this activity</button>
+                </div>
+                <p class="theme-look-status" id="theme-look-status" aria-live="polite"></p>
+            </div>
+        </section>
+
+        <section class="theme-section">
+            <h2>Reveal Animation</h2>
+            <div class="theme-toggle" role="tablist" aria-label="Reveal animation mode">
+                <button type="button" id="mode-default" class="is-active">Default Pattern</button>
+                <button type="button" id="mode-custom">Custom (Draw Your Own)</button>
+            </div>
+            <div class="theme-knob-grid theme-shape-knobs">
+                <label class="theme-knob">Grid <span class="theme-knob-value" id="reveal-grid-val">6×6</span>
+                    <input type="range" id="reveal-grid-size" min="6" max="20" step="1" value="6" aria-label="Reveal grid size">
+                </label>
+                <label class="theme-knob">Frames <span class="theme-knob-value" id="reveal-frames-val">2</span>
+                    <input type="range" id="reveal-frame-count" min="2" max="12" step="1" value="2" aria-label="Reveal frame count">
+                </label>
+                <label class="theme-knob">Land
+                    <button type="button" class="film-note" id="final-note">C2</button>
+                </label>
+            </div>
+            <p class="theme-hint">Grid is how many squares on a side (6–20). Frames is how many drawings play in the Custom sequence (2–12). Lowering Frames parks the extra drawings; raising it brings them back. A new animation starts at 6×6 with 2 frames. Land is the ping when the prompts appear — same pentatonic as the film, including mute.</p>
+
+            <div class="theme-monitor" id="preview-panel">
+                <canvas id="reveal-preview" width="420" height="315" aria-label="Reveal animation preview"></canvas>
+                <p class="theme-hint" id="preview-hint">Default geometric decoy — fills the leftover card, then shrinks toward the result. No drawing needed.</p>
+            </div>
+
+            <div class="theme-monitor is-hidden" id="custom-panel">
+                <div class="film-strip" id="film-strip" aria-label="Animation frames"></div>
+                <canvas id="draw-grid" width="320" height="320" aria-label="Pixel drawing grid"></canvas>
+                <div class="pixel-palette" id="pixel-palette" role="listbox" aria-label="Pixel color"></div>
+                <div class="theme-toolbar">
+                    <button type="button" class="theme-chrome-btn is-active" id="tool-pen">Pen</button>
+                    <button type="button" class="theme-chrome-btn" id="tool-eraser">Eraser</button>
+                    <button type="button" class="theme-chrome-btn" id="clear-frame">Clear Frame</button>
+                    <button type="button" class="theme-chrome-btn" id="reset-all-frames">Reset All</button>
+                    <button type="button" class="theme-chrome-btn" id="copy-next">Copy to Next</button>
+                    <button type="button" class="theme-chrome-btn" id="copy-prev">Copy Previous</button>
+                    <button type="button" class="theme-chrome-btn" id="play-custom">Play</button>
+                </div>
+                <p class="theme-hint">Each thumbnail’s note is from a pentatonic (C-1 through C3, or mute) — click to cycle. Play hears those notes, same as the prompting window. Frames sit centered above the grid. Drag to reorder. Shift-click a range. Hold Shift while drawing to flip pen and eraser. Clear Frame empties the selected frame(s); Reset All empties every frame, including parked ones.</p>
+            </div>
+
+            <div class="theme-file-row">
+                <button type="button" class="theme-chrome-btn" id="download-anim">Download Animation</button>
+                <button type="button" class="theme-chrome-btn" id="load-anim">Load Animation</button>
+                <button type="button" class="theme-chrome-btn" id="restore-anim-defaults">Restore defaults</button>
+                <input type="file" id="load-anim-file" accept="application/json,.json" class="is-hidden" aria-hidden="true">
+            </div>
+            <p class="theme-hint">Saved in this browser and with the open activity. Restore defaults returns to the factory geometric film (6×6, 2 frames). Download a file to recall it on another machine.</p>
+        </section>
+    </div>
+
+    <script src="reveal-animation.js?v=20260830az"></script>
+    <script src="theme-page.js?v=20260830az"></script>
+</body>
+</html>

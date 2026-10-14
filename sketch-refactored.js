@@ -7,7 +7,9 @@ let previousName = ''; // Store completed name for display
 window.clearPreviousNameForNavigation = function () { previousName = ''; };
 let classList = []; // Array to store student names from class list
 let p5CategoryCheckboxes = []; // Global array to store p5.js checkbox elements
-let isGenerating = false;
+// Shared with prompt-generator.js / animation-manager.js (classic scripts).
+// `let` here used to shadow their writes, so GENERATING… / STOP could stick until refresh.
+window.isGenerating = false;
 let generationStep = 0;
 let audioCtx;
 let shouldStop = false;
@@ -44,6 +46,57 @@ const DEFAULT_COLORS = {
 };
 const DEFAULT_FONT = 'VT323';
 
+function sketchUiFont() {
+    try {
+        const raw = getComputedStyle(document.documentElement).getPropertyValue('--ui-font').trim();
+        if (!raw) return DEFAULT_FONT;
+        const first = raw.split(',')[0].replace(/['"]/g, '').trim();
+        const name = first || DEFAULT_FONT;
+        // Unloaded webfont: p5 draws nothing until refresh. Fall back until fonts.ready.
+        if (document.fonts && name) {
+            const spec = '12px "' + name + '"';
+            if (!document.fonts.check(spec)) return 'monospace';
+        }
+        return name;
+    } catch (e) {
+        return DEFAULT_FONT;
+    }
+}
+
+function sketchCardStroke() {
+    try {
+        const raw = getComputedStyle(document.documentElement).getPropertyValue('--card-stroke-width').trim();
+        const n = parseFloat(raw);
+        return (Number.isFinite(n) && n > 0) ? n : 4;
+    } catch (e) {
+        return 4;
+    }
+}
+
+function sketchTypeScale() {
+    try {
+        const n = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui-font-size'));
+        return (Number.isFinite(n) && n > 0) ? (n / 18) : 1;
+    } catch (e) {
+        return 1;
+    }
+}
+
+function sketchFontStyle() {
+    try {
+        const style = getComputedStyle(document.documentElement).getPropertyValue('--ui-font-style').trim();
+        const weight = getComputedStyle(document.documentElement).getPropertyValue('--ui-font-weight').trim();
+        const italic = style === 'italic';
+        const bold = weight === 'bold' || Number(weight) >= 600;
+        if (italic && bold) return BOLDITALIC;
+        if (italic) return ITALIC;
+        if (bold) return BOLD;
+        return NORMAL;
+    } catch (e) {
+        return NORMAL;
+    }
+}
+
 // D-012: wrap-first sizing for sentence prompts (4+ words). Floor stops the card from shrinking type unreadably.
 const CARD_FIT = {
     MIN_PROMPT_SIZE: 20,
@@ -52,7 +105,8 @@ const CARD_FIT = {
     SENTENCE_PROMPT_SIZE_PHONE: 30,
     WORD_LINE_HEIGHT: 1.14,
     SENTENCE_LINE_HEIGHT: 1.08,
-    // D-015: fitted PNG/JPG slot under the prompt label
+    // D-038: floor while other chrome is measured. Live height is leftover after
+    // name, objective, labels, and text prompts (split across pictures).
     IMAGE_SLOT: 110,
     IMAGE_SLOT_PHONE: 88,
     // D-017: dots flicker per scramble tick (brightness comes from animation, not a sine wave)
@@ -60,7 +114,17 @@ const CARD_FIT = {
     IMAGE_DOT_RADIUS: 5,
     IMAGE_DOT_GAP: 16,
     IMAGE_DOT_DIM: 0.18,
-    IMAGE_DOT_BRIGHT: 1.05
+    IMAGE_DOT_BRIGHT: 1.05,
+    // D-028: square reveal grid inset from the card stroke
+    REVEAL_INSET: 10,
+    // D-028: objective sits under the name field, then prompts cluster below
+    OBJECTIVE_BELOW_NAME: 8,
+    OBJECTIVE_BELOW_NAME_PHONE: 6,
+    OBJECTIVE_PROMPT_GAP: 12,
+    OBJECTIVE_PROMPT_GAP_PHONE: 8,
+    // D-039: mix labels toward paper so they recede from the chosen values.
+    // 0 = same as prompt ink; 1 = paper (invisible). Was a flat 0.8× primary.
+    LABEL_MIX: 0.55
 };
 
 // p5.Image cache for img: tokens (D-015). Values: Image | 'loading' | 'fail'
@@ -120,7 +184,72 @@ function drawImageWaitDots(cx, y, slotH, rgb, flicker) {
     }
 }
 
-/** Draw a prompt picture fitted in the slot; returns the slot height used. */
+/**
+ * D-025 / D-028 / D-032 / D-036 / D-037: square-cell mask, centered in the card.
+ * Full cover: opaque paper + decoy film (results stay hidden).
+ * Once tiles lift: leftover cells are paper (hides the word) with the film still
+ * painted on them; lifted cells skip so the real word/picture shows through.
+ * Gutters stay paper so type does not leak at the edges of the square (D-028).
+ */
+function drawPixelRevealOverlay(bounds, primaryRgb, bgRgb) {
+    const pr = window.pixelReveal;
+    if (!pr || !pr.active || !bounds || bounds.w < 8 || bounds.h < 8) return;
+    const size = pr.size || (window.REVEAL && window.REVEAL.GRID_SIZE) || 6;
+    const decoy = pr.decoy || [];
+    const ranks = pr.ranks || [];
+    const resolveCount = pr.resolveCount || 0;
+    const lifting = resolveCount > 0;
+    const metrics = (typeof revealSquareGridMetrics === 'function')
+        ? revealSquareGridMetrics(bounds.w, bounds.h, size)
+        : { cell: Math.max(1, Math.floor(Math.min(bounds.w, bounds.h) / size)), n: size, ox: 0, oy: 0, grid: 0 };
+    const cell = metrics.cell;
+    const ox = bounds.x + metrics.ox;
+    const oy = bounds.y + metrics.oy;
+    const grid = metrics.grid || cell * size;
+    const paper = (bgRgb && Number.isFinite(bgRgb.r)) ? bgRgb : sketchPageRgb();
+    // p5 push/pop — raw clip+restore was popping the retina transform and leaving
+    // unpainted canvas (browser default white) around the card (D-028)
+    push();
+    noStroke();
+    rectMode(CORNER);
+    fill(paper.r, paper.g, paper.b);
+    if (lifting) {
+        // Cover only the gutters. Holes in the square must show the prompts (D-036).
+        if (oy > bounds.y) rect(bounds.x, bounds.y, bounds.w, oy - bounds.y);
+        const bottom = oy + grid;
+        if (bottom < bounds.y + bounds.h) {
+            rect(bounds.x, bottom, bounds.w, bounds.y + bounds.h - bottom);
+        }
+        if (ox > bounds.x) rect(bounds.x, oy, ox - bounds.x, grid);
+        const right = ox + grid;
+        if (right < bounds.x + bounds.w) rect(right, oy, bounds.x + bounds.w - right, grid);
+    } else {
+        rect(bounds.x, bounds.y, bounds.w, bounds.h);
+    }
+    for (let i = 0; i < size * size; i++) {
+        if (lifting && ranks[i] != null && ranks[i] < resolveCount) continue;
+        const gx = i % size;
+        const gy = Math.floor(i / size);
+        if (lifting) {
+            fill(paper.r, paper.g, paper.b);
+            rect(ox + gx * cell, oy + gy * cell, cell + 0.5, cell + 0.5);
+        }
+        const cellVal = decoy[i];
+        const on = (typeof revealCellOn === 'function') ? revealCellOn(cellVal) : !!cellVal;
+        if (!on) continue;
+        // D-027: hex paints stay that color; 1 / theme ink follows the live preset
+        if (typeof cellVal === 'string' && cellVal.charAt(0) === '#') {
+            const rgb = hexToRgb(cellVal);
+            fill(rgb.r, rgb.g, rgb.b);
+        } else {
+            fill(primaryRgb.r, primaryRgb.g, primaryRgb.b);
+        }
+        rect(ox + gx * cell, oy + gy * cell, cell + 0.5, cell + 0.5);
+    }
+    pop();
+}
+
+/** Draw a prompt picture fitted in the leftover slot (D-038 fallback / wait-dots). */
 function drawFittedPromptImage(token, cx, y, maxW, slotH, rgb) {
     prefetchPromptImage(token);
     const cached = promptImageCache[token];
@@ -142,6 +271,127 @@ function drawFittedPromptImage(token, cx, y, maxW, slotH, rgb) {
     text(cached === 'loading' ? '…' : '[image]', cx, y + slotH / 2);
     textAlign(CENTER, TOP);
     return slotH;
+}
+
+function sketchRevealGridSize() {
+    const pr = window.pixelReveal;
+    if (pr && pr.size) return pr.size;
+    if (typeof loadRevealAnimation === 'function' && typeof revealGridSize === 'function') {
+        return revealGridSize(loadRevealAnimation());
+    }
+    return (window.REVEAL && window.REVEAL.GRID_SIZE) || 6;
+}
+
+/** Same leftover rect the film overlay uses (D-028). */
+function leftoverRevealBounds(cardX, cardY, cardWidth, cardHeight, innerTop, innerBottom) {
+    const inset = CARD_FIT.REVEAL_INSET;
+    const x = cardX + inset;
+    const y = Math.max(cardY + inset, innerTop);
+    const r = cardX + cardWidth - inset;
+    const b = Math.min(cardY + cardHeight - inset, innerBottom);
+    return { x: x, y: y, w: Math.max(0, r - x), h: Math.max(0, b - y) };
+}
+
+function filmSquareFromBounds(bounds, size) {
+    const metrics = (typeof revealSquareGridMetrics === 'function')
+        ? revealSquareGridMetrics(bounds.w, bounds.h, size)
+        : { cell: 1, n: size, ox: 0, oy: 0, grid: Math.min(bounds.w, bounds.h) };
+    return {
+        x: bounds.x + metrics.ox,
+        y: bounds.y + metrics.oy,
+        w: metrics.grid,
+        h: metrics.grid,
+        cell: metrics.cell,
+        n: metrics.n
+    };
+}
+
+/** Cover-crop source rect so the bitmap fills dest (D-053). */
+function coverCropSource(img, destW, destH) {
+    const scale = Math.max(destW / img.width, destH / img.height);
+    const sw = destW / scale;
+    const sh = destH / scale;
+    return {
+        sx: (img.width - sw) / 2,
+        sy: (img.height - sh) / 2,
+        sw: sw,
+        sh: sh
+    };
+}
+
+function splitFilmSquareRow(square, count, index) {
+    const n = Math.max(1, square.n || 1);
+    const cell = square.cell || square.h;
+    const rowsEach = Math.max(1, Math.floor(n / Math.max(1, count)));
+    const startRow = index * rowsEach;
+    const endRow = (index === count - 1) ? n : Math.min(n, (index + 1) * rowsEach);
+    return {
+        x: square.x,
+        y: square.y + startRow * cell,
+        w: square.w,
+        h: Math.max(cell, (endRow - startRow) * cell),
+        cell: cell,
+        n: n,
+        startRow: startRow,
+        endRow: endRow
+    };
+}
+
+/**
+ * D-053: picture lives in the film square — cover-cropped, never wider than the grid.
+ * During tile lift, paint one cell at a time so edges don't pop as a smooth rectangle.
+ */
+function drawPromptImageInFilmSquare(token, square, mosaic, rgb) {
+    prefetchPromptImage(token);
+    const cached = promptImageCache[token];
+    if (!square || square.w < 2 || square.h < 2) return;
+    if (!cached || cached === 'loading' || cached === 'fail' || !cached.width) {
+        const r = (rgb && rgb.r) || 180;
+        const g = (rgb && rgb.g) || 180;
+        const b = (rgb && rgb.b) || 180;
+        fill(r * 0.7, g * 0.7, b * 0.7);
+        textStyle(NORMAL);
+        textAlign(CENTER, CENTER);
+        text(cached === 'loading' ? '…' : '[image]', square.x + square.w / 2, square.y + square.h / 2);
+        textAlign(CENTER, TOP);
+        return;
+    }
+    const src = coverCropSource(cached, square.w, square.h);
+    imageMode(CORNER);
+    if (mosaic && square.cell > 0 && square.n > 0) {
+        const n = square.n;
+        const cell = square.cell;
+        const row0 = (typeof square.startRow === 'number') ? square.startRow : 0;
+        const row1 = (typeof square.endRow === 'number') ? square.endRow : n;
+        const localRows = Math.max(1, row1 - row0);
+        for (let ly = 0; ly < localRows; ly++) {
+            for (let gx = 0; gx < n; gx++) {
+                const sx = src.sx + (gx / n) * src.sw;
+                const sy = src.sy + (ly / localRows) * src.sh;
+                image(
+                    cached,
+                    square.x + gx * cell,
+                    square.y + ly * cell,
+                    cell + 0.5,
+                    cell + 0.5,
+                    sx,
+                    sy,
+                    src.sw / n,
+                    src.sh / localRows
+                );
+            }
+        }
+        return;
+    }
+    const ctx = (typeof drawingContext !== 'undefined') ? drawingContext : null;
+    if (ctx && typeof ctx.save === 'function') {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(square.x, square.y, square.w, square.h);
+        ctx.clip();
+    }
+    image(cached, square.x, square.y, square.w, square.h, src.sx, src.sy, src.sw, src.sh);
+    if (ctx && typeof ctx.restore === 'function') ctx.restore();
 }
 
 function debugLog(...args) {
@@ -764,15 +1014,54 @@ setInterval(() => {
 
 // Helper function to convert hex to RGB
 function hexToRgb(hex) {
-    // Remove # if present
-    hex = hex.replace('#', '');
-    
-    // Parse hex values
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-    
-    return { r, g, b };
+    // Invalid / rgb() values used to become NaN → p5 paints white (the canvas default)
+    if (!hex || typeof hex !== 'string') return { r: 0, g: 0, b: 0 };
+    const trimmed = hex.trim();
+    const rgbMatch = trimmed.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+    if (rgbMatch) {
+        return { r: Number(rgbMatch[1]), g: Number(rgbMatch[2]), b: Number(rgbMatch[3]) };
+    }
+    let h = trimmed.replace('#', '');
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    if (h.length !== 6) return { r: 0, g: 0, b: 0 };
+    const r = parseInt(h.substring(0, 2), 16);
+    const g = parseInt(h.substring(2, 4), 16);
+    const b = parseInt(h.substring(4, 6), 16);
+    if (![r, g, b].every(function (n) { return Number.isFinite(n); })) {
+        return { r: 0, g: 0, b: 0 };
+    }
+    return { r: r, g: g, b: b };
+}
+
+function mixRgb(a, b, t) {
+    const u = Math.max(0, Math.min(1, t));
+    const ar = (a && a.r) || 0, ag = (a && a.g) || 0, ab = (a && a.b) || 0;
+    const br = (b && b.r) || 0, bg = (b && b.g) || 0, bb = (b && b.b) || 0;
+    return {
+        r: ar + (br - ar) * u,
+        g: ag + (bg - ag) * u,
+        b: ab + (bb - ab) * u
+    };
+}
+
+/** D-039: prompt labels sit toward paper so the chosen values stay the loud ink. */
+function labelInkRgb(primaryRgb, paperRgb) {
+    const t = (typeof CARD_FIT.LABEL_MIX === 'number') ? CARD_FIT.LABEL_MIX : 0.55;
+    return mixRgb(primaryRgb, paperRgb, t);
+}
+
+function sketchPageRgb() {
+    try {
+        const raw = getComputedStyle(document.documentElement).getPropertyValue('--background-color').trim();
+        return hexToRgb(raw);
+    } catch (e) {
+        return { r: 0, g: 0, b: 0 };
+    }
+}
+
+function paintSketchPageBackground() {
+    const rgb = sketchPageRgb();
+    background(rgb.r, rgb.g, rgb.b);
 }
 
 // Screenshot function
@@ -917,8 +1206,14 @@ function preload() {
 
 function setup() {
     createCanvas(windowWidth, windowHeight);
-    textFont('VT323');
+    textFont(sketchUiFont());
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(function () {
+            if (typeof textFont === 'function') textFont(sketchUiFont());
+        });
+    }
     textAlign(CENTER, CENTER);
+    paintSketchPageBackground();
     
     // Clean up any corrupted data first
     cleanupCorruptedData();
@@ -1105,9 +1400,11 @@ function draw() {
     const primaryRgb = hexToRgb(primaryColor);
     const frameRgb = hexToRgb(frameBg);
     
-    background(bgRgb.r, bgRgb.g, bgRgb.b);
+    paintSketchPageBackground();
     
-    textFont(DEFAULT_FONT);
+    textFont(sketchUiFont());
+    const cardTextStyle = sketchFontStyle();
+    const typeScale = sketchTypeScale();
 
     // --- LOCKED card; chrome evenly distributed: tools → NEXT → card → results → RUN ---
     const cardLayout = (typeof window !== 'undefined' && window.CARD_LAYOUT) ? window.CARD_LAYOUT : {
@@ -1133,7 +1430,6 @@ function draw() {
     const padX = cardWidth * (cardLayout.PAD_X_RATIO || 0.08);
     const padY = cardHeight * (cardLayout.PAD_Y_RATIO || 0.04);
     const innerWidth = cardWidth - padX * 2;
-    const MAX_PROMPT_WIDTH = innerWidth;
 
     const objectiveText = (categories?.objective || '').trim();
     const prompt1InterestsMode = categories.prompt1InterestsMode || false;
@@ -1161,27 +1457,36 @@ function draw() {
         return typeof isSentencePrompt === 'function' && isSentencePrompt(t);
     });
     const lineHeightRatio = sentenceHeavy ? CARD_FIT.SENTENCE_LINE_HEIGHT : CARD_FIT.WORD_LINE_HEIGHT;
-    const minPromptSize = chrome.phone ? CARD_FIT.MIN_PROMPT_SIZE_PHONE : CARD_FIT.MIN_PROMPT_SIZE;
+    const minPromptSize = (chrome.phone ? CARD_FIT.MIN_PROMPT_SIZE_PHONE : CARD_FIT.MIN_PROMPT_SIZE) * typeScale;
     let promptSize = chrome.phone ? Math.min(width * 0.068, 48) : Math.min(width * 0.048, 42);
     if (sentenceHeavy) {
         promptSize = Math.min(promptSize, chrome.phone ? CARD_FIT.SENTENCE_PROMPT_SIZE_PHONE : CARD_FIT.SENTENCE_PROMPT_SIZE);
     }
+    promptSize *= typeScale;
     let labelSize = promptSize / PROMPT_TO_LABEL_RATIO;
     let objectiveSize = labelSize;
-    let nameSize = Math.max(18, Math.min(chrome.phone ? 32 : 30, promptSize * 0.75));
-    let nameRowHeight = Math.max(32, nameSize * 1.25);
+    let nameSize = Math.max(18 * typeScale, Math.min((chrome.phone ? 32 : 30) * typeScale, promptSize * 0.75));
+    let nameRowHeight = Math.max(32 * typeScale, nameSize * 1.25);
     let promptLineH = promptSize * lineHeightRatio;
     let labelLineH = labelSize * 1.08;
     let objectiveLineH = objectiveSize * 1.1;
     let labelGap = labelSize * 0.1;
     let promptBlockGap = labelSize * 0.35;
-    // Extra air between objective and first prompt so prompts sit lower in the card
-    let objectiveToPromptGap = chrome.phone ? Math.max(28, padY * 2.2) : Math.max(44, padY * 2.8);
+    const belowNameGap = chrome.phone ? CARD_FIT.OBJECTIVE_BELOW_NAME_PHONE : CARD_FIT.OBJECTIVE_BELOW_NAME;
+    let objectiveToPromptGap = chrome.phone
+        ? CARD_FIT.OBJECTIVE_PROMPT_GAP_PHONE
+        : CARD_FIT.OBJECTIVE_PROMPT_GAP;
     const innerLeft = cardX + padX;
     const centerX = cardX + cardWidth / 2;
     let innerTop = cardY + padY + nameRowHeight;
     let innerBottom = cardY + cardHeight - padY;
     let availableHeight = innerBottom - innerTop;
+    function clusterWrapWidth() {
+        return Math.max(80, Math.min(innerWidth, availableHeight) - CARD_FIT.REVEAL_INSET * 2);
+    }
+    let MAX_PROMPT_WIDTH = clusterWrapWidth();
+    // D-038: start at the floor; leftover cluster height is added after type is locked
+    let imageSlotH = promptImageSlotHeight(chrome.phone);
 
     function wrapTextToWidth(str, maxW) {
         const s = (str || '').toString();
@@ -1241,55 +1546,97 @@ function draw() {
         return displayLines.slice(0, lineCount);
     }
 
-    function measureContentHeight() {
+    function measureObjectiveHeight(wrapW) {
+        if (!objectiveText) return 0;
+        textSize(objectiveSize);
+        textStyle(cardTextStyle);
+        return wrapTextToWidth(objectiveText.toUpperCase(), wrapW).length * objectiveLineH;
+    }
+
+    function measurePromptClusterHeight() {
         let total = 0;
-        if (objectiveText) {
-            textSize(objectiveSize);
-            textStyle(NORMAL);
-            total += wrapTextToWidth(objectiveText.toUpperCase(), MAX_PROMPT_WIDTH).length * objectiveLineH + objectiveToPromptGap;
-        }
         for (let i = 0; i < headersToDraw.length; i++) {
             if (!(typeof isUnlabeledPromptHeader === 'function' && isUnlabeledPromptHeader(headersToDraw[i]))) {
                 total += labelLineH + labelGap;
             }
             textSize(promptSize);
-            textStyle(BOLD);
+            textStyle(cardTextStyle);
             const entry = promptValueTexts[i] || { display: '', layout: '' };
             if (isPromptImageEntry(entry)) {
-                total += promptImageSlotHeight(chrome.phone);
+                // D-053: pictures sit in the film square, not the cluster stack
+                if (entry.imageWait) total += imageSlotH;
             } else {
                 const lines = wrapTextToWidth(entry.layout || entry.display || '', MAX_PROMPT_WIDTH);
                 total += Math.max(1, lines.length) * promptLineH;
             }
             if (i < headersToDraw.length - 1) total += promptBlockGap;
         }
-        textStyle(NORMAL);
         return total;
+    }
+
+    function layoutBelowName() {
+        const nameBottom = cardY + padY + nameRowHeight;
+        const objH = measureObjectiveHeight(innerWidth);
+        const objBlock = objH ? (belowNameGap + objH + objectiveToPromptGap) : 0;
+        innerTop = nameBottom + objBlock;
+        innerBottom = cardY + cardHeight - padY;
+        availableHeight = innerBottom - innerTop;
+        MAX_PROMPT_WIDTH = clusterWrapWidth();
     }
 
     // Scale type down so up to 4 prompts stay inside the locked card (no spill).
     // D-012: never shrink below minPromptSize — extra length wraps instead of going tiny.
-    let contentH = measureContentHeight();
-    if (contentH > availableHeight && availableHeight > 40 && contentH > 0) {
-        const s = availableHeight / contentH;
+    layoutBelowName();
+    let contentH = measurePromptClusterHeight();
+    const nameBottom = cardY + padY + nameRowHeight;
+    const packed = (innerTop - nameBottom) + contentH;
+    const belowName = innerBottom - nameBottom;
+    if (packed > belowName && belowName > 40 && packed > 0) {
+        const s = belowName / packed;
         const nextPrompt = Math.max(minPromptSize, promptSize * s);
         const promptScale = nextPrompt / promptSize;
         promptSize = nextPrompt;
         labelSize *= promptScale;
         objectiveSize *= promptScale;
-        nameSize = Math.max(16, nameSize * promptScale);
-        nameRowHeight = Math.max(28, nameSize * 1.25);
+        nameSize = Math.max(16 * typeScale, nameSize * promptScale);
+        nameRowHeight = Math.max(28 * typeScale, nameSize * 1.25);
         promptLineH = promptSize * lineHeightRatio;
         labelLineH = labelSize * 1.08;
         objectiveLineH = objectiveSize * 1.1;
         labelGap = labelSize * 0.1;
         promptBlockGap = labelSize * 0.35;
         objectiveToPromptGap = Math.max(8, objectiveToPromptGap * promptScale);
-        innerTop = cardY + padY + nameRowHeight;
-        innerBottom = cardY + cardHeight - padY;
-        availableHeight = innerBottom - innerTop;
-        contentH = measureContentHeight();
+        layoutBelowName();
+        contentH = measurePromptClusterHeight();
     }
+
+    // D-038 leftover-slot grow is unused while pictures live in the film square (D-053).
+    const imageCount = promptValueTexts.filter(isPromptImageEntry).length;
+    const fallbackImageWait = promptValueTexts.some(function (e) { return e && e.imageWait; });
+    if (fallbackImageWait && imageCount > 0) {
+        layoutBelowName();
+        imageSlotH = promptImageSlotHeight(chrome.phone);
+        const used = measurePromptClusterHeight();
+        const slack = availableHeight - used;
+        if (slack > 1) {
+            imageSlotH += Math.floor(slack / imageCount);
+        }
+        contentH = measurePromptClusterHeight();
+        if (contentH > availableHeight) {
+            const over = contentH - availableHeight;
+            imageSlotH = Math.max(
+                promptImageSlotHeight(chrome.phone),
+                imageSlotH - Math.ceil(over / imageCount)
+            );
+        }
+    }
+
+    // D-028: prompts cluster in the remaining space below the objective
+    contentH = measurePromptClusterHeight();
+    // Pictures occupy the film square (D-053); pin labels to the top so they sit in the gutter
+    const clusterTop = (imageCount > 0 && !fallbackImageWait)
+        ? innerTop
+        : innerTop + Math.max(0, (availableHeight - contentH) / 2);
 
     window.sketchCardBounds = {
         x: cardX,
@@ -1316,7 +1663,7 @@ function draw() {
     rect(cardX, cardY, cardWidth, cardHeight, cornerRadius);
 
     stroke(primaryRgb.r, primaryRgb.g, primaryRgb.b);
-    strokeWeight(4);
+    strokeWeight(sketchCardStroke());
     noFill();
     rect(cardX, cardY, cardWidth, cardHeight, cornerRadius);
     noStroke();
@@ -1328,43 +1675,51 @@ function draw() {
         const nb = Number.isFinite(primaryRgb.b) ? primaryRgb.b : textRgb.b;
         fill(nr, ng, nb);
         textSize(nameSize);
-        textStyle(BOLD);
+        textStyle(cardTextStyle);
         textAlign(CENTER, CENTER);
         text(displayName, centerX, cardY + padY + nameRowHeight / 2);
-        textStyle(NORMAL);
         textAlign(LEFT, TOP);
     }
 
-    // Start under name; objective sits near top, gap below pushes prompts down
-    let contentY = innerTop + Math.max(10, padY * 0.9);
-
-    // Objective title: static size, centered
+    // D-028: objective sits under the name field, full inner width
     if (objectiveText) {
         fill(primaryRgb.r * .8, primaryRgb.g * .8, primaryRgb.b * .8);
         textSize(objectiveSize);
-        textStyle(NORMAL);
+        textStyle(cardTextStyle);
         textAlign(CENTER, TOP);
-        const objLines = wrapTextToWidth(objectiveText.toUpperCase(), MAX_PROMPT_WIDTH);
+        const objLines = wrapTextToWidth(objectiveText.toUpperCase(), innerWidth);
+        const objY = cardY + padY + nameRowHeight + belowNameGap;
         for (let li = 0; li < objLines.length; li++) {
-            text(objLines[li], centerX, contentY + li * objectiveLineH);
+            text(objLines[li], centerX, objY + li * objectiveLineH);
         }
-        contentY += objLines.length * objectiveLineH + objectiveToPromptGap;
     }
 
+    // Prompts start centered in the remaining space below the objective
+    let contentY = clusterTop;
+
     // Light feedback: show GENERATING… in the card until the first prompt text appears
-    const hasPromptDisplay = promptValueTexts.some(p => (p.display || '').length > 0 || p.imageWait);
+    const hasPromptDisplay = promptValueTexts.some(p => {
+        if ((p.display || '').length > 0 || p.imageWait) return true;
+        const layout = (p && p.layout) || '';
+        return typeof isImagePromptToken === 'function' && isImagePromptToken(layout);
+    });
     if ((isGenerating || isAnimating) && !hasPromptDisplay) {
         const pulse = 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(millis() / 280));
         fill(primaryRgb.r * pulse, primaryRgb.g * pulse, primaryRgb.b * pulse);
-        textSize(Math.max(18, promptSize * 0.85));
-        textStyle(NORMAL);
+        textSize(Math.max(18 * typeScale, promptSize * 0.85));
+        textStyle(cardTextStyle);
         textAlign(CENTER, CENTER);
         text('GENERATING…', centerX, cardY + cardHeight * 0.55);
         textAlign(LEFT, TOP);
         return;
     }
 
-    // Prompts: fixed type; wrap at MAX_PROMPT_WIDTH (card does not resize)
+    // Prompts: wrap to the centered cluster width so type stays inside the card (D-028)
+    const leftoverBounds = leftoverRevealBounds(cardX, cardY, cardWidth, cardHeight, innerTop, innerBottom);
+    const filmSquare = filmSquareFromBounds(leftoverBounds, sketchRevealGridSize());
+    const prActive = window.pixelReveal && window.pixelReveal.active;
+    const prLanding = !!(prActive && window.pixelReveal.landing);
+    const imageTokens = [];
     if (headersToDraw.length > 0) {
         const promptBrightness = 2;
         headersToDraw.forEach((header, i) => {
@@ -1374,9 +1729,10 @@ function draw() {
             // D-018: skip the heading row when the teacher left the prompt label blank
             const showLabel = !(typeof isUnlabeledPromptHeader === 'function' && isUnlabeledPromptHeader(header));
             if (showLabel) {
-                fill(primaryRgb.r * .8, primaryRgb.g * .8, primaryRgb.b * .8);
+                const labelInk = labelInkRgb(primaryRgb, bgRgb);
+                fill(labelInk.r, labelInk.g, labelInk.b);
                 textSize(labelSize);
-                textStyle(NORMAL);
+                textStyle(cardTextStyle);
                 textAlign(CENTER, TOP);
                 text((header || '').toUpperCase(), centerX, contentY);
                 contentY += labelLineH + labelGap;
@@ -1387,23 +1743,16 @@ function draw() {
                 min(primaryRgb.b * promptBrightness, 255)
             );
             textSize(promptSize);
-            textStyle(BOLD);
+            textStyle(cardTextStyle);
             textAlign(CENTER, TOP);
             // D-015/D-016: pictures skip scramble; dots while waiting, then the image
             if (typeof isImagePromptToken === 'function' && isImagePromptToken(layoutText || displayText)) {
-                const slotH = promptImageSlotHeight(chrome.phone);
                 if (entry.imageWait) {
+                    const slotH = imageSlotH;
                     drawImageWaitDots(centerX, contentY, slotH, primaryRgb, entry.dotFlicker);
                     contentY += slotH;
                 } else {
-                    contentY += drawFittedPromptImage(
-                        layoutText || displayText,
-                        centerX,
-                        contentY,
-                        MAX_PROMPT_WIDTH,
-                        slotH,
-                        primaryRgb
-                    );
+                    imageTokens.push(layoutText || displayText);
                 }
             } else {
                 // Line breaks follow final prompt, not scramble width (prevents bounce)
@@ -1415,7 +1764,27 @@ function draw() {
             }
             if (i < headersToDraw.length - 1) contentY += promptBlockGap;
         });
-        textStyle(NORMAL);
+    }
+
+    // D-053: pictures in the film square. Skip while the film fully covers (no edge flash).
+    // Mosaic while tiles lift so the photo matches the glitch grid; sharp crop after land.
+    if (imageTokens.length && !(prActive && !prLanding)) {
+        const mosaic = prLanding;
+        imageTokens.forEach(function (token, i) {
+            const dest = imageTokens.length === 1
+                ? filmSquare
+                : splitFilmSquareRow(filmSquare, imageTokens.length, i);
+            drawPromptImageInFilmSquare(token, dest, mosaic, primaryRgb);
+        });
+    }
+
+    let pixelOverlayBounds = null;
+    if (prActive) {
+        pixelOverlayBounds = leftoverBounds;
+    }
+
+    if (pixelOverlayBounds) {
+        drawPixelRevealOverlay(pixelOverlayBounds, primaryRgb, bgRgb);
     }
 }
 
@@ -1456,7 +1825,7 @@ function keyPressed() {
         prevStudent();
         // Play beep sound
         if (audioCtx && window.playSound) {
-            window.playSound({FREQUENCY: 300, DURATION: 80});
+            window.playSound((window.SOUND && window.SOUND.NAV_LEFT) || { FREQUENCY: 300, DURATION: 80 });
         }
         return;
     }
@@ -1467,7 +1836,7 @@ function keyPressed() {
         nextStudent();
         // Play beep sound
         if (audioCtx && window.playSound) {
-            window.playSound({FREQUENCY: 500, DURATION: 80});
+            window.playSound((window.SOUND && window.SOUND.NAV_RIGHT) || { FREQUENCY: 500, DURATION: 80 });
         }
         return;
     }
@@ -1486,7 +1855,9 @@ function keyPressed() {
             window.advanceToNextResultAndClearPrompts('');
         }
         if (resultNameEl) resultNameEl.focus();
-        if (audioCtx && window.playSound) window.playSound({FREQUENCY: 400, DURATION: 100});
+        if (audioCtx && window.playSound) {
+            window.playSound((window.SOUND && window.SOUND.NAV_DOWN) || { FREQUENCY: 400, DURATION: 100 });
+        }
         return;
     }
     
@@ -1512,6 +1883,12 @@ function keyPressed() {
 
 // Same action as UP arrow / Enter — used by phone RUN button
 function triggerPromptRun() {
+    // D-047: second press must stop even if name/missing checks would run first.
+    if (window.pixelReveal && window.pixelReveal.active
+        && typeof window.skipRevealToResult === 'function') {
+        window.skipRevealToResult();
+        return;
+    }
     const resultNameEl = window.getResultNameFieldElement ? window.getResultNameFieldElement() : null;
     let inputValue = (window.getResultNameFieldValue && window.getResultNameFieldValue()) || '';
     if (!inputValue) inputValue = getAutoRunName();

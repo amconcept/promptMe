@@ -6,6 +6,28 @@ let currentLoadedActivity = null;
 let isLoadingActivity = false; // Flag to prevent clearing activity during loading
 let lastRunActivity = null; // Remember the last activity that was run
 
+/** D-055: Activity History carries the live film so loading an activity recalls it. */
+function attachCurrentRevealToActivity(currentData) {
+    if (!currentData) return;
+    try {
+        const raw = localStorage.getItem('revealAnimation');
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') currentData.revealAnimation = parsed;
+    } catch (e) { /* ignore */ }
+}
+
+function applyActivityReveal(settings) {
+    if (typeof restoreActivityReveal === 'function') {
+        restoreActivityReveal(settings);
+        return;
+    }
+    if (!settings || !settings.revealAnimation || typeof settings.revealAnimation !== 'object') return;
+    try {
+        localStorage.setItem('revealAnimation', JSON.stringify(settings.revealAnimation));
+    } catch (e) { /* ignore */ }
+}
+
 // Function to clear current activity tracking (when starting fresh)
 function clearCurrentActivity() {
     currentLoadedActivity = null;
@@ -367,6 +389,7 @@ function saveCurrentActivity() {
         })(),
         background: localStorage.getItem('selectedBackground') || 'black'
     };
+    attachCurrentRevealToActivity(currentData);
     
     // Collect prompt headers
     const headerInputs = document.querySelectorAll('.header-input');
@@ -387,8 +410,11 @@ function saveCurrentActivity() {
         for (let colIndex = 0; colIndex < promptCount; colIndex++) {
             const textareaIndex = rowIndex * promptCount + colIndex;
             const textarea = textareas[textareaIndex];
-            if (textarea && textarea.value.trim()) {
-                categoryData.push(textarea.value.trim().split('\n').filter(line => line.trim()));
+            if (textarea) {
+                const lines = (typeof getPromptLinesFromTextarea === 'function')
+                    ? getPromptLinesFromTextarea(textarea)
+                    : (textarea.value.trim() ? textarea.value.trim().split('\n').filter(line => line.trim()) : []);
+                categoryData.push(lines);
             } else {
                 categoryData.push([]);
             }
@@ -455,6 +481,7 @@ function saveActivityWithName(settingsName) {
         })(),
         background: localStorage.getItem('selectedBackground') || 'black'
     };
+    attachCurrentRevealToActivity(currentData);
     
     // Collect prompt headers
     const headerInputs = document.querySelectorAll('.header-input');
@@ -475,8 +502,11 @@ function saveActivityWithName(settingsName) {
         for (let colIndex = 0; colIndex < promptCount; colIndex++) {
             const textareaIndex = rowIndex * promptCount + colIndex;
             const textarea = textareas[textareaIndex];
-            if (textarea && textarea.value.trim()) {
-                categoryData.push(textarea.value.trim().split('\n').filter(line => line.trim()));
+            if (textarea) {
+                const lines = (typeof getPromptLinesFromTextarea === 'function')
+                    ? getPromptLinesFromTextarea(textarea)
+                    : (textarea.value.trim() ? textarea.value.trim().split('\n').filter(line => line.trim()) : []);
+                categoryData.push(lines);
             } else {
                 categoryData.push([]);
             }
@@ -757,86 +787,28 @@ async function loadSettingsByName(settingsName) {
     if (settingsName === 'Sample') {
         console.log('Loading Sample - reloading from CSV to ensure latest data');
         try {
-            const response = await fetch('Sample-activity-2025-10-27.csv?v=20260830l');
+            const response = await fetch('Sample-activity-2025-10-27.csv?v=20260830az');
             const csvText = await response.text();
-            
-            // Parse CSV and populate UI directly (same as importSettings)
-            const lines = csvText.split('\n');
-            
-            // Parse CSV data
-            let activityName = '';
-            let objective = '';
-            let theme = 'pinkCRT';
-            let background = 'black';
-            let prompt1InterestsMode = false;
-            let criterionLabels = [];
-            let promptHeaders = [];
-            let categories = {};
-            
-            // Extract metadata
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (line.startsWith('Activity Name: ')) {
-                    activityName = line.replace('Activity Name: ', '');
-                } else if (line.startsWith('Objective: ')) {
-                    objective = line.replace('Objective: ', '');
-                } else if (line.startsWith('Theme: ')) {
-                    let parsedTheme = line.replace('Theme: ', '');
-                    // Migrate old theme names immediately when parsing CSV
-                    const themeMigration = {
-                        'orange': 'orangeCRT',
-                        'green': 'greenCRT',
-                        'blue': 'blueCRT',
-                        'purple': 'purpleCRT',
-                        'pink': 'pinkCRT',
-                        'white': 'macintosh'
-                    };
-                    if (themeMigration[parsedTheme]) {
-                        parsedTheme = themeMigration[parsedTheme];
-                    }
-                    theme = parsedTheme;
-                } else if (line.startsWith('Background: ')) {
-                    background = line.replace('Background: ', '');
-                } else if (line.startsWith('Prompt 1 Interests Mode: ')) {
-                    prompt1InterestsMode = line.replace('Prompt 1 Interests Mode: ', '') === 'Yes';
-                } else if (line.startsWith('Criterion Labels: ')) {
-                    const labelsText = line.replace('Criterion Labels: ', '');
-                    criterionLabels = labelsText.split(',').map(label => label.trim()).filter(l => l);
-                } else if (line.includes(',') && !line.startsWith('PromptMe') && !line.startsWith('Exported') && 
-                          !line.startsWith('Activity Name') && !line.startsWith('Objective') && 
-                          !line.startsWith('Theme') && !line.startsWith('Background') && 
-                          !line.startsWith('Prompt 1') && !line.startsWith('Criterion')) {
-                    if (line.startsWith('Category,')) {
-                        const headers = line.split(',').slice(1);
-                        promptHeaders = headers.map(h => h.trim());
-                    } else if (line.includes(',')) {
-                        const parts = line.split(',');
-                        const category = parts[0].trim();
-                        const items = parts.slice(1).map(item => item.trim().replace(/"/g, ''));
-                        
-                        if (category) {
-                            if (!categories[category]) {
-                                categories[category] = items.map(() => []);
-                            }
-                            items.forEach((item, index) => {
-                                if (item) {
-                                    categories[category][index].push(item);
-                                }
-                            });
-                        }
-                    }
-                }
-            }
-            
-            // Create settings object in the format expected by loadSettingsByName
+            const parsed = (typeof parseActivityCsv === 'function')
+                ? parseActivityCsv(csvText)
+                : { objective: '', prompt1InterestsMode: false, criterionLabels: [], promptHeaders: [], categories: {}, theme: 'pinkCRT', background: 'black' };
+            const themeMigration = {
+                'orange': 'orangeCRT',
+                'green': 'greenCRT',
+                'blue': 'blueCRT',
+                'purple': 'purpleCRT',
+                'pink': 'pinkCRT',
+                'white': 'macintosh'
+            };
+            const sampleTheme = themeMigration[parsed.theme] || parsed.theme || 'pinkCRT';
             const sampleSettings = {
-                objective: objective,
-                prompt1InterestsMode: prompt1InterestsMode,
-                criterionLabels: criterionLabels,
-                promptHeaders: promptHeaders,
-                categories: categories,
-                theme: theme,
-                background: background,
+                objective: parsed.objective,
+                prompt1InterestsMode: parsed.prompt1InterestsMode,
+                criterionLabels: parsed.criterionLabels,
+                promptHeaders: parsed.promptHeaders,
+                categories: parsed.categories,
+                theme: sampleTheme,
+                background: parsed.background || 'black',
                 name: 'Sample',
                 timestamp: new Date().toISOString()
             };
@@ -941,63 +913,14 @@ async function loadSettingsByName(settingsName) {
         // Show activity status indicator
         updateActivityStatusIndicator();
         
-        // Apply theme and background (matching CSV import behavior)
-        // IMPORTANT: Don't override user's saved theme preference when loading activities
-        // Only apply activity theme if user hasn't manually selected a theme preference
-        const userSavedTheme = localStorage.getItem('selectedTheme');
-        
-        console.log('DEBUG: Loading activity theme:', settings.theme);
-        console.log('DEBUG: User saved theme:', userSavedTheme);
-        
-        // Only apply activity theme if there's no user preference saved
-        // This ensures the user's last selected theme is always respected
-        if (settings.theme && !userSavedTheme) {
-            // Ensure theme is migrated before applying (changeTheme will also migrate, but do it here too for safety)
-            if (window.migrateOldThemes) {
-                window.migrateOldThemes();
-            }
-            // Apply the activity's theme only if user has no saved preference
-            if (window.changeTheme) {
-                changeTheme(settings.theme, true); // true = skipSave
-            }
-            const themeSelect = document.getElementById('theme-select');
-            if (themeSelect) {
-                themeSelect.value = settings.theme;
-            }
-        } else if (userSavedTheme) {
-            // User has a saved theme preference - keep it and ensure dropdown shows the saved theme
-            // Don't apply activity theme (preserve user's choice)
-            console.log('User has saved theme preference:', userSavedTheme, '- not applying activity theme:', settings.theme);
-            // Ensure the saved theme is still applied (in case activity loading tried to override it)
-            if (window.changeTheme) {
-                changeTheme(userSavedTheme);
-            }
-            const themeSelect = document.getElementById('theme-select');
-            if (themeSelect) {
-                // Show user's saved theme in dropdown, not the activity theme
-                themeSelect.value = userSavedTheme;
-            }
-            const mobileThemeSelect = document.getElementById('mobile-theme-select');
-            if (mobileThemeSelect) {
-                mobileThemeSelect.value = userSavedTheme;
-            }
+        // D-033: an activity that was stamped from Customize recalls that look.
+        if (typeof restoreActivityTheme === 'function') {
+            restoreActivityTheme(settings);
+        } else if (settings.theme && window.changeTheme) {
+            changeTheme(settings.theme);
         }
-        // Don't override background if user has a saved theme preference
-        // The theme already sets the correct background colors
-        if (settings.background && !userSavedTheme) {
-            // Only apply activity background if user has no saved theme preference
-            localStorage.setItem('selectedBackground', settings.background);
-            if (window.changeBackground) {
-                changeBackground(settings.background);
-            }
-            const bgSelect = document.getElementById('bg-select');
-            if (bgSelect) {
-                bgSelect.value = settings.background;
-            }
-        } else if (userSavedTheme) {
-            // User has saved theme - don't override background, theme already set it correctly
-            console.log('User has saved theme preference - not applying activity background');
-        }
+        // D-055: recall that activity's film if one was saved with it.
+        applyActivityReveal(settings);
         
         // Load objective
         document.getElementById('objective-input').value = settings.objective || '';
@@ -1240,7 +1163,7 @@ function sharePromptSet() {
         window.playClickSound();
     }
     
-    // Export current content as CSV for sharing
+    // Share: quoted CSV, or zip with media/ when the activity has pictures (D-057)
     exportSettings();
 }
 
@@ -1250,7 +1173,7 @@ function loadPromptSet() {
         window.playClickSound();
     }
     
-    // Load a CSV file
+    // Load a quoted CSV or a zip pack with pictures (D-057)
     importSettings();
 }
 
@@ -1301,6 +1224,71 @@ function showThemedAlert(message) {
     overlay.appendChild(box);
     overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
     box.onclick = (e) => e.stopPropagation();
+    document.body.appendChild(overlay);
+}
+
+// Two-button themed confirm. onResult(true) = confirm, onResult(false) = cancel.
+function showThemedConfirm(message, buttons, onResult) {
+    const existing = document.getElementById('themed-confirm-popup');
+    if (existing) existing.remove();
+    const labels = buttons || {};
+    const overlay = document.createElement('div');
+    overlay.id = 'themed-confirm-popup';
+    overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background-color: rgba(0, 0, 0, 0.6);
+        display: flex; justify-content: center; align-items: center;
+        z-index: 10000; font-family: 'VT323', monospace;
+    `;
+    const box = document.createElement('div');
+    box.style.cssText = `
+        background-color: var(--background-color);
+        color: var(--primary-color);
+        border: 3px solid var(--primary-color);
+        border-radius: 4px;
+        padding: 30px 40px;
+        font-size: 22px;
+        font-weight: bold;
+        text-align: center;
+        letter-spacing: 1px;
+        box-shadow: 0 0 20px var(--primary-shadow);
+        max-width: 28em;
+    `;
+    const msg = document.createElement('div');
+    msg.textContent = message;
+    msg.style.cssText = 'line-height: 1.35;';
+    const btnWrap = document.createElement('div');
+    btnWrap.style.cssText = 'margin-top: 20px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;';
+    const btnStyle = `
+        padding: 10px 24px;
+        background-color: var(--background-color);
+        color: var(--primary-color);
+        border: 2px solid var(--primary-color);
+        border-radius: 4px;
+        font-family: 'VT323', monospace;
+        font-size: 20px;
+        cursor: pointer;
+    `;
+    function finish(ok) {
+        if (window.playClickSound) window.playClickSound();
+        overlay.remove();
+        if (typeof onResult === 'function') onResult(ok);
+    }
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = labels.confirm || 'OK';
+    confirmBtn.style.cssText = btnStyle;
+    confirmBtn.onclick = function () { finish(true); };
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = labels.cancel || 'CANCEL';
+    cancelBtn.style.cssText = btnStyle;
+    cancelBtn.onclick = function () { finish(false); };
+    btnWrap.appendChild(confirmBtn);
+    btnWrap.appendChild(cancelBtn);
+    box.appendChild(msg);
+    box.appendChild(btnWrap);
+    overlay.appendChild(box);
+    overlay.onclick = function (e) { if (e.target === overlay) finish(false); };
+    box.onclick = function (e) { e.stopPropagation(); };
     document.body.appendChild(overlay);
 }
 
@@ -1449,4 +1437,5 @@ window.loadSettingsByName = loadSettingsByName;
 window.showCustomPrompt = showCustomPrompt;
 window.saveActivityWithName = saveActivityWithName;
 window.showThemedAlert = showThemedAlert;
+window.showThemedConfirm = showThemedConfirm;
 window.showMissingObjectiveWithSkip = showMissingObjectiveWithSkip;

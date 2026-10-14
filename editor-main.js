@@ -14,7 +14,7 @@ function openSketchFromEditor() {
     } else {
         sessionStorage.setItem('promptMeEditorLayout', 'grid');
     }
-    window.location.href = 'sketch.html?from=editor&v=20260830l';
+    window.location.href = 'sketch.html?from=editor&v=20260830az';
 }
 
 // Quick test function - navigate to sketch. Blocks if prompts missing; offers Skip if only objective missing (D-011).
@@ -97,7 +97,7 @@ async function ensureSampleInHistory() {
         
         // Load the CSV and add to history
         try {
-            const response = await fetch('Sample-activity-2025-10-27.csv?v=20260830l');
+            const response = await fetch('Sample-activity-2025-10-27.csv?v=20260830az');
             const csvText = await response.text();
             const sampleActivity = parseCSVToActivity(csvText);
             
@@ -165,7 +165,7 @@ async function loadDefaultActivity() {
     // Try to load from CSV file
     let defaultActivity;
     try {
-        const response = await fetch('Sample-activity-2025-10-27.csv?v=20260830l');
+        const response = await fetch('Sample-activity-2025-10-27.csv?v=20260830az');
         const csvText = await response.text();
         defaultActivity = parseCSVToActivity(csvText);
         console.log('Loaded Sample activity from CSV file');
@@ -273,81 +273,27 @@ async function loadDefaultActivity() {
 
 // Parse CSV text to activity object
 function parseCSVToActivity(csvText) {
-    const lines = csvText.split('\n');
-    
-    // Parse CSV data
-    let activityName = '';
-    let objective = '';
-    let theme = 'pink';
-    let background = 'black';
-    let prompt1InterestsMode = false;
-    let criterionLabels = [];
-    let categories = {};
-    let promptHeaders = [];
-    
-    // Extract metadata
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (line.startsWith('Activity Name: ')) {
-            activityName = line.replace('Activity Name: ', '');
-        } else if (line.startsWith('Objective: ')) {
-            objective = line.replace('Objective: ', '');
-        } else if (line.startsWith('Theme: ')) {
-            theme = line.replace('Theme: ', '');
-        } else if (line.startsWith('Background: ')) {
-            background = line.replace('Background: ', '');
-        } else if (line.startsWith('Prompt 1 Interests Mode: ')) {
-            prompt1InterestsMode = line.replace('Prompt 1 Interests Mode: ', '') === 'Yes';
-        } else if (line.startsWith('Criterion Labels: ')) {
-            const labelsText = line.replace('Criterion Labels: ', '');
-            criterionLabels = labelsText.split(',').map(label => label.trim()).filter(l => l);
-        } else if (line.includes(',') && !line.startsWith('PromptMe') && !line.startsWith('Exported')) {
-            // This is the header row or data row
-            if (line.startsWith('Category,')) {
-                // Header row - extract prompt headers
-                const headers = line.split(',').slice(1);
-                promptHeaders = headers.map(h => h.trim());
-            } else if (line.includes(',')) {
-                // Data row
-                const parts = line.split(',');
-                const category = parts[0].trim();
-                const items = parts.slice(1).map(item => item.trim().replace(/"/g, ''));
-                
-                if (category) {
-                    if (!categories[category]) {
-                        // Initialize as array of arrays - one for each prompt column
-                        categories[category] = items.map(() => []);
-                    }
-                    
-                    // Add items to each prompt column
-                    items.forEach((item, index) => {
-                        if (item) {
-                            categories[category][index].push(item);
-                        }
-                    });
-                }
-            }
-        }
-    }
-    
-    // Build categories structure for the app format
+    const parsed = (typeof parseActivityCsv === 'function')
+        ? parseActivityCsv(csvText)
+        : { activityName: '', objective: '', theme: 'pink', background: 'black', prompt1InterestsMode: false, criterionLabels: [], promptHeaders: [], categories: {} };
+    const promptHeaders = parsed.promptHeaders || [];
+    const categories = parsed.categories || {};
     const appCategories = {};
-    promptHeaders.forEach(header => {
+    promptHeaders.forEach(function (header) {
         appCategories[header] = {};
-        Object.keys(categories).forEach(category => {
+        Object.keys(categories).forEach(function (category) {
             const itemIndex = promptHeaders.indexOf(header);
-            appCategories[header][category] = categories[category][itemIndex] || [];
+            appCategories[header][category] = (categories[category] && categories[category][itemIndex]) || [];
         });
     });
-    
     return {
-        objective,
-        prompt1InterestsMode,
-        criterionLabels,
+        objective: parsed.objective,
+        prompt1InterestsMode: parsed.prompt1InterestsMode,
+        criterionLabels: parsed.criterionLabels,
         categories: appCategories,
-        activityName,
-        theme,
-        background
+        activityName: parsed.activityName,
+        theme: parsed.theme,
+        background: parsed.background
     };
 }
 
@@ -689,7 +635,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (hasData) {
                 console.log('P pressed in editor - going to sketch to test');
                 saveChanges();
-                window.location.href = 'sketch.html?v=20260830l';
+                window.location.href = 'sketch.html?v=20260830az';
             } else {
                 console.log('P pressed in editor - no data, going to index');
                 window.location.href = 'index.html';

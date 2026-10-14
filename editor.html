@@ -21,12 +21,20 @@
             --primary-shadow-light: rgba(0, 255, 0, 0.1);
             --accent-color: #66FF66;
             --background-color: #001100;
+            --on-primary-color: var(--background-color);
             --text-color: #00FF00;
             --border-color: #003300;
             --delete-color: var(--primary-color); /* D5: follows theme primary, not a warning red */
             --frame-color: #00FF00;
             --frame-border: #00FF00;
             --frame-background: #001100;
+            --ui-font: 'VT323', monospace;
+            --ui-font-size: 18px;
+            --ui-font-style: normal;
+            --ui-font-weight: 400;
+            --stroke-width: 1px;
+            --panel-stroke-width: 2px;
+            --card-stroke-width: 4px;
             
             /* ⚙️ SINGLE SOURCE OF TRUTH FOR COLUMN WIDTH - EDIT THIS ONE LINE */
             --column-width: 200px;
@@ -35,7 +43,7 @@
 
         /* Terminal-style base styles */
         body {
-            font-family: 'VT323', monospace;
+            font-family: var(--ui-font, 'VT323', monospace);
             background-color: var(--background-color);
             color: var(--text-color);
             margin: 0;
@@ -113,7 +121,8 @@
         
         .start-prompting {
             background-color: var(--primary-color);
-            color: var(--background-color);
+            color: var(--on-primary-color, var(--background-color));
+            -webkit-text-fill-color: var(--on-primary-color, var(--background-color));
             border: 1px solid var(--primary-color);
             border-radius: 4px;
             font-size: 26px;
@@ -134,6 +143,7 @@
         .start-prompting:hover {
             background-color: var(--background-color);
             color: var(--primary-color);
+            -webkit-text-fill-color: var(--primary-color);
         }
 
         .settings-checkbox {
@@ -275,6 +285,26 @@
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
+        }
+
+        .settings-help-button {
+            width: 100%;
+            padding: 8px;
+            height: 36px;
+            box-sizing: border-box;
+            margin: 10px 0;
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            font-weight: bold;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .settings-help-button:hover {
@@ -681,8 +711,8 @@
             background-color: var(--primary-color);
             border: 2px solid var(--primary-color);
             border-radius: 50%;
-            color: #000 !important;
-            -webkit-text-fill-color: #000;
+            color: var(--on-primary-color, var(--background-color)) !important;
+            -webkit-text-fill-color: var(--on-primary-color, var(--background-color));
             font-family: 'VT323', monospace;
             font-size: 20px;
             font-weight: bold;
@@ -1943,7 +1973,8 @@
             border-radius: 50%;
             border: 2px solid var(--primary-color);
             background: var(--primary-color);
-            color: #000000;
+            color: var(--on-primary-color, var(--background-color));
+            -webkit-text-fill-color: var(--on-primary-color, var(--background-color));
             font-family: 'VT323', monospace;
             font-size: 18px;
             font-weight: bold;
@@ -1959,6 +1990,7 @@
         .cube-run:hover {
             background: var(--background-color);
             color: var(--primary-color);
+            -webkit-text-fill-color: var(--primary-color);
         }
 
         .cube-delete-link {
@@ -1977,7 +2009,7 @@
             bottom: 8px;
         }
     </style>
-    <script src="theme-manager.js"></script>
+    <script src="theme-manager.js?v=20260830az"></script>
     <script>
         if (typeof applyThemeFromStorage === 'function') applyThemeFromStorage();
     </script>
@@ -2119,38 +2151,11 @@
     <div id="settings-panel" class="settings-panel">
         <!-- Activity Status Indicator removed -->
         
-        <!-- Theme menu: custom themed dropdown (closed label "Theme", no "Theme:" label) -->
-        <div class="theme-picker theme-menu-picker themed-dropdown" id="theme-menu-dropdown">
-            <button type="button" class="themed-dropdown-trigger" id="theme-menu-trigger" aria-label="Theme" aria-haspopup="listbox" aria-expanded="false">Theme</button>
-            <ul class="themed-dropdown-menu" id="theme-menu-list" role="listbox" aria-label="Theme options">
-                <li role="option" data-value="windows" tabindex="-1">Windows</li>
-                <li role="option" data-value="macintosh" tabindex="-1">Macintosh</li>
-                <li role="option" data-value="greenCRT" tabindex="-1">Green CRT</li>
-                <li role="option" data-value="orangeCRT" tabindex="-1">Orange CRT</li>
-                <li role="option" data-value="blueCRT" tabindex="-1">Blue CRT</li>
-                <li role="option" data-value="purpleCRT" tabindex="-1">Purple CRT</li>
-                <li role="option" data-value="pinkCRT" tabindex="-1">Pink CRT</li>
-                <li role="option" data-value="black" tabindex="-1">Black</li>
-            </ul>
-            <select id="theme-select" class="themed-dropdown-native-sync" aria-hidden="true" tabindex="-1">
-                <option value="windows">Windows</option>
-                <option value="macintosh">Macintosh</option>
-                <option value="greenCRT">Green CRT</option>
-                <option value="orangeCRT">Orange CRT</option>
-                <option value="blueCRT">Blue CRT</option>
-                <option value="purpleCRT">Purple CRT</option>
-                <option value="pinkCRT">Pink CRT</option>
-                <option value="black">Black</option>
-            </select>
-        </div>
-        
-        <!-- Divider line -->
-        <div class="settings-divider"></div>
-
-        <!-- File menu: custom themed dropdown (native select popup cannot match CRT theme) -->
+        <!-- D-056: FILE first (everyday). Customize sits under Help as advanced.
+             Hidden native <select> stays — editor-settings-manager / editor-data-manager read theme-select.value (D-024). -->
         <div class="theme-picker file-menu-picker themed-dropdown" id="file-menu-dropdown">
-            <button type="button" class="themed-dropdown-trigger" id="file-menu-trigger" aria-label="File" aria-haspopup="listbox" aria-expanded="false">File</button>
-            <ul class="themed-dropdown-menu" id="file-menu-list" role="listbox" aria-label="File actions">
+            <button type="button" class="themed-dropdown-trigger" id="file-menu-trigger" aria-label="FILE" aria-haspopup="listbox" aria-expanded="false">FILE</button>
+            <ul class="themed-dropdown-menu" id="file-menu-list" role="listbox" aria-label="FILE actions">
                 <li role="option" data-value="new" tabindex="-1">New</li>
                 <li role="option" data-value="save" id="file-menu-save" class="disabled" aria-disabled="true" tabindex="-1">Save</li>
                 <li role="option" data-value="save-as" id="file-menu-save-as" tabindex="-1">Save As</li>
@@ -2164,26 +2169,18 @@
         <div class="settings-divider"></div>
         
         <!-- Help Button -->
-        <button class="settings-help-button" onclick="showInstructionsPopup()" style="
-            width: 100%;
-            padding: 8px;
-            height: 36px;
-            box-sizing: border-box;
-            margin: 10px 0;
-            background-color: var(--background-color);
-            color: var(--primary-color);
-            border: 1px solid var(--primary-color);
-            border-radius: 4px;
-            cursor: pointer;
-            font-family: 'VT323', monospace;
-            font-size: 18px;
-            font-weight: bold;
-            text-transform: uppercase;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        ">Help & Instructions</button>
+        <button type="button" class="settings-help-button" onclick="showInstructionsPopup()">Help & Instructions</button>
+        <button type="button" class="settings-help-button" id="customize-page-link" onclick="window.location.href='theme.html'">Customize</button>
+        <select id="theme-select" class="themed-dropdown-native-sync" aria-hidden="true" tabindex="-1">
+            <option value="windows">Windows</option>
+            <option value="macintosh">Macintosh</option>
+            <option value="greenCRT">Green CRT</option>
+            <option value="orangeCRT">Orange CRT</option>
+            <option value="blueCRT">Blue CRT</option>
+            <option value="purpleCRT">Purple CRT</option>
+            <option value="pinkCRT">Pink CRT</option>
+            <option value="black">Black</option>
+        </select>
         
         <!-- Divider line -->
         <div class="settings-divider"></div>
@@ -2201,12 +2198,13 @@
         </div>
     </div>
 
-    <script src="image-store.js?v=20260830l"></script>
-    <script src="editor-image-prompts.js?v=20260830l"></script>
-    <script src="editor-ui-manager.js?v=20260830l"></script>
-    <script src="editor-prompt-cube.js?v=20260830l"></script>
-    <script src="editor-data-manager.js?v=20260830l"></script>
-    <script src="editor-settings-manager.js?v=20260830l"></script>
-    <script src="editor-main.js?v=20260830l"></script>
+    <script src="image-store.js?v=20260830az"></script>
+    <script src="activity-pack.js?v=20260830az"></script>
+    <script src="editor-image-prompts.js?v=20260830az"></script>
+    <script src="editor-ui-manager.js?v=20260830az"></script>
+    <script src="editor-prompt-cube.js?v=20260830az"></script>
+    <script src="editor-data-manager.js?v=20260830az"></script>
+    <script src="editor-settings-manager.js?v=20260830az"></script>
+    <script src="editor-main.js?v=20260830az"></script>
 </body>
 </html>

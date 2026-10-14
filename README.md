@@ -51,10 +51,10 @@ The exact rules are specified in `RANDOMIZER_LOGIC_SPEC.md` (rules R1–R7, inva
 Enter student names as you go, or paste a comma-separated list. The app tracks who has received prompts, lets you navigate between them, take screenshots, and download a report at any time.
 
 ### 🎨 **Visual Appeal**
-The prompting interface features a retro terminal aesthetic with smooth animations that make the experience engaging and fun. Students watch as their prompts reveal themselves in an exciting, game-like way. Eight themes are available in the editor (see "Themes").
+The prompting interface features a retro terminal aesthetic with smooth animations that make the experience engaging and fun. Students watch as their prompts reveal themselves in an exciting, game-like way. Eight themes and a customizable reveal animation live on the Customize page (see "Themes").
 
 ### 💾 **Save and Share**
-Create activity templates and save them for future use. Share your prompt sets with other teachers via CSV files. Everything is stored locally in your browser, so your data stays private.
+Create activity templates and save them for future use. Share your prompt sets with other teachers as a CSV, or as a zip folder when the activity includes pictures. Everything is stored locally in your browser, so your data stays private.
 
 ---
 
@@ -83,15 +83,15 @@ If you have groupings of options that need to be combined in different ways, Ran
 
 ## How Does It Work?
 
-Rando Calrissian has two main parts:
+Rando Calrissian has three main parts:
 
 ### 1. **The Editor** (`editor.html` — where you set up prompts)
 
 - **Add Prompts**: Create up to **4** prompt columns (`MAX_PROMPTS`), each with an optional heading students see, such as USES, WITH, or AND. Leave the heading blank and it will not appear on the card.
 - **Add Groupings**: Create up to **6** grouping rows (`MAX_CATEGORIES`), labelled A, B, C… automatically
-- **Fill in Options**: Add one option per line in each cell. You can also drop or paste a PNG or JPG onto the list (under 2MB). Pictures chatter like a scramble, then appear on the card.
+- **Fill in Options**: Add one option per line in each cell. You can also drop or paste a PNG or JPG onto the list (under 2MB). Pictures use the same pixel-fill reveal as words and sentences.
 - **Set an Objective** (optional): Write what students should create or accomplish. You can Skip and still run if you have prompts.
-- **Save Your Activity**: Use the File menu to name and save it
+- **Save Your Activity**: Use the FILE menu to name and save it
 
 **Think of it like a grid**: rows are groupings, columns are prompts, and each cell holds one option per line.
 
@@ -100,19 +100,23 @@ On a **phone or narrow window**, the grid is replaced by a **cube layout** that 
 ### 2. **The Prompting Window** (`sketch.html` — where students get prompts)
 
 - **Enter a name** (optional — see "Unnamed runs")
-- **Press RUN**, or the Up Arrow / Enter key, to generate a combination
-- **Watch the animation** as prompts scramble and resolve. Short lists (1–3 words) reveal letter by letter; longer sentences (4+ words) finish in about a second and wrap to fit the card. The scramble borrows another option’s length so you can’t read the answer from how long the spinning text is. A picture option uses the same beep clock with flickering dots, then appears.
+- **Press RUN**, or the Up Arrow / Enter key, to generate a combination. First press plays a short start tone in the same family as the left / right / down arrows, then the film notes.
+- **Watch the animation** as the leftover card plays the frames from Customize (or the default pattern) at the same speed as **Play** on that page, with one musical note per frame (you pick each frame’s note on Customize). Press **STOP** and square tiles the same color as the background lift off. Through those holes the words scramble (spinning letters) and lock into place with the tiles; a picture is cropped to that same square of tiles and comes through in chunks, then stays that size. You cannot tell the type while the film is covering. If Custom is on but the frames are empty (never drawn, or **Reset All**), RUN skips that overlay and scrambles the letters instead — it does not fill in the default pattern. The pixels stay square and sit in the middle of the card even if the window is wide; empty cells are the page background. The objective sits under the name field; the chosen prompt (or the stack of prompts) sits in the center of the remaining card.
 - **Navigate** between students with the ← → arrows
 - **GO TO NEXT** confirms the current result and opens a fresh slot
 
 **The Result**: each student gets one option from each prompt, all drawn from the same grouping — for example "a paperclip + a laser cutter".
+
+### 3. **Customize** (`theme.html` — themes and reveal animation)
+
+Opened from **Customize** in the editor `...` menu (under Help & Instructions — advanced). Pick one of 8 leftover-card thumbnails (the page re-skins immediately). Tune ink, paper, stroke, glow, font family, size, and style. **Save look** stamps that mix onto the selected thumbnail; **Factory** recalls the original recipe; **Use on [activity]** stamps it onto the open activity. Choose the default geometric reveal, or draw your own (grid 6×6–20×20, 2–12 frames; a new animation starts at 6×6 with 2 frames). An empty custom drawing does not play the default pattern — the prompting window scrambles text instead. The film saves with the open activity. **Restore defaults** returns to the factory geometric film. Download the animation as a JSON file to recall it on another machine.
 
 ---
 
 ## Quick Start Guide
 
 **Try the Sample Activity First!**
-- A sample activity called "Sample" is available in the File menu and is restored automatically if deleted
+- A sample activity called "Sample" is available in the FILE menu and is restored automatically if deleted
 - It is loaded from `Sample-activity-2025-10-27.csv`, which is the source of truth for it
 - Run it to see how the system works
 
@@ -130,11 +134,11 @@ On a **phone or narrow window**, the grid is replaced by a **cube layout** that 
    - Fill in options, one per line
 
 4. **Set an Objective** (optional)
-   - Type what students should create or accomplish — it appears at the top of the prompting screen
+   - Type what students should create or accomplish — it appears under the name field on the leftover card
    - If you skip it, you can still run as long as you have prompts. The editor will ask once; choose **Skip** to proceed
 
 5. **Save Your Activity**
-   - Open the **File** menu (`...` in the top right)
+   - Open the **FILE** menu (`...` in the top right)
    - Choose **Save** or **Save As** and give it a name
 
 6. **Start Prompting**
@@ -156,29 +160,29 @@ On a **phone or narrow window**, the grid is replaced by a **cube layout** that 
 
 | Control | What it does |
 |---------|--------------|
-| **RUN** button (circular) | Generate prompts. Becomes **RE-RUN** (dimmed) once a result is showing |
+| **RUN** button (circular) | Generate prompts and **start** the film. While it loops the button reads **STOP** — press again to glitch-land on the prompts (transition sound, then land note). The film does not end on its own. Becomes **RE-RUN** (dimmed) once a result is showing |
 | **GO TO NEXT** button | Confirm the current result and open a fresh slot |
-| **↑ (Up Arrow)** or **Enter** | Generate prompts (same as RUN) |
+| **↑ (Up Arrow)** or **Enter** | Generate prompts (same as RUN). Second press while the film is up skips to the result |
 | **↓ (Down Arrow)** | Confirm and advance to the next slot |
 | **← → (Left/Right Arrows)** | Navigate between students / browse history |
-| **Space** | Interrupt a scramble in progress and reset it. Does **not** generate |
+| **Space** | Interrupt a scramble in progress and **clear** it (no result). Does **not** generate |
 | **screenshot** | Save a PNG of the current result |
 | **report** | Download the report for the current activity |
 | **clear** | Clear the report for the current activity |
 | **edit** | Return to the editor |
 
 Pressing Up / Enter again on a finished result **re-rolls** that student: their previous
-options go back into the pool and a new combination is drawn (rule R5). Presses are
-ignored while the scramble animation is still running.
+options go back into the pool and a new combination is drawn (rule R5). While the film
+is still looping, a second RUN / Up / Enter **stops** it: a short transition sound, paper tiles lift, the words scramble into place through the holes, then the land note. The film does not time out.
 
 ### In the Editor
 
 | Control | What it does |
 |---------|--------------|
 | **P** | Go to the prompting window if the activity has data; if it doesn’t, go to `index.html`. Ignored while typing in a field |
-| **File** menu (`...`) | New, Save, Save As, Share, Load, Restore Last Run |
-| **Theme** menu | Choose one of 8 themes |
+| **FILE** menu (`...`) | New, Save, Save As, Share, Load, Restore Last Run |
 | **Help & Instructions** | Open the in-app guide |
+| **Customize** (`...`) | Advanced; under Help. Opens the theme + reveal-animation page (`theme.html`) |
 
 ### The phone cube
 
@@ -203,13 +207,13 @@ Student names are **optional**. If no name is entered, runs are labelled automat
 Type a name, or paste several separated by commas ("Alec, Marc, Miles") to build a list you can navigate with ← →. A counter under the field shows your position in the list.
 
 ### **Per-activity reports**
-Results are stored **per activity**, not in one shared pile. Switching activities saves the session you're leaving and restores the one you're entering, so two activities never mix their results. **Restore Last Run** in the File menu reopens the most recent session. Reports persist across trips to the editor and are only cleared by **clear**.
+Results are stored **per activity**, not in one shared pile. Switching activities saves the session you're leaving and restores the one you're entering, so two activities never mix their results. **Restore Last Run** in the FILE menu reopens the most recent session. Reports persist across trips to the editor and are only cleared by **clear**.
 
 ### **Activity History**
-Save multiple activity templates and switch between them. Each activity remembers its prompts, groupings, grouping labels, objective, theme, and background.
+Save multiple activity templates and switch between them. Each activity remembers its prompts, groupings, grouping labels, objective, theme, background, and reveal animation.
 
 ### **Export and Share**
-Save activities as CSV to share with other teachers, and import CSVs created by others. The CSV carries a metadata header (activity name, theme, background, objective, grouping labels) plus all prompt and grouping content. PNG/JPG files are **not** in the CSV (they stay in this browser); reports list pictures as `[image]`.
+Share from FILE to give another teacher the activity. Sentences with commas stay intact (the CSV quotes those cells). If the activity has pictures, you get a warning — **Saving this means saving images** — then a zip folder with `activity.csv` and a `media` folder. No pictures → a plain CSV. Load accepts either. Reports list pictures as `[image]`. The reveal animation is still a separate JSON download (D-055).
 
 ### **Reports and Screenshots**
 - Take screenshots of individual student results
@@ -217,7 +221,11 @@ Save activities as CSV to share with other teachers, and import CSVs created by 
 - Reports include the objective and activity settings for context
 
 ### **Themes**
-Eight themes ship with the app: Windows, Macintosh, Green CRT, Orange CRT, Blue CRT, Purple CRT, Pink CRT, and Black. The choice is saved per activity and carried through CSV export/import. Theming is live, maintained infrastructure — see decision **D8** in `DESIGN_DECISIONS.md`, which treats it as the foundation for letting teachers restyle the app as their own room.
+Eight themes ship with the app: Windows, Macintosh, Green CRT, Orange CRT, Blue CRT, Purple CRT, Pink CRT, and Black. Open **Customize** from the editor `...` menu under Help & Instructions (`theme.html`) — not a dropdown on that panel. The choice is saved per activity and carried through CSV export/import.
+
+Each preset can be tuned on that page: ink, paper, stroke color, stroke size, glow, font family, font size, and font style. Ink, paper, and stroke are four short palettes (Pastel, Primary, Neon, Shades) that span the Tune panel — named web colors, not the full system picker (**D-030**, **D-033**). The eight cards are leftover-card thumbnails: **Save look** stamps the mix on the selected card, **Factory** recalls that card’s original recipe, **Use on [activity]** stamps the look onto the open activity so opening it later recalls it (**D-033**). Tweaks stay with that preset in this browser (**D-026**).
+
+On the same page you can keep the default geometric reveal, or draw a custom animation. Two sliders set **grid size** (6–20 squares on a side) and **frames** (2–12 drawings). A new animation starts at 6×6 with 2 frames; an animation already saved in this browser keeps the size you last used. Lowering **Frames** parks the extra drawings; raising it brings them back (**D-041**). **Reset All** is what actually throws those parked drawings away. The frames sit in a centered row above the drawing grid; drag a thumbnail to reorder. Under each thumbnail is a note name — C-1 through C3 (pentatonic C D E G A at each octave), or **mute**. Click it to cycle. Those pitches always sound complementary; the number after the letter is how many octaves above this app’s C, and **-1** is one octave below (**D-042**, **D-049**). Shift-click selects a range of frames; hold Shift while drawing to flip pen and eraser. **Clear Frame** empties the selected frame(s); **Reset All** empties the whole sequence. The leftover-card window at the top of that section previews both modes (silently). **Play** on a custom animation hears those notes — the same ones the prompting window uses (**D-040**). **Land** (next to Grid / Frames) is the ping when the prompts appear, from the same scale (**D-046**). **Copy to Next** duplicates the outlined drawing onto the next slot (not the tone). The pixel palette starts on **Theme ink** so strokes follow the current look; other swatches stay that color. The animation is saved in this browser and **with the open activity**, and can be downloaded as a JSON file. **Restore defaults** returns to the factory geometric film (6×6, 2 frames). Empty Custom does not play that factory film — RUN scrambles letters instead (**D-058**). Drawn Custom and Default Pattern still play as saved (**D-025**, **D-027**, **D-031**, **D-032**, **D-055**).
 
 ### **Welcome popup**
 First-time visitors to `index.html` get a one-time welcome explaining the idea, the difference between prompts and groupings, and a link into Help & Instructions. It is shown once and remembered in local storage (`randoCalrissianWelcomeSeen`).
@@ -273,20 +281,18 @@ Save activities with descriptive names so you can reuse or share them later.
 
 **Stack**: HTML5/CSS3, vanilla JavaScript, and p5.js for the prompting window. **No build step** — open the HTML files directly, or serve the folder (`python3 -m http.server 8000`).
 
-**Storage**: `localStorage` is the source of truth for activity text and `img:` tokens.
+**Storage**: `localStorage` is the source of truth for activity text, `img:` tokens, `selectedTheme`, per-preset `themeCustomizations`, and the reveal animation (`revealAnimation`, plus a copy on the open activity — D-055).
 The actual PNG/JPG files live in IndexedDB (`promptMeImages`, object store `blobs`).
 Editor and prompting window sync through a `promptDataUpdated` custom event and the
 `storage` event across tabs.
 
 ### Cache busting
 
-Fourteen local module `<script>` tags carry `?v=20260830l` (seven on `editor.html`,
-seven on `sketch.html`). After editing any of those modules, bump that value on **all
-fourteen together**. Mismatched values load a mix of old and new files.
+Twenty-three local module `<script>` tags carry `?v=20260830az` (nine on `editor.html`,
+ten on `sketch.html`, three on `theme.html`, one on `index.html`). After editing any of those modules, bump that value on **all
+twenty-three together**. Mismatched values load a mix of old and new files.
 
-`theme-manager.js` is loaded on `editor.html`, `sketch.html`, and `index.html` with
-**no** `?v=`. `index.html` has no other local modules. `sketch.html` also loads p5.js
-from a CDN (untagged). The Sample activity CSV fetch uses the same `?v=20260830l`
+`sketch.html` also loads p5.js from a CDN (untagged). The Sample activity CSV fetch uses the same `?v=20260830az`
 value as the tagged modules.
 
 ### Companion documents
@@ -294,7 +300,7 @@ value as the tagged modules.
 | Document | Purpose |
 |----------|---------|
 | `RANDOMIZER_LOGIC_SPEC.md` | Required randomizer behavior (R1–R7, I1–I6, scenarios S1–S10) |
-| `DESIGN_DECISIONS.md` | Why visual/UX choices are the way they are (D1–D23: D6 and D7 retired; D16 superseded by D17), plus future directions |
+| `DESIGN_DECISIONS.md` | Why visual/UX choices are the way they are (D1–D58: D6 and D7 retired; D16 superseded by D17; D29 superseded by D32; D34 superseded by D36; D43 superseded by D49), plus future directions |
 | `CHANGELOG.txt` | Development history |
 | `docs/TROUBLESHOOT_LOCALHOST.md` | Local server troubleshooting |
 

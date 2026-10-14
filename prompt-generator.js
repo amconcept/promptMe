@@ -196,12 +196,75 @@ function pickLeaderOptionAndCategory(leaderType, candidateCategories) {
     return { value: pick, category: category };
 }
 
+// User-facing: grouping, not category. Shown when a run cannot lock a row (empty list).
+const RUN_EMPTY_GROUPING_MSG = 'Every grouping needs at least one option in each prompt. Fill the empty list.';
+
+function listPromptTypesForRun() {
+    let promptTypes = Object.keys(categories || {}).filter(function (cat) {
+        return cat !== 'objective' && cat !== 'prompt1InterestsMode';
+    });
+    if (categories && categories.prompt1InterestsMode && promptTypes.length > 0) {
+        promptTypes = promptTypes.slice(1);
+    }
+    return promptTypes;
+}
+
+/** Groupings that have at least one option in every prompt column — otherwise the run cannot lock. */
+function listSharedGroupings(promptTypes) {
+    const types = (promptTypes || []).filter(function (pt) {
+        return pt !== 'objective' && pt !== 'prompt1InterestsMode';
+    });
+    if (!types.length) return [];
+    return Object.keys(categories[types[0]] || {}).filter(function (cat) {
+        return types.every(function (promptType) {
+            const arr = categories[promptType] && categories[promptType][cat];
+            // Blank / whitespace-only options do not count — that is still an empty field.
+            return Array.isArray(arr) && arr.some(function (v) {
+                return v != null && String(v).trim() !== '';
+            });
+        });
+    });
+}
+
+function abortGeneration(message) {
+    // Always write the window flags too — `let` in another file can shadow a bare assign,
+    // which is what left GENERATING… on screen after an empty-field run.
+    window.isGenerating = false;
+    window.isAnimating = false;
+    isGenerating = false;
+    isAnimating = false;
+    isGenerationComplete = true;
+    if (message && typeof showThemedMessage === 'function') {
+        showThemedMessage(message);
+    } else if (message && typeof window.showThemedMessage === 'function') {
+        window.showThemedMessage(message);
+    }
+}
+
 // Start prompt generation
 function startGeneration() {
     debugLog('4. startGeneration called');
 
-    // Hat-safe: ignore Up/Enter while a scramble is still running.
-    // Re-roll is allowed only after the current result finishes (puts that slip back, draws from remaining).
+    // First RUN starts the looping film. STOP starts the tile-land, then the result (D-045, D-047, D-048).
+    if (typeof window.skipRevealToResult === 'function' && window.pixelReveal && window.pixelReveal.active) {
+        window.skipRevealToResult();
+        return;
+    }
+
+    // Failed empty-field runs used to leave isGenerating true with nothing on the card
+    // (GENERATING… forever, next RUN ignored). Clear that stuck busy flag.
+    if (isGenerating && !isAnimating && !(window.pixelReveal && window.pixelReveal.active)) {
+        const prompts = window.currentPrompts || {};
+        const hasDisplay = Object.keys(prompts).some(function (k) {
+            const p = prompts[k];
+            if (p == null || p === '') return false;
+            if (typeof p === 'object') return !!(p.revealed || p.rotating || p.final);
+            return true;
+        });
+        if (!hasDisplay) isGenerating = false;
+    }
+
+    // Hat-safe: ignore Up/Enter while a scramble is still running (letter-scramble fallback).
     if (isGenerating || isAnimating) {
         debugLog('Ignoring generate — scramble still in progress (no mid-roll interrupt)');
         if (window.audioCtx && window.playSound) {
@@ -216,14 +279,27 @@ function startGeneration() {
 // Internal generation function
 function startGenerationInternal() {
     debugLog('4. startGenerationInternal called');
+
+    const promptTypes = listPromptTypesForRun();
+    if (!promptTypes.length) {
+        abortGeneration('Waiting for user to input prompts.');
+        return;
+    }
+    let shared = listSharedGroupings(promptTypes);
+    const selectedInterests = (typeof getSelectedInterests === 'function') ? getSelectedInterests() : 'all';
+    if (selectedInterests !== 'all' && Array.isArray(selectedInterests) && selectedInterests.length > 0) {
+        shared = shared.filter(function (cat) { return selectedInterests.indexOf(cat) !== -1; });
+    }
+    if (!shared.length) {
+        abortGeneration(RUN_EMPTY_GROUPING_MSG);
+        return;
+    }
     
-    // Play initial beep to indicate generation has started
-    // Use same pattern as error handlers - check for audioCtx and playSound
-    if (window.audioCtx && window.playSound) {
-        window.playSound({FREQUENCY: 600, DURATION: 50});
+    // D-051: 600 Hz start chime — same family as left 300 / down 400 / right 500.
+    if (window.playSound && window.SOUND && window.SOUND.START) {
+        window.playSound(window.SOUND.START);
     } else if (window.playSound) {
-        // Fallback - try to play even if audioCtx check fails
-        window.playSound({FREQUENCY: 600, DURATION: 50});
+        window.playSound({ FREQUENCY: 600, DURATION: 80 });
     }
     
     // Get current student name
@@ -262,6 +338,7 @@ function startGenerationInternal() {
     currentStudentForPrompts = currentStudent;
     
     isGenerating = true;
+    window.isGenerating = true;
     shouldStop = false;
     generationStep = 0;  // Double-check generation step is 0
     // Clear prompts - use window.currentPrompts as source of truth
@@ -293,17 +370,8 @@ function startGenerationInternal() {
         window.usedPrompts = usedPrompts;
     }
     
-    // Use prompt types in order (1, 2, 3, 4) - no shuffling
-    let promptTypes = Object.keys(categories).filter(cat => cat !== 'objective' && cat !== 'prompt1InterestsMode');
-    
-    // Skip the first prompt if prompt1InterestsMode is enabled
-    const prompt1InterestsMode = categories.prompt1InterestsMode || false;
-    if (prompt1InterestsMode && promptTypes.length > 0) {
-        promptTypes = promptTypes.slice(1); // Remove the first prompt
-        debugLog('Skipping first prompt due to prompt1InterestsMode');
-    }
-    
-    shuffledPromptTypes = [...promptTypes]; // Keep original order
+    // Same list as the empty-field check above (prompt1InterestsMode already applied).
+    shuffledPromptTypes = promptTypes.slice();
     debugLog('Prompt types for this generation (in order):', shuffledPromptTypes);
     debugLog('Current settings - constraintEnabled:', constraintEnabled, 'completion based on student list processing');
     debugLog('usedPrompts initialized:', usedPrompts);
@@ -326,6 +394,7 @@ function generateNextAttribute() {
     
     if (!shuffledPromptTypes.length) {
         console.error('No valid prompt types found');
+        abortGeneration('Waiting for user to input prompts.');
         return;
     }
     
@@ -354,7 +423,10 @@ function generateNextAttribute() {
             availableCategories = availableCategories.filter(cat => {
                 return allPromptTypes.every(promptType => {
                     const promptData = categories[promptType];
-                    return promptData && promptData[cat] && Array.isArray(promptData[cat]) && promptData[cat].length > 0;
+                    const arr = promptData && promptData[cat];
+                    return Array.isArray(arr) && arr.some(function (v) {
+                        return v != null && String(v).trim() !== '';
+                    });
                 });
             });
             
@@ -391,7 +463,7 @@ function generateNextAttribute() {
         
         if (availableCategories.length === 0) {
             console.error('No categories found that exist in all prompt types and match selected interests');
-            isGenerationComplete = true;
+            abortGeneration(RUN_EMPTY_GROUPING_MSG);
             return;
         }
         
@@ -416,7 +488,7 @@ function generateNextAttribute() {
             const pick = pickLeaderOptionAndCategory(leaderType, candidateCategories);
             if (pick.value == null || pick.category == null) {
                 console.error('Leader draw failed — empty combined pool or missing category for', leaderType);
-                isGenerationComplete = true;
+                abortGeneration(RUN_EMPTY_GROUPING_MSG);
                 return;
             }
             selectedCategory = pick.category;
@@ -434,7 +506,7 @@ function generateNextAttribute() {
     
     if (!currentPromptType || !categories[currentPromptType]) {
         console.error('Invalid prompt type:', currentPromptType);
-            isGenerationComplete = true;
+            abortGeneration(RUN_EMPTY_GROUPING_MSG);
             return;
         }
         
@@ -455,8 +527,7 @@ function generateNextAttribute() {
         console.error('This should not happen - selectedCategory should exist in all prompt types');
         console.error('This means the category filtering logic failed to ensure category exists in all types');
         
-        // This is a critical error - the category selection logic failed
-        isGenerationComplete = true;
+        abortGeneration(RUN_EMPTY_GROUPING_MSG);
         return;
     }
     
@@ -477,15 +548,9 @@ function generateNextAttribute() {
         console.error('Available categories for this prompt type:', Object.keys(categories[currentPromptType] || {}));
         console.error('Selected category:', selectedCategory);
         console.error('Prompt data:', categories[currentPromptType]);
-        
-        if (generationStep + 1 < maxPrompts) {
-            generationStep++;
-            generateNextAttribute();
-        } else {
-            isGenerationComplete = true;
-        }
-            return;
-        }
+        abortGeneration(RUN_EMPTY_GROUPING_MSG);
+        return;
+    }
         
     let selectedPrompt;
     const shouldConstrain = true;
@@ -654,6 +719,7 @@ function commitPendingPrompts() {
 
 // Export functions to window
 window.startGeneration = startGeneration;
+window.abortGeneration = abortGeneration;
 window.resetGeneratorState = resetGeneratorState;
 window.generateNextAttribute = generateNextAttribute;
 window.resetPrompts = resetPrompts;

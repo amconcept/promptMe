@@ -4,6 +4,20 @@
 // When true: no sidebar control panel — wireframe chrome around the card
 const SKETCH_HIDE_CONTROL_PANEL = true;
 
+// D-054: Native <button> can ignore CSS `color` and paint ButtonText (ink).
+// Set -webkit-text-fill-color to the same token as color — paper on ink fill
+// (D-050), ink on paper chips. Do not use currentColor; WebKit may resolve
+// that to ink and hide Macintosh GO TO NEXT / RUN.
+function styleChromeLabel(btn, onInkFill) {
+    const el = btn && (btn.elt || btn);
+    if (!el || !el.style) return;
+    const token = onInkFill
+        ? 'var(--on-primary-color, var(--background-color))'
+        : 'var(--primary-color)';
+    el.style.color = token;
+    el.style.webkitTextFillColor = token;
+}
+
 // UI State Variables
 let controlPanel;
 let controlPanelVisible = true;
@@ -157,6 +171,8 @@ function positionControlPanel() {
             btn.style('height', chrome.toolH + 'px');
             btn.style('font-size', chrome.phone ? '13px' : '14px');
             btn.style('margin-bottom', '0');
+            styleChromeLabel(btn, false);
+            btn.style('z-index', '5000');
             btn.position(x, topY);
             x += btnW + gap;
         });
@@ -293,6 +309,7 @@ function positionNameInputAndButtons() {
         btn.style('align-items', 'center');
         btn.style('justify-content', 'center');
         btn.style('line-height', '1');
+        styleChromeLabel(btn, false);
     };
 
     if (prevStudentButton) {
@@ -332,24 +349,30 @@ function positionNameInputAndButtons() {
         const nextTop = (bounds && typeof bounds.nextTop === 'number')
             ? bounds.nextTop
             : (chrome.nextTop || chrome.toolsBottom + 10);
-        nextHintWrapper.elt.style.cssText = [
-            'display:flex',
-            'flex-direction:row',
-            'align-items:center',
-            'justify-content:center',
-            'position:absolute',
-            'z-index:5000',
-            'height:' + nextH + 'px',
-            'box-sizing:border-box',
-            'margin:0',
-            'padding:0',
-            'pointer-events:none'
-        ].join(';');
+        // Layout only — do not reset pointer-events (setHintVisible owns that) or
+        // display:flex (p5 show() would clear it). Overflow visible so a large
+        // Tune font cannot clip GO TO NEXT to an empty ink bar.
+        const wrap = nextHintWrapper.elt.style;
+        wrap.display = 'flex';
+        wrap.flexDirection = 'row';
+        wrap.alignItems = 'center';
+        wrap.justifyContent = 'center';
+        wrap.position = 'absolute';
+        wrap.zIndex = '5000';
+        wrap.minHeight = nextH + 'px';
+        wrap.height = 'auto';
+        wrap.boxSizing = 'border-box';
+        wrap.margin = '0';
+        wrap.padding = '0';
+        wrap.overflow = 'visible';
         const btn = nextHintWrapper.elt.querySelector('.sketch-next-btn');
-        if (btn) btn.style.fontSize = fontPx + 'px';
+        if (btn) {
+            btn.style.fontSize = fontPx + 'px';
+            styleChromeLabel(btn, true);
+        }
         const hintW = nextHintWrapper.elt.offsetWidth || Math.ceil(fontPx * 10);
         nextHintWrapper.position(Math.round((currentWidth - hintW) / 2), nextTop);
-        nextHintWrapper.show();
+        nextHintWrapper.elt.style.display = 'flex';
     }
 
     // RUN / RE-RUN — pinned to visible bottom
@@ -358,17 +381,21 @@ function positionNameInputAndButtons() {
     if (runBtn) {
         const bottomPad = chrome.bottomPad || 14;
         const awaiting = !!window.sketchAwaitingNext;
-        const label = awaiting ? 'RE-RUN' : 'RUN';
+        const stopping = !!(window.pixelReveal && window.pixelReveal.active);
+        const label = stopping ? 'STOP' : (awaiting ? 'RE-RUN' : 'RUN');
         runBtn.textContent = label;
-        runBtn.setAttribute('aria-label', awaiting ? 'Regenerate prompts' : 'Generate prompts');
-        runBtn.classList.toggle('sketch-run-muted', awaiting);
+        runBtn.setAttribute('aria-label', stopping
+            ? 'Stop animation and show prompts'
+            : (awaiting ? 'Regenerate prompts' : 'Generate prompts'));
+        runBtn.classList.toggle('sketch-run-muted', awaiting && !stopping);
+        // Layout only — fill/label colors live on .sketch-run / .sketch-run-muted so
+        // :hover can invert. D-054: those rules set an explicit fill token, not currentColor.
         runBtn.style.cssText = [
             'display:flex',
             'align-items:center',
             'justify-content:center',
             'position:fixed',
             'visibility:visible',
-            'opacity:' + (awaiting ? '0.85' : '1'),
             'pointer-events:auto',
             'z-index:10001',
             'width:' + runSize + 'px',
@@ -380,9 +407,7 @@ function positionNameInputAndButtons() {
             'transform:translateX(-50%)',
             'border-radius:50%',
             'border:2px solid var(--primary-color)',
-            'background:' + (awaiting ? 'var(--background-color)' : 'var(--primary-color)'),
-            'color:' + (awaiting ? 'var(--primary-color)' : '#000000'),
-            'font-family:VT323, monospace',
+            'font-family:var(--ui-font)',
             'font-size:' + (awaiting ? (isNarrow ? '11px' : '12px') : (isNarrow ? '16px' : '18px')),
             'font-weight:bold',
             'letter-spacing:' + (awaiting ? '0.02em' : '0'),
@@ -420,7 +445,6 @@ function ensureSketchRunButton() {
     btn.setAttribute('aria-label', 'Generate prompts');
     btn.textContent = 'RUN';
     btn.onclick = function () {
-        if (window.playClickSound) window.playClickSound();
         if (typeof window.triggerPromptRun === 'function') window.triggerPromptRun();
         else if (typeof window.runSketchFromButton === 'function') window.runSketchFromButton();
     };
@@ -446,7 +470,7 @@ function createUI() {
         controlPanelToggle.style('border', '2px solid var(--primary-color)');
         controlPanelToggle.style('border-radius', '0px');
         controlPanelToggle.style('color', 'var(--primary-color)');
-        controlPanelToggle.style('font-family', 'VT323, monospace');
+        controlPanelToggle.style('font-family', 'var(--ui-font)');
         controlPanelToggle.style('font-size', '14px');
         controlPanelToggle.style('font-weight', 'bold');
         controlPanelToggle.style('width', '28px');
@@ -470,7 +494,7 @@ function createUI() {
         controlPanel.style('border', '2px solid var(--primary-color)');
         controlPanel.style('border-radius', '0px');
         controlPanel.style('padding', '6px');
-        controlPanel.style('font-family', 'VT323, monospace');
+        controlPanel.style('font-family', 'var(--ui-font)');
         controlPanel.style('color', 'var(--text-color)');
         controlPanel.style('font-size', 'clamp(16px, 2.5vw, 20px)');
         controlPanel.style('width', '220px');
@@ -508,7 +532,7 @@ function createUI() {
 
     if (SKETCH_HIDE_CONTROL_PANEL) {
         resultsLabel = createDiv('1 of 1');
-        resultsLabel.style('font-family', 'VT323, monospace');
+        resultsLabel.style('font-family', 'var(--ui-font)');
         resultsLabel.style('font-size', '13px');
         resultsLabel.style('color', 'var(--primary-color)');
         resultsLabel.style('background-color', 'var(--background-color)');
@@ -520,7 +544,7 @@ function createUI() {
         resultsLabel.style('white-space', 'nowrap');
         // Card name input (identifier) — separate from NEXT
         resultNameWrapper = createDiv('');
-        resultNameWrapper.elt.style.cssText = 'display:inline-flex; flex-direction:row; align-items:center; justify-content:center; white-space:nowrap; font-family: VT323, monospace; color: var(--primary-color); font-size: ' + Math.max(FONT_SIZES.INPUT(), 14) + 'px; position: absolute;';
+        resultNameWrapper.elt.style.cssText = 'display:inline-flex; flex-direction:row; align-items:center; justify-content:center; white-space:nowrap; font-family: var(--ui-font); color: var(--primary-color); font-size: ' + Math.max(FONT_SIZES.INPUT(), 14) + 'px; position: absolute;';
 
         // GO TO NEXT — solid button; hidden until revealed after a run
         nextHintWrapper = createDiv('');
@@ -542,6 +566,7 @@ function createUI() {
         prefixContainer.appendChild(hintLabel);
         prefixContainer.appendChild(rightSquare);
         nextHintWrapper.elt.appendChild(prefixContainer);
+        styleChromeLabel(prefixContainer, true);
 
         function hintTextForMode(mode) {
             return (mode === 'start') ? 'START' : 'GO TO NEXT';
@@ -756,7 +781,7 @@ function createUI() {
     });
     classListUploadButton.style('background-color', 'var(--background-color)');
     classListUploadButton.style('color', 'var(--primary-color)');
-    classListUploadButton.style('font-family', 'VT323, monospace');
+    classListUploadButton.style('font-family', 'var(--ui-font)');
     classListUploadButton.style('font-size', '18px');  // Match editor settings-item
     classListUploadButton.style('width', '100%');
     classListUploadButton.style('height', '28px');
@@ -793,7 +818,7 @@ function createUI() {
     window.recordButton = recordButton;
     recordButton.style('background-color', 'var(--background-color)');
     recordButton.style('color', 'var(--primary-color)');
-    recordButton.style('font-family', 'VT323, monospace');
+    recordButton.style('font-family', 'var(--ui-font)');
     recordButton.style('font-size', SKETCH_HIDE_CONTROL_PANEL ? '14px' : '18px');
     recordButton.style('width', SKETCH_HIDE_CONTROL_PANEL ? '90px' : '100%');
     recordButton.style('height', SKETCH_HIDE_CONTROL_PANEL ? '36px' : '28px');
@@ -803,8 +828,9 @@ function createUI() {
     recordButton.style('margin-bottom', '4px');
     recordButton.style('text-align', 'center');
     recordButton.style('letter-spacing', '0.5px');
-    recordButton.mouseOver(() => { recordButton.style('background-color', 'var(--primary-color)'); recordButton.style('color', 'var(--background-color)'); });
-    recordButton.mouseOut(() => { recordButton.style('background-color', 'var(--background-color)'); recordButton.style('color', 'var(--primary-color)'); });
+    styleChromeLabel(recordButton, false);
+    recordButton.mouseOver(() => { recordButton.style('background-color', 'var(--primary-color)'); styleChromeLabel(recordButton, true); });
+    recordButton.mouseOut(() => { recordButton.style('background-color', 'var(--background-color)'); styleChromeLabel(recordButton, false); });
     // When panel is hidden, also create compact report/clear bubbles under screenshot
     if (SKETCH_HIDE_CONTROL_PANEL) {
         // Download report bubble
@@ -817,7 +843,7 @@ function createUI() {
         });
         downloadReportButton.style('background-color', 'var(--background-color)');
         downloadReportButton.style('color', 'var(--primary-color)');
-        downloadReportButton.style('font-family', 'VT323, monospace');
+        downloadReportButton.style('font-family', 'var(--ui-font)');
         downloadReportButton.style('font-size', '14px');
         downloadReportButton.style('width', '90px');
         downloadReportButton.style('height', '36px');
@@ -829,11 +855,11 @@ function createUI() {
         downloadReportButton.style('letter-spacing', '0.5px');
         downloadReportButton.mouseOver(() => {
             downloadReportButton.style('background-color', 'var(--primary-color)');
-            downloadReportButton.style('color', 'var(--background-color)');
+            styleChromeLabel(downloadReportButton, true);
         });
         downloadReportButton.mouseOut(() => {
             downloadReportButton.style('background-color', 'var(--background-color)');
-            downloadReportButton.style('color', 'var(--primary-color)');
+            styleChromeLabel(downloadReportButton, false);
         });
 
         // Clear results bubble
@@ -846,7 +872,7 @@ function createUI() {
         });
         resetReportButton.style('background-color', 'var(--background-color)');
         resetReportButton.style('color', 'var(--primary-color)');
-        resetReportButton.style('font-family', 'VT323, monospace');
+        resetReportButton.style('font-family', 'var(--ui-font)');
         resetReportButton.style('font-size', '14px');
         resetReportButton.style('width', '90px');
         resetReportButton.style('height', '36px');
@@ -857,11 +883,11 @@ function createUI() {
         resetReportButton.style('letter-spacing', '0.5px');
         resetReportButton.mouseOver(() => {
             resetReportButton.style('background-color', 'var(--primary-color)');
-            resetReportButton.style('color', 'var(--background-color)');
+            styleChromeLabel(resetReportButton, true);
         });
         resetReportButton.mouseOut(() => {
             resetReportButton.style('background-color', 'var(--background-color)');
-            resetReportButton.style('color', 'var(--primary-color)');
+            styleChromeLabel(resetReportButton, false);
         });
 
         // Edit bubble — replaces bottom >EDITOR
@@ -873,7 +899,7 @@ function createUI() {
         });
         editButton.style('background-color', 'var(--background-color)');
         editButton.style('color', 'var(--primary-color)');
-        editButton.style('font-family', 'VT323, monospace');
+        editButton.style('font-family', 'var(--ui-font)');
         editButton.style('font-size', '14px');
         editButton.style('width', '90px');
         editButton.style('height', '36px');
@@ -884,11 +910,11 @@ function createUI() {
         editButton.style('letter-spacing', '0.5px');
         editButton.mouseOver(() => {
             editButton.style('background-color', 'var(--primary-color)');
-            editButton.style('color', 'var(--background-color)');
+            styleChromeLabel(editButton, true);
         });
         editButton.mouseOut(() => {
             editButton.style('background-color', 'var(--background-color)');
-            editButton.style('color', 'var(--primary-color)');
+            styleChromeLabel(editButton, false);
         });
 
         // Position top strip (screenshot · report · clear · edit)
@@ -906,7 +932,7 @@ function createUI() {
     });
     downloadReportButton.style('background-color', 'var(--background-color)');
     downloadReportButton.style('color', 'var(--primary-color)');
-    downloadReportButton.style('font-family', 'VT323, monospace');
+    downloadReportButton.style('font-family', 'var(--ui-font)');
     downloadReportButton.style('font-size', '18px');  // Match editor settings-item
     downloadReportButton.style('width', '100%');
     downloadReportButton.style('height', '28px');  // Slightly taller for readability
@@ -955,7 +981,7 @@ function createUI() {
     // Style class report upload button
     classReportUploadButton.style('background-color', 'var(--background-color)');
     classReportUploadButton.style('color', 'var(--primary-color)');
-    classReportUploadButton.style('font-family', 'VT323, monospace');
+    classReportUploadButton.style('font-family', 'var(--ui-font)');
     classReportUploadButton.style('font-size', '18px');  // Match editor settings-item
     classReportUploadButton.style('width', '100%');
     classReportUploadButton.style('height', '28px');  // Slightly taller for readability
@@ -986,7 +1012,7 @@ function createUI() {
     });
     resetReportButton.style('background-color', 'var(--background-color)');
     resetReportButton.style('color', 'var(--primary-color)');
-    resetReportButton.style('font-family', 'VT323, monospace');
+    resetReportButton.style('font-family', 'var(--ui-font)');
     resetReportButton.style('font-size', '18px');  // Match editor settings-item
     resetReportButton.style('width', '100%');
     resetReportButton.style('height', '28px');  // Slightly taller for readability
@@ -1092,7 +1118,7 @@ function createUI() {
                 justify-content: center;
                 align-items: center;
                 z-index: 10000;
-                font-family: 'VT323', monospace;
+                font-family: var(--ui-font), monospace;
             `;
             
             // Create dialog
@@ -1155,7 +1181,7 @@ function createUI() {
                 padding: 12px 24px;
                 border-radius: 4px;
                 cursor: pointer;
-                font-family: 'VT323', monospace;
+                font-family: var(--ui-font), monospace;
                 font-size: 18px;
                 font-weight: bold;
                 transition: all 0.3s ease;
@@ -1184,7 +1210,7 @@ function createUI() {
                 padding: 12px 24px;
                 border-radius: 4px;
                 cursor: pointer;
-                font-family: 'VT323', monospace;
+                font-family: var(--ui-font), monospace;
                 font-size: 18px;
                 transition: all 0.3s ease;
             `;
@@ -1234,7 +1260,7 @@ function createUI() {
             if (button) {
                 button.style('background-color', 'var(--background-color)');
                 button.style('color', 'var(--primary-color)');
-                button.style('font-family', 'VT323, monospace');
+                button.style('font-family', 'var(--ui-font)');
                 button.style('font-size', FONT_SIZES.INPUT() + 'px');
                 button.style('width', '30px');
                 button.style('height', BUTTON_SIZES.HEIGHT() + 'px');
@@ -1245,12 +1271,13 @@ function createUI() {
                 // Add hover effects
                 button.mouseOver(() => {
                     button.style('background-color', 'var(--primary-color)');
-                    button.style('color', 'var(--background-color)');
+                    styleChromeLabel(button, true);
                 });
                 button.mouseOut(() => {
                     button.style('background-color', 'var(--background-color)');
-                    button.style('color', 'var(--primary-color)');
+                    styleChromeLabel(button, false);
                 });
+                styleChromeLabel(button, false);
             }
         });
     } else {
@@ -1274,6 +1301,7 @@ function createUI() {
 // Update UI on window resize
 function updateUIOnResize() {
     resizeCanvas(windowWidth, windowHeight);
+    if (typeof paintSketchPageBackground === 'function') paintSketchPageBackground();
     
     // Position control panel and toggle button
     positionControlPanel();

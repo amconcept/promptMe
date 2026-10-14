@@ -905,34 +905,52 @@ function downloadClassReport() {
         const theme = (activityFromSettings && activityFromSettings.theme) ? activityFromSettings.theme : (localStorage.getItem('selectedTheme') || 'windows');
         const background = (activityFromSettings && activityFromSettings.background) ? activityFromSettings.background : (localStorage.getItem('selectedBackground') || 'black');
         const headers = Object.keys(categories || {}).filter(c => c !== 'objective' && c !== 'prompt1InterestsMode');
-        reportText += `PromptMe Activity Export\n`;
-        reportText += `Exported: ${new Date().toLocaleString()}\n`;
-        reportText += `Activity Name: ${currentActivity}\n`;
-        reportText += `Objective: ${(objective || 'No objective set').replace(/\n/g, ' ')}\n`;
-        reportText += `Theme: ${theme}\n`;
-        reportText += `Background: ${background}\n`;
-        reportText += `Prompt 1 Interests Mode: ${prompt1InterestsMode ? 'Yes' : 'No'}\n`;
-        reportText += `Criterion Labels: ${(criterionLabels || []).join(', ')}\n\n`;
-        if (headers.length > 0 && parsed.categories) {
-            reportText += `Category,${headers.map((h) => (isUnlabeledPromptHeader(h) ? '' : h)).join(',')}\n`;
-            const firstHeader = headers[0];
-            const catLabels = Object.keys(parsed.categories[firstHeader] || {});
-            catLabels.forEach(catLabel => {
-                let maxRows = 1;
-                headers.forEach(h => {
-                    const arr = parsed.categories[h] && parsed.categories[h][catLabel];
-                    if (Array.isArray(arr)) maxRows = Math.max(maxRows, arr.length);
-                });
-                for (let r = 0; r < maxRows; r++) {
-                    const row = [catLabel];
+        const reportHeaders = headers.map((h) => (isUnlabeledPromptHeader(h) ? '' : h));
+        const grid = (typeof activityGridFromAppCategories === 'function')
+            ? activityGridFromAppCategories(parsed.categories || {})
+            : { promptHeaders: reportHeaders, categories: {} };
+        if (typeof serializeActivityCsv === 'function') {
+            // Quoted cells so commas in sentences survive Load (D-057).
+            reportText += serializeActivityCsv({
+                activityName: currentActivity,
+                objective: objective,
+                theme: theme,
+                background: background,
+                prompt1InterestsMode: prompt1InterestsMode,
+                criterionLabels: criterionLabels,
+                promptHeaders: reportHeaders.length ? reportHeaders : grid.promptHeaders,
+                categories: grid.categories
+            });
+        } else {
+            reportText += `PromptMe Activity Export\n`;
+            reportText += `Exported: ${new Date().toLocaleString()}\n`;
+            reportText += `Activity Name: ${currentActivity}\n`;
+            reportText += `Objective: ${(objective || 'No objective set').replace(/\n/g, ' ')}\n`;
+            reportText += `Theme: ${theme}\n`;
+            reportText += `Background: ${background}\n`;
+            reportText += `Prompt 1 Interests Mode: ${prompt1InterestsMode ? 'Yes' : 'No'}\n`;
+            reportText += `Criterion Labels: ${(criterionLabels || []).join(', ')}\n\n`;
+            if (headers.length > 0 && parsed.categories) {
+                reportText += `Category,${reportHeaders.join(',')}\n`;
+                const firstHeader = headers[0];
+                const catLabels = Object.keys(parsed.categories[firstHeader] || {});
+                catLabels.forEach(catLabel => {
+                    let maxRows = 1;
                     headers.forEach(h => {
                         const arr = parsed.categories[h] && parsed.categories[h][catLabel];
-                        const val = (Array.isArray(arr) && arr[r] !== undefined) ? String(arr[r]).replace(/,/g, ';') : '';
-                        row.push(val);
+                        if (Array.isArray(arr)) maxRows = Math.max(maxRows, arr.length);
                     });
-                    reportText += row.join(',') + '\n';
-                }
-            });
+                    for (let r = 0; r < maxRows; r++) {
+                        const row = [catLabel];
+                        headers.forEach(h => {
+                            const arr = parsed.categories[h] && parsed.categories[h][catLabel];
+                            const val = (Array.isArray(arr) && arr[r] !== undefined) ? String(arr[r]).replace(/,/g, ';') : '';
+                            row.push(val);
+                        });
+                        reportText += row.join(',') + '\n';
+                    }
+                });
+            }
         }
     } catch (err) {
         console.warn('Could not append activity settings to report:', err);
@@ -1362,64 +1380,23 @@ function parseClassReport(reportText) {
         studentNames.push(currentStudent.name);
     }
 
-    // Parse ACTIVITY SETTINGS (CSV) block if present (same format as CSV export)
+    // Parse ACTIVITY SETTINGS (CSV) block if present (same quoted format as Share, D-057)
     const csvStart = rawLines.findIndex(l => l.trim().startsWith('PromptMe Activity Export'));
-    if (csvStart >= 0) {
-        let activityNameCsv = '';
-        let objective = '';
-        let theme = 'windows';
-        let background = 'black';
-        let prompt1InterestsMode = false;
-        let criterionLabels = ['', '', '', ''];
-        let promptHeaders = [];
-        const categories = {};
-        for (let i = csvStart; i < rawLines.length; i++) {
-            const line = rawLines[i].trim();
-            if (!line) continue;
-            if (line.startsWith('Activity Name: ')) {
-                activityNameCsv = line.replace('Activity Name: ', '').trim();
-            } else if (line.startsWith('Objective: ')) {
-                objective = line.replace('Objective: ', '').trim();
-            } else if (line.startsWith('Theme: ')) {
-                theme = line.replace('Theme: ', '').trim();
-            } else if (line.startsWith('Background: ')) {
-                background = line.replace('Background: ', '').trim();
-            } else if (line.startsWith('Prompt 1 Interests Mode: ')) {
-                prompt1InterestsMode = line.replace('Prompt 1 Interests Mode: ', '').trim() === 'Yes';
-            } else if (line.startsWith('Criterion Labels: ')) {
-                const labelsText = line.replace('Criterion Labels: ', '');
-                criterionLabels = labelsText.split(',').map(l => l.trim());
-            } else if (line.startsWith('Category,')) {
-                promptHeaders = line.split(',').slice(1).map(h => h.trim());
-            } else if (promptHeaders.length > 0 && line.includes(',') && !line.startsWith('PromptMe') && !line.startsWith('Exported')) {
-                const parts = line.split(',');
-                const category = parts[0].trim();
-                const items = parts.slice(1).map(item => item.trim().replace(/;/g, ','));
-                if (category) {
-                    if (!categories[category]) {
-                        categories[category] = promptHeaders.map(() => []);
-                    }
-                    items.forEach((item, index) => {
-                        if (index < promptHeaders.length && item) {
-                            categories[category][index].push(item);
-                        }
-                    });
-                }
-            }
-        }
-        if (activityNameCsv || Object.keys(categories).length > 0) {
+    if (csvStart >= 0 && typeof parseActivityCsv === 'function') {
+        const parsedCsv = parseActivityCsv(rawLines.slice(csvStart).join('\n'));
+        if (parsedCsv.activityName || Object.keys(parsedCsv.categories || {}).length > 0) {
             activitySettings = {
-                name: activityNameCsv || activityName,
-                objective,
-                theme,
-                background,
-                prompt1InterestsMode,
-                criterionLabels: Array.isArray(criterionLabels) && criterionLabels.length ? criterionLabels : ['', '', '', ''],
-                promptHeaders: promptHeaders.length ? promptHeaders : [''],
-                categories,
+                name: parsedCsv.activityName || activityName,
+                objective: parsedCsv.objective,
+                theme: parsedCsv.theme,
+                background: parsedCsv.background,
+                prompt1InterestsMode: parsedCsv.prompt1InterestsMode,
+                criterionLabels: (parsedCsv.criterionLabels && parsedCsv.criterionLabels.length) ? parsedCsv.criterionLabels : ['', '', '', ''],
+                promptHeaders: parsedCsv.promptHeaders.length ? parsedCsv.promptHeaders : [''],
+                categories: parsedCsv.categories,
                 timestamp: new Date().toISOString()
             };
-            if (activityNameCsv) activityName = activityNameCsv;
+            if (parsedCsv.activityName) activityName = parsedCsv.activityName;
             console.log('DEBUG: Parsed activity settings from report:', activitySettings.name);
         }
     }

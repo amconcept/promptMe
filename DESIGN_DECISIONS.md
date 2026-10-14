@@ -28,14 +28,14 @@ Routine visual tweaks are CHANGELOG-only (see Documentation routing in `.cursorr
 
 | # | Decision | Why | Where it lives in code |
 |---|----------|-----|-------------------------|
-| D1 | Theme is one saved preference (`localStorage` key `selectedTheme`), applied on editor, sketch, and index. Missing key → **windows**. Each page’s CSS `:root` is only a flash-before-JS fallback (editor.html currently greenCRT-like values; sketch.html currently Chocolate `#D2691E`) and is overwritten once `applyThemeFromStorage()` runs. Not a fixed editor-orange / sketch-green split. | An activity should look like itself in both rooms | `applyThemeFromStorage()` in theme-manager.js; called from editor.html, sketch.html, index.html, sketch-refactored.js |
-| D2 | VT323 monospace font throughout | Retro terminal aesthetic, ties to Apple II control panel concept | all HTML `<head>` font links |
+| D1 | Theme is one saved preference (`localStorage` key `selectedTheme`), applied on editor, sketch, index, and theme.html. Missing key → **windows**. Each page’s CSS `:root` is only a flash-before-JS fallback (editor.html currently greenCRT-like values; sketch.html currently Chocolate `#D2691E`) and is overwritten once `applyThemeFromStorage()` runs. Not a fixed editor-orange / sketch-green split. | An activity should look like itself in both rooms | `applyThemeFromStorage()` in theme-manager.js; called from editor.html, sketch.html, index.html, theme.html, sketch-refactored.js |
+| D2 | VT323 is the **factory default** font. A preset may override family, size, and style via `--ui-font*` (D-026). Missing customization → VT323 at 18px regular. | Retro terminal aesthetic, ties to Apple II control panel concept | `--ui-font`; Google Fonts links; theme-manager.js `THEME_FONTS` / `THEME_FONT_STYLES` |
 | D3 | Prompt headers align with grouping columns via CSS grid knobs `--column-width` (200px) and `--grid-gap` (40px). A `.header-placeholder` cell occupies the first column so headers sit over the option boxes, not the grouping labels. | Headers must line up with the cells below | editor.html `:root` and `.prompt-grid`; `editor-ui-manager.js` rebuilds the grid using those variables |
 | D4 | Delete buttons render as orange `[x]` in brackets, not circles | Cleaner look, less visual noise than circle+icon | editor-ui-manager.js |
 | D5 | Delete `[ X ]` follows the theme’s `--primary-color` (via `--delete-color`). Not a separate warning red. | Chrome should read as one palette; a leftover `#FF6B6B` in theme presets was unused and would have fought that | `theme-manager.js` presets; `.delete-prompt` / `.delete-category` in editor.html |
 | ~~D6~~ | *Retired — see 2.1* | | |
 | ~~D7~~ | *Retired — see 2.1* | | |
-| D8 | Theme system (8 presets: orangeCRT, blueCRT, windows, greenCRT, purpleCRT, pinkCRT, macintosh, black) is **fully live** — CHANGELOG's "THEME SYSTEM REMOVAL" entry is simply wrong, not a sign this was meant to go away | This is now understood as the seed of F5's "teachers can style it their way," not legacy weight — direction is to grow it, not decide whether to delete it | theme-manager.js + all three HTML files |
+| D8 | Theme system (8 presets: orangeCRT, blueCRT, windows, greenCRT, purpleCRT, pinkCRT, macintosh, black) is **fully live** — CHANGELOG's "THEME SYSTEM REMOVAL" entry is simply wrong, not a sign this was meant to go away. Picker lives on `theme.html` (D-024), not in the editor `...` dropdown. | This is now understood as the seed of F5's "teachers can style it their way," not legacy weight — direction is to grow it, not decide whether to delete it | theme-manager.js + editor.html, sketch.html, index.html, theme.html |
 | D9 | `prompt1InterestsMode` (student-interest/category-selection): **open question, not dead code** — mechanism is fully built (checkbox UI, wiring, CSV round-trip) but hardcoded off. Paused because the real unsolved problem is *how a student's interest gets identified*, not the widget itself. See Future Directions F2 for where this is headed. | Alec wants this feature back, but not until the identification method is designed | editor.html (hidden/disabled checkbox), editor-data-manager.js, editor-settings-manager.js, sketch-refactored.js, prompt-generator.js, data-manager.js, ui-manager.js |
 | D10 | Auto-save copies cube → grid **only while phone/cube layout is live** | Desktop and phone share one data model but two DOM copies. The cube stays in the page on desktop, hidden and empty. Flushing it on every save overwrote the visible prompt list after the 600ms auto-save delay. | `saveChanges()` in editor-data-manager.js; `flushPromptCube()` in editor-prompt-cube.js |
 | D11 | Objective is optional at run time. Editor warns (“Missing objective”) with Skip; the prompting window only blocks when there are no prompts. | Teachers should be able to try prompt lists before writing an objective. Hard-blocking RUN after Skip made Skip a dead end. | `quickTest()` in editor-main.js; `triggerPromptRun()` in sketch-refactored.js |
@@ -51,6 +51,41 @@ Routine visual tweaks are CHANGELOG-only (see Documentation routing in `.cursorr
 | D21 | File drop: cancel `dragenter` and `dragover`, always `dropEffect = copy`, remember the box under the cursor, light it while a file is held over it | Paste already had the bytes. Safari skips `drop` if `dragenter` is not cancelled, and `dropEffect = none` (used when hit-testing missed) makes Finder withhold the file | `editor-image-prompts.js`, `.is-drop-target` in editor.html |
 | D22 | Phone/narrow objective: measure width with a hidden mirror span; trim after `input`, never rewrite `input.value` on keydown | iOS Safari drops characters / breaks the caret if the field is rewritten mid-keystroke | `getObjectiveMirror()` / `enforceObjectiveWidthLimit()` in editor-ui-manager.js |
 | D23 | Phone or narrow window uses the cube editor (one prompt at a time), not the desktop grid. Grid stays in the DOM as the data store. | A 4×N grid does not fit a phone; two DOM copies need an explicit live layout | `editor-prompt-cube.js`, `.prompt-cube-wrap` / `.editor-cube-layout` in editor.html |
+| D24 | Theme picker is a dedicated `theme.html` page (8 preset cards). The editor `...` panel’s Theme dropdown is **gone**, replaced by a Customize link. Hidden `#theme-select` stays in the editor for legacy `.value` reads. **Panel order is D-056.** | Alec: “remove old one.” A future session restoring the dropdown would duplicate the picker. | editor.html settings panel; theme.html; theme-manager.js still syncs `#theme-select` |
+| D25 | Reveal animation is a fill-then-resolve overlay. Custom drawings persist in `localStorage` (`revealAnimation`) and as a downloadable JSON file (not IndexedDB). **Per-activity snapshot is D-055.** `sketch.html` plays the saved mode. Grid size and frame count: **D-032**. Film clock: **D-035**. Landing: **D-036** (paper tiles lift, prompts show through). Film and lift **overlap** (**D-037**). Film notes: **D-040**. | Filling the card first masks word vs phrase vs image. IndexedDB is for PNG blobs (D-015); this payload is small. | `reveal-animation.js`, theme.html, animation-manager.js, sketch-refactored.js |
+| D26 | Each of the 8 presets can be tuned (ink, paper, stroke, glow, font family, size, style) without a ninth theme. Overlays in `themeCustomizations`. **Factory** restores that preset. The 8 cards are the thumbnails (**D-033**). Ink/paper/stroke use curated swatches (**D-030**). | Alec: restyle a chosen look as the room. Flattening knobs into factory objects would wipe edits. | `getThemeKnobs` / `resolveThemeCss`; Tune panel on theme.html |
+| D27 | One leftover-card preview canvas for both reveal modes. Custom pixels default to **theme ink** (`1` in the frame data) so they follow the live preset; extra palette colors store `#rrggbb`. No separate custom-play canvas; no convergence-preview section. | A second frame under the editor duplicated the preview. Hardcoding white (or collapsing hex to 0/1) would look like the palette was broken. | `theme.html` `#reveal-preview`; `REVEAL.PIXEL_PALETTE`; `normalizeRevealCell()` |
+| D28 | Reveal cells stay **square** and sit in the **middle of the card**, whatever the window aspect. Gutters and off-cells are `--background-color`. Objective sits **under the name field** (full inner width). Prompts cluster in the remaining space below. Overlay starts below the objective so the title stays visible during scramble. | Stretching cells to the leftover strip made a wide window look like a smeared barcode. Putting the objective in the prompt cluster hid it under the scramble and pulled it off the name row. | `revealSquareGridMetrics()`; `drawPixelRevealOverlay()`; `CARD_FIT.OBJECTIVE_BELOW_NAME*` |
+| ~~D29~~ | *Superseded by D-032 — fixed 10×10 / 8 frames.* Saved 16×16 / 10-frame JSON was resampled rather than cropped. | Alec then asked for teacher-chosen size/count (D-032). | `resampleRevealFrame()` still used |
+| D30 | Ink, paper, and stroke are picked from four curated web-color palettes (Pastel, Primary, Neon, Shades), not the OS `<input type="color">` picker. Existing off-palette hexes still display until a swatch is chosen. | Alec: less extensive, like Illustrator web swatches. Restoring the native picker would look like a “fix” for a missing color well. | `THEME_SWATCH_GROUPS` in theme-manager.js; chips + grid on theme.html |
+| D31 | Custom film strip is **centered** above the draw grid. Frames **drag to reorder**. **Shift** while drawing flips pen/eraser. **Shift-click** selects a frame range. Clear Frame empties the selection; Reset All empties every frame. | Alec: timeline-style edit, not a left-aligned strip with one tool at a time. Restoring click-only selection or a non-flipping Shift would look like a bug. | `theme-page.js` `selectFilmFrame` / `reorderFrames` / `drawingUsesEraser`; `#reset-all-frames` |
+| D32 | Teacher chooses reveal **grid size** (6–20) and **frame count** (2–12). A new animation (empty storage) starts at **6×6 / 2 frames**. An already-saved animation keeps its size and count (clamped). Changing the grid **resamples**. Shrinking the count **parks** leftover frames (**D-041**); it does not delete them. | Alec: min 6×6, max 20×20, 2–12 frames, default 2 frames 6×6. A future session restoring a hardcoded 10×10 / 8 would look like a “fix” against D-029. | `REVEAL.GRID_SIZE*` / `FRAME_COUNT*` in reveal-animation.js; sliders on theme.html |
+| D33 | Tune is compact. Palette tiles **span the panel**. The 8 cards are leftover-card **thumbnails**. **Save look** stamps knobs onto that thumbnail. **Factory** recalls factory for that preset. **Use on [activity]** stamps preset + knob snapshot onto the open activity. Loading that activity restores the snapshot. CSV still only the preset id. | Alec: palette full width; save in thumbnail; recall defaults; apply to project; less spread out / phone-friendly. A second leftover-card mock under Tune duplicated the cards. | theme.html Tune panel; `commitThemeLook` / `applyThemeToCurrentActivity` / `restoreActivityTheme` |
+| ~~D34~~ | *Superseded by D-036 — overlay resolved to paper, held 1s, then the prompts popped on.* Punch-through during the film is still rejected. | Alec then asked for a paper-tile puzzle over the results, not a blank beat. | `REVEAL.HOLD_MS` remains as an unused knob |
+| D35 | Sketch **plays the film on `FRAME_MS`** (same as Customize Play), for at least one full loop. Default geometric uses one stable blob per frame slot, not a new random walk every sound tick. During lift the playhead **keeps moving** on leftover tiles (**D-037**). Custom film is not flickered (**D-044**). | Alec: looked like noise then prompt, not scrambling. Stepping the film on the 50ms sound clock strobed the drawing. | `REVEAL.FRAME_MS`; `getRevealDecoyFrame(state, tick, flickerSalt)`; `startPixelRevealAnimation()` |
+| D36 | Lifted tiles are not drawn — the word or picture shows through. Leftover cells are **paper** (hides the result) with the film still painted on them. Shuffle order. No blank hold. | Alec: like a puzzle covering the results; as pieces lift, elements appear. Tiles match the background. | `ranksPuzzleShuffle()`; `drawPixelRevealOverlay()` |
+| D37 | Film and lift are **one motion**. Holes open before the cover period would have ended (`REVEAL.OVERLAP`). Leftover tiles keep playing the film — do not freeze the last frame and switch to a dead paper grid. One full loop stays fully covered. | Alec: looked like 2 processes. The hard cut (film stops, then paper mosaic) was the second act. | `REVEAL.OVERLAP`; `revealLiftStartTick()` |
+| D38 | Prompt pictures fill **leftover** height after name, objective, labels, and text. Width is the inner card (not the square text wrap). `IMAGE_SLOT*` is the floor. Multiple pictures split the leftover. **Live dest is D-053** (film square). | Alec: bigger, or as big as other elements allow. Restoring 110px as the drawn size would look like a regression. | `imageSlotH` in `sketch-refactored.js`; `CARD_FIT.IMAGE_SLOT*` |
+| D39 | Prompt **labels** mix toward paper (`LABEL_MIX`) so they recede from the chosen values. Not `0.8 ×` primary (too close to full ink on black). Objective and name stay as they were. | Alec: labels needed more contrast from the prompts. Restoring 0.8× would flatten WITH/USING back into ALEC/FACE. | `CARD_FIT.LABEL_MIX`; `labelInkRgb()` |
+| D40 | Pixel-film plays **one note per frame** from a pentatonic (`FRAME_SCALE_HZ`), on the playhead — not a beep every 50ms. Customize **Play** uses the same helper. Letter-scramble / image-dot keep 440Hz chatter. Which degree each frame uses: **D-042**. | Alec: try different sounds; a sound for every frame. Walking a scale is the score; teachers already pick the pictures. | `playRevealFrameSound()`; `REVEAL.FRAME_SCALE_HZ` |
+| D41 | Lowering **Frames** parks leftover drawings (and their notes) past `frameCount`. Raising it restores them. **Reset All** is what actually throws parked frames away. Play / RUN only use the live count. | Alec: 12→2→12 erased frames 3–12. Restoring a truncate would look like a “fix” against disk size. | `normalizeRevealState()`; `applyRevealShape()` |
+| D42 | Each live frame has a **scale degree** (`notes[]`), shown on the thumbnail. Click cycles. Never arbitrary Hz — every pick stays in the pentatonic or mute (**D-043**). Defaults to the D-040 walk. Saved in `revealAnimation` / the JSON file. | Alec: a way to change the tone of each frame, always harmonic. A Hz picker would let two frames clash. | `state.notes`; `.film-note`; `revealFrameNoteIndex()` |
+| D43 | *Superseded by D-049 — scale is now C-1 through C3, then mute. Mute still 0 Hz.* | Alec then asked for another octave up and below. | `FRAME_SCALE_*` |
+| D44 | Custom film plays **as drawn**. Flicker does not punch holes in it. During lift, leftover geometric tiles also stop flickering. Playtime decoy is resampled to the live grid so leftover cells are not empty paper. | Alec: a square/chunk blacked out while shuffling. 3% flicker on a 20×20 grid flips a dozen cells per tick. | `getRevealDecoyFrame()`; `normalizeRevealFrame()` |
+| D45 | First **RUN** starts the film; it **loops** until **STOP**. STOP starts the paper-tile land (**D-048**), not an instant drop. No timed ending (**D-047**). Space still aborts and clears. | Alec: run to animate, second hit to stop. A few-second auto-end is not start/stop. | `skipRevealToResult()`; `startGeneration()` |
+| D46 | Land ping (when the overlay drops) is a teacher-chosen scale degree on Customize (**Land**), same pentatonic including mute. Default **C2**. Not the old 1200 Hz chirp. | Alec: allow design of the final reveal sound. | `state.finalNote`; `playRevealFinalSound()`; `#final-note` |
+| D47 | Pixel film **does not auto-complete**. It loops fully covered until STOP. Tile lift on a timer is unused while holding. | Alec: still timed; plays a few seconds then stops. Customize Play already loops until Pause. | `startPixelRevealAnimation()` tick |
+| D48 | STOP lifts paper tiles with **rapid gated low tones** (C-1…G-1, one per tick), then the land note. Noise hiss rejected (read as a drum). | Alec: edit the glitch sound; shhh sounded like a random drum; rapid low / interrupted tones that match the transition. | `playRevealTransitionSound()` on lift ticks |
+| D49 | Scale is C-1 … C3 (pentatonic) then mute. Saved v5 indices remap so C still means C. Default land stays C2. | Alec: another octave up and below; highest C3, lowest C-1. | `FRAME_SCALE_HZ` / `FRAME_SCALE_NAMES`; `migrateRevealNoteIndex()`; `FILE_VERSION` 6 |
+| D50 | Ink-filled buttons (highlighted / RUN / GO TO NEXT / …) use **paper** for the label (`--on-primary-color`). Not hardcoded black. Outline / muted / hover: **D-054**. | Alec: Macintosh highlighted buttons hid the text (black on black). | `--on-primary-color`; sketch.html; editor.html; theme.html |
+| D51 | First RUN / Up plays a **600 Hz start chime** (same family as left 300, down 400, right 500). The first film note waits until the playhead actually moves. No Mac-click on RUN. | Alec: start chime on first press was more tuneful before and complemented left/right/down. | `SOUND.START`; `startGenerationInternal()` |
+| D52 | During STOP land, prompt **words scramble in the holes** and lock as tiles lift. Not finished text sitting under the film. Pictures: **D-053**. | Alec: the text should reveal as glitch too, not only be under animation. | `applyPixelLandGlitch()` |
+| D53 | Pictures are **cover-cropped to the film square**. During lift they paint **one cell at a time**. After land they stay that square — edges do not grow to leftover width. | Alec: edges of the image grew suddenly; uniform and did not match the glitch. | `drawPromptImageInFilmSquare()` |
+| D54 | Button glyphs set `-webkit-text-fill-color` to the **same token as `color`** (paper on ink fill, ink on paper chips). Not `currentColor` — native `<button>` may paint ink (ButtonText) and hide Macintosh GO TO NEXT / RUN. | Alec: Macintosh screenshot/report/clear/edit and RUN labels vanished; later GO TO NEXT was a solid ink bar. | `styleChromeLabel()`; `.sketch-run`; `.sketch-next-btn` |
+| D55 | The live film is also stored on the open activity (`promptSettings` / `promptCategories.revealAnimation`). Loading that activity restores it. **Restore defaults** on Customize returns to factory geometric 6×6 / 2 frames. CSV still does not carry frames. | Alec: does the custom animation save with Activity History; there should be a button to restore to defaults. A future session treating the film as browser-global-only would look like a regression. | `stampRevealOnCurrentActivity()`; `#restore-anim-defaults` |
+| D56 | Editor `...` panel order: **FILE** (top), Help & Instructions, **Customize** (advanced, under Help), Activity History. Label is **FILE**, not File. | Alec: Customize is too prominent; Rando should be as simple to operate as possible. Restoring Customize to the top would look like a “missing” first item. | `editor.html` `#settings-panel` |
+| D57 | Share quotes CSV cells (RFC 4180). Pictures download as a zip (`activity.csv` + `media/<id>.png\|jpg`) after SHARE / CANCEL. No pictures → plain `.csv`. Load accepts `.csv` or `.zip`. Not base64 in the CSV. | Commas in sentences were split on Load. D-015 forbade binaries in the CSV; a folder-with-media pack is the share path. | `activity-pack.js`; `exportSettings` / `importSettings` |
+| D58 | Empty Custom film does **not** play Default Pattern. RUN uses letter scramble (pictures: flicker dots). Default Pattern still plays the geometric film. | Substituting the factory blobs made Reset All / a blank custom look like the default animation. | `revealUsesPixelFilm()`; `startScrambleAnimation()` |
 
 ---
 
@@ -132,10 +167,10 @@ still holds as a general principle. It just doesn't need a D-row pinning specifi
 ## D-015 — PNG/JPG as prompt options (local, skip scramble)
 **Date:** 2026-08-30 · **Status:** Active · **Touches:** image-store.js, editor-image-prompts.js, editor-data-manager.js, animation-manager.js, sketch-refactored.js, data-manager.js
 
-**Decision** A picture option is stored as the string `img:<uuid>` in the same `categories[header][grouping][]` arrays as text. The file itself lives in IndexedDB (`promptMeImages` / `blobs`). The editor hides those tokens: drop or paste PNG/JPG onto a prompt list, show a thumbnail with × to remove, and keep ids on `dataset.imageIds`. On the prompting window, skip letter-scramble, play the final ping, and draw the picture in a fitted slot (`CARD_FIT.IMAGE_SLOT`). Reports print `[image]`, not the token or the file. GIF/SVG/webp are rejected; max size 2MB (`IMAGE_MAX_BYTES`).
+**Decision** A picture option is stored as the string `img:<uuid>` in the same `categories[header][grouping][]` arrays as text. The file itself lives in IndexedDB (`promptMeImages` / `blobs`). The editor hides those tokens: drop or paste PNG/JPG onto a prompt list, show a thumbnail with × to remove, and keep ids on `dataset.imageIds`. On the prompting window, skip letter-scramble, play the final ping, and draw the picture in the film square (D-053; `CARD_FIT.IMAGE_SLOT` is the fallback floor). Reports print `[image]`, not the token or the file. GIF/SVG/webp are rejected; max size 2MB (`IMAGE_MAX_BYTES`).
 **Why** Teachers asked for pictures in the lists (F1). The draw rules (R1–R7) already treat options as opaque strings, so the randomizer does not need a new type. Scramble is a text effect — spinning letters over a picture would be nonsense. Reveal (show the chosen picture) is enough; we do not flash other images as a decoy.
 **Rejected** Hosted/remote images (would add a backend this app does not have), embedding binaries in localStorage or CSV, scrambling/decoy-flashing other pictures, and GIF/SVG/webp (animation and scripting risk).
-**Consequence** Sharing a CSV does not carry the files — another browser gets dead `img:` tokens unless the blobs are already in that machine’s IndexedDB. Same-browser refresh works because localStorage keeps the tokens and IndexedDB keeps the blobs. Hosted images remain an open F1 question. Wait-then-reveal treatment is D-017.
+**Consequence** The CSV itself still does not embed binaries (that rejection stands). Teacher-to-teacher Share with pictures is a zip pack — D-057. Same-browser refresh works because localStorage keeps the tokens and IndexedDB keeps the blobs. Hosted images remain an open F1 question. Wait-then-reveal treatment is D-017. How big the picture draws on the leftover card is D-038.
 
 ---
 
@@ -219,6 +254,356 @@ still holds as a general principle. It just doesn't need a D-row pinning specifi
 
 ---
 
+## D-024 — Theme picker moved off the editor dropdown
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** editor.html, theme.html, theme-page.js, theme-manager.js
+
+**Decision** Theme selection lives on `theme.html` as 8 clickable preset cards. The `theme-menu-dropdown` block (`theme-menu-trigger` / `theme-menu-list`) is removed from the editor `...` panel. That slot is a **Customize** button to the new page. File / Help / Activity History stay. The hidden native `<select id="theme-select">` stays in the editor DOM and stays synced by `changeTheme()` / `syncThemeMenuSelection()`, because `editor-settings-manager.js` and `editor-data-manager.js` still read `theme-select.value`.
+**Why** Alec: relocate the picker onto its own page and “remove old one.” Cards re-skin the whole page live via the existing `changeTheme()` path (D1 / D8).
+**Rejected** Keeping the dropdown in parallel; deleting `theme-select` (legacy readers would fall back to `selectedTheme`, but activity save/load still writes the select).
+**Consequence** Do not restore a Theme dropdown in the settings panel. The leftover `initThemeMenuDropdown()` in theme-manager.js no-ops when those nodes are missing — that is not a sign the picker should come back. Customize at the top of the `...` panel is D-056, not this row.
+
+---
+
+## D-025 — Fill-then-resolve reveal; localStorage + downloadable JSON
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** reveal-animation.js, theme.html, theme-page.js, animation-manager.js, sketch-refactored.js, sketch.html
+
+**Decision** Scramble is a fill-then-resolve overlay that first fills the leftover card so you cannot tell word vs phrase vs image, then a paper-tile puzzle lifts so the result shows through (D-036). The film clock is D-035. Default mode uses a geometric decoy; Custom is hand-drawn frames. The active animation is stored in `localStorage` key `revealAnimation`, and can be downloaded / loaded as a JSON file (`kind: rando-reveal-animation`). The prompting window (`sketch.html`) reads that saved animation. Not IndexedDB. **Grid size and frame count live in D-032** (this entry originally specified 16×16 / 10 frames; D-029 then fixed 10×10 / 8). **A copy on the open activity is D-055.**
+**Why** Alec: mask type during scramble; persist like `selectedTheme` but also be downloadable for recall on another machine. Frame data is a few kilobytes — D-015’s IndexedDB is for PNG/JPG blobs.
+**Rejected** IndexedDB persistence; editor-only preview that sketch would ignore; shrinking the *pixel size* independently of the grid (only how many cells are still noise changes). 10×10 was rejected here, then adopted in D-029, then made teacher-chosen in D-032.
+**Consequence** Letter-scramble and image-dot paths remain in animation-manager.js as fallback if `reveal-animation.js` does not load, **and when Custom is empty** (D-058). Do not “fix” the overlay by sizing it to the chosen prompt — that would leak the type. Tune grid size / frame count from Customize (D-032), not by hardcoding `REVEAL.GRID_SIZE`. Do not punch through before one full film loop (D-037). Landing is D-036. Do not step the film on the 50ms sound clock — that is D-035. Film notes follow the playhead (D-040). Do not fill empty Custom with the factory geometric decoy — that is D-058.
+
+---
+
+## D-026 — Per-preset theme knobs, not a ninth theme
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** theme-manager.js, theme.html, theme-page.js, sketch-refactored.js, ui-manager.js, editor.html, sketch.html, index.html
+
+**Decision** Each of the 8 factory presets can be tuned: ink (primary), paper (background), stroke color, stroke size (1–6px), glow (shadow alpha), font family (a short list; VT323 remains the default), font size (12–28px), and font style (regular / italic / bold / bold italic). Edits are stored per preset id in `localStorage` key `themeCustomizations`. `resolveThemeCss()` starts from the factory `themes` object and overlays knobs; it does not mutate the factory. **Factory** clears only that preset’s overlay. Not written into activity CSV (an activity snapshot is D-033). The Customize page chrome and the 8 cards show the look; the leftover-card mock under Tune was removed as duplicate (D-033).
+**Why** Alec: teachers should restyle a chosen look as their room, not only pick a canned swatch; they need to see those changes on Customize because they affect the other windows. Keeping overlays separate means factory Windows/Green CRT stay recoverable.
+**Rejected** A ninth “Custom” preset (hides which room you started from); putting knobs into the factory objects (un-resettable); exposing every CSS variable (F5 — low floor).
+**Consequence** Do not “simplify” by writing ink/paper back into `const themes`. Glow derives `--primary-shadow*` from ink + the glow knob. Stroke size sets `--stroke-width` / `--panel-stroke-width` / `--card-stroke-width`. Font loads extra Google Fonts on demand. Size/style set `--ui-font-size` / `--ui-font-style` / `--ui-font-weight`. Ink/paper/stroke wells are curated swatches (D-030), not the OS color picker.
+
+---
+
+## D-027 — One leftover-card preview; pixels default to theme ink
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** theme.html, theme-page.js, reveal-animation.js, sketch-refactored.js
+
+**Decision** The Default Pattern window (`#reveal-preview`) is the only card-shaped preview. Custom Play runs there; do not add a second playback canvas under the drawing grid. Convergence Preview (sample word BIKE + slider) is gone — the prompting window is the place that resolve is judged. Custom cells store `0` (empty), `1` (theme ink, follows `--primary-color`), or a `#rrggbb` from the palette. The pen starts on Theme.
+**Why** Alec: don’t need a convergence preview; the default window should preview custom animation; pixels need a palette but should default to the global theme. A future session “fixing” theme-ink cells to a baked white would make the palette look broken when the theme changes.
+**Rejected** A second preview under Custom; baking the current ink hex into every new stroke (would freeze pixels against later Tune knobs).
+**Consequence** `normalizeRevealFrame` must not collapse truthy cells to `1` — that would strip palette colors. Old JSON with 0/1 still loads. Tune `PIXEL_PALETTE` in `REVEAL`.
+
+---
+
+## D-028 — Square reveal grid, centered cluster
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** sketch-refactored.js, reveal-animation.js
+
+**Decision** The grid uses the largest **square** cell that fits in the inner card, then centers that grid. Do not set cell width and height independently from the card’s aspect. Empty cells and the gutters around the square are `--background-color`. On-cells use theme ink or a palette hex (D-027). The overlay covers the inner card **below the objective** (which sits under the name field), not a leftover strip under the current heading and not over the title. Prompt list is a cluster, vertically centered in the remaining space, wrapped to that square width so they stay inside the card.
+**Why** Alec: widening the window stretched the leftover strip into a barcode; negative space should be background; the name field and objective belong together at the top; the chosen prompt(s) should sit in the middle of the remaining card.
+**Rejected** Filling the whole wide card with non-square cells; shrinking the overlay to the prompt’s bounding box (leaks word vs phrase vs image — D-025); keeping the objective inside the prompt cluster (it disappeared under the scramble and sat away from the name).
+**Consequence** `CARD_FIT.REVEAL_INSET` / `OBJECTIVE_BELOW_NAME*` / `OBJECTIVE_PROMPT_GAP*` are the knobs. Do not restore the objective as a “push prompts down” spacer inside the cluster. p5’s default clear is white — `html`/`canvas` use `--background-color`, and overlay drawing uses p5 `push`/`pop` (not raw clip) so a missed frame does not flash white. One fill-then-resolve per RUN (not one per prompt column) — a second scramble in a row is a bug, not leftover-strip sequencing.
+
+---
+
+## D-029 — Reveal is 10×10, 8 frames
+**Date:** 2026-08-30 · **Status:** Superseded by D-032 · **Touches:** reveal-animation.js, theme.html, theme-page.js, sketch-refactored.js, animation-manager.js
+
+**Decision** `REVEAL.GRID_SIZE` is 10 and `REVEAL.FRAME_COUNT` is 8. Saved animations with the old 16×16 / 10-frame shape are resampled on load (`FILE_VERSION` 3) rather than cropped cell-by-cell. Fill-then-resolve behaviour and `localStorage` / JSON persistence stay D-025.
+**Why** Alec: 8 frames, not 10; grid 10×10, not 16. Coarser cells are easier to draw and read at leftover-card size.
+**Rejected** Keeping 16×16 (D-025’s original size); padding extra empty frames to 10; dropping old drawings instead of resampling.
+**Consequence** Do not restore 16×16 / 10 frames as a “bug fix” against D-025’s old Rejected line. Size and count are now teacher-chosen (D-032). `resampleRevealFrame()` remains the load path for a mismatch.
+
+---
+
+## D-030 — Curated web-color swatches, not the OS picker
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** theme-manager.js, theme.html, theme-page.js
+
+**Decision** Ink, paper, and stroke are three target chips plus a shared swatch grid in four groups: **Pastel**, **Primary**, **Neon**, **Shades** (`THEME_SWATCH_GROUPS`). No `<input type="color">`. Names follow the CSS/web set Illustrator uses; Neon and Shades also include factory CRT inks and papers so Reset colors stay pickable. A hex already stored that is not in any group still shows on the chip until the teacher picks a swatch — do not snap it.
+**Why** Alec: the OS picker is too extensive; Illustrator’s web swatches are the model — a short named grid, grouped.
+**Rejected** Keeping the native color well; dumping the 216 web-safe colors; snapping old custom hexes onto the nearest swatch on load.
+**Consequence** Tune the four arrays in `THEME_SWATCH_GROUPS`. Do not “fix” a missing rainbow by restoring `type="color"`. Pixel-draw palette (`REVEAL.PIXEL_PALETTE`) is a separate control (D-027).
+
+---
+
+## D-031 — Film-strip timeline: center, drag, Shift-flip, multi-select
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** theme.html, theme-page.js, reveal-animation.js
+
+**Decision** Custom frames sit in a **centered** row above the draw grid. Drag a thumbnail to a new slot to reorder `state.frames` (numbers 1–N stay in strip order). **Shift** while drawing inverts the parked tool (pen erases, eraser draws). **Shift-click** selects an inclusive range from the last plain click; the outlined frame is the one the pen paints. **Clear Frame** empties every selected frame. **Reset All** replaces the whole sequence with empty frames, including drawings parked by lowering Frames (D-041). No confirm dialog. Frame count and grid size are D-032.
+**Why** Alec: frames in the middle above the grid; drag to move a frame; Shift as the opposite of the current tool; reset all or shift-select many.
+**Rejected** Left-aligned scrolling strip; HTML5-only drag (weak on touch — pointer distance threshold instead); snapping Shift to “always erase.”
+**Consequence** Do not treat Shift-draw as a stuck eraser. Tune the drag threshold (`8px`) in `bindFilmStrip`. Copy to Next / Copy Previous still act on the outlined frame only.
+
+---
+
+## D-032 — Teacher-chosen grid size and frame count
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** reveal-animation.js, theme.html, theme-page.js, animation-manager.js, sketch-refactored.js
+
+**Decision** Customize has two sliders: **Grid** 6–20 (square) and **Frames** 2–12. Factory default when nothing is saved is **6×6 and 2 frames**. An already-saved animation keeps its `gridSize` and `frameCount` (clamped into those ranges) — do not snap an existing 10×10 / 8-frame drawing down to 6×6 / 2 on load. Changing the grid **resamples** every stored frame, including parked ones (D-041). Sketch and the leftover-card preview play `frameCount` frames, not `frames.length`. `FILE_VERSION` 5 (stash + notes; was 4 in this entry).
+**Why** Alec: min 6×6, max 20×20, max 12 frames, min 2, default 2 frames 6×6.
+**Rejected** Keeping a hardcoded 10×10 / 8 (D-029); snapping every old save to the new default; cropping instead of resampling when the grid changes.
+**Consequence** Do not “fix” a 10×10 save by rewriting it to 6×6. Decoy fill (~25%) and resolve ticks scale with `n`. Tune the ranges on `REVEAL.GRID_SIZE_MIN/MAX` and `FRAME_COUNT_MIN/MAX`. Shrinking the count no longer drops leftover frames — that truncate is D-041.
+
+---
+
+## D-033 — Compact Tune: full-width palette, thumbnail save, apply to activity
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** theme.html, theme-page.js, theme-manager.js, editor-settings-manager.js
+
+**Decision** The Tune panel is dense, not a second leftover-card stage. Swatches are a full-width grid of equal tiles (not a short centered strip). Each of the 8 cards is a mini leftover-card **thumbnail**. **Save look** writes the current knobs onto that preset’s overlay so the thumbnail holds the mix. **Factory** deletes that overlay (factory recipe again). **Use on [activity]** copies preset id + knob snapshot onto the open activity (`promptSettings` / `promptCategories`). Loading that activity restores the snapshot (`restoreActivityTheme`). CSV still carries only the preset name (D-026). A pip on the card marks a saved overlay. Phone keeps four thumbnail columns and larger tiles (~36px) for tap.
+**Why** Alec: palette spanning the window; a way to save the theme in the thumbnail; recall defaults; apply to the project; less spread out and phone-friendly.
+**Rejected** A ninth Custom preset (D-026); keeping the tall leftover-card mock under Tune; auto-applying every slider tick onto the activity (that would stamp unfinished mixes).
+**Consequence** Do not restore the Tune leftover-card mock as a “missing preview.” The page chrome plus the eight thumbnails are the preview. Do not skip an activity’s stamped theme because `selectedTheme` already exists — that made Apply look like a no-op.
+
+---
+
+## D-034 — Overlay ends on paper, then a beat, then prompts
+**Date:** 2026-08-30 · **Status:** Superseded by D-036 · **Touches:** reveal-animation.js, animation-manager.js, sketch-refactored.js
+
+**Decision** When a cell resolves, it paints `--background-color` (paper). It does not skip so the real word or picture shows through. After every cell is paper, the overlay stays up for `REVEAL.HOLD_MS` (1000). Then the overlay drops, the prompts unmask, and `SOUND.FINAL` plays. Space / clear still cancels the hold.
+**Why** Alec: the animation should end on background color, pause a second, then reveal the prompts. Punch-through made the result readable while pixels were still finishing.
+**Rejected** Punch-through as the resolve (the previous landing); holding with leftover decoy still on screen; playing the final ping at the start of the hold (it belongs with the words).
+**Consequence** Superseded by D-036. The blank hold felt paused, and “animation then nothing then results” was not the intent. Punch-through *during the colored film* is still rejected. `HOLD_MS` remains in `REVEAL` unused.
+
+---
+
+## D-035 — Film plays on FRAME_MS, then freezes while clearing
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** reveal-animation.js, animation-manager.js
+
+**Decision** Sketch advances decoy frames on `REVEAL.FRAME_MS` (120), the same clock as Customize **Play**. Scramble lasts at least one full loop of the saved frame count. During lift the playhead keeps moving on leftover tiles (D-037). Flicker may still shimmer cells on the 50ms sound clock. Default geometric decoy is one stable blob per frame index (`idx * 97 + 3`), not `makeGeometricFrame(size, tick)` every tick.
+**Why** Alec: the prompting window looked like noise then prompt, not scrambling. A 3-frame custom drawing stepped every 50ms (~20fps) and kept mutating while cells vanished, so the film never read as an animation.
+**Rejected** Driving `getRevealDecoyFrame` from the scramble tick counter; regenerating default geometry every tick; punching through before one loop has played.
+**Consequence** Do not “sync” sketch to `TICK_MS` for the playhead. Pixel-film notes follow the playhead too (D-040); the old 50ms chatter was the sound clock, not the picture clock. Tune `FRAME_MS`. Flicker salt is the third argument to `getRevealDecoyFrame`. Do not freeze the last frame as a “cleanup” — that is the two-act cut D-037 forbids.
+
+---
+
+## D-036 — Paper tiles lift; the results show through
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** sketch-refactored.js, animation-manager.js, reveal-animation.js
+
+**Decision** Lifted tiles are not drawn, so the real word or picture shows through that hole. Leftover cells are `--background-color` (paper) so empty decoy spots cannot leak the result, and the film still paints on those leftover cells (D-037). Gutters around the square stay paper. Order is a shuffle of all cells (`ranksPuzzleShuffle`), not far-from-shape first. When the last tile lifts, the overlay drops immediately — no `HOLD_MS` blank card.
+**Why** Alec: like a puzzle covering the results; as pieces are removed, elements are revealed. Not animation over already-visible results, not animation then nothing then results. Reveal tiles are the same color as the background.
+**Rejected** D-034’s hold-then-pop; far-cells-first (cleared empty paper first, so the word appeared only at the end and felt paused).
+**Consequence** Do not restore a blank beat as a “missing pause.” Do not drop the film off leftover tiles (that reads as a second process — D-037). Tune shuffle vs another lift order only with a new decision. What the holes show for **text** is D-052 (glyphs that lock), not the finished word from tick one.
+
+---
+
+## D-037 — Film and lift overlap; leftover tiles keep playing
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** reveal-animation.js, animation-manager.js, sketch-refactored.js
+
+**Decision** The cover period and the lift share time. `REVEAL.OVERLAP` (0–1, default 0.55) is how much of the cover window already has holes. Holes never open before one full film loop. After lift starts, leftover tiles **keep advancing** on `FRAME_MS` — paper underneath, decoy on top. Not a freeze-then-paper-grid second act.
+**Why** Alec: needs more overlap between animation and final reveal; looked like 2 processes instead of one. Stopping the film and switching to dead paper tiles was the cut.
+**Rejected** Waiting for the film to finish, then starting a separate puzzle; punching through from tick 1 (would leak type before the drawing reads).
+**Consequence** Tune `REVEAL.OVERLAP`. Do not restore `pixelReveal.phase = 'puzzle'` as a film-off mode.
+
+---
+
+## D-038 — Pictures fill leftover card height
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** sketch-refactored.js
+
+**Decision** After type is locked (D-012), leftover height below the objective is given to picture prompts: `IMAGE_SLOT` / `IMAGE_SLOT_PHONE` is the **floor**, then remaining slack is split equally across pictures. Each picture aspect-fits in that slot. Width is the **inner card** (minus inset), not the square text-wrap used for words (D-028). Name, objective, labels, and text prompts are not shrunk to make pictures huge.
+**Why** Alec: bigger, or as big as possible given the other elements. A fixed 110px slot left empty card around a lone picture. Wrapping pictures to the reveal square left unused width.
+**Rejected** A second hardcoded size; shrinking the word floor to feed the picture; stretching the bitmap (aspect stays).
+**Consequence** Do not “fix” a large picture by restoring `IMAGE_SLOT` as the drawn height, or by wrapping pictures to `MAX_PROMPT_WIDTH`. Tune the floor on `CARD_FIT.IMAGE_SLOT*`. **Drawn dest on the leftover card is D-053** (film square, cover-crop). Do not restore inner-card-width aspect-fit as the live picture.
+
+---
+
+## D-039 — Prompt labels recede toward paper
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** sketch-refactored.js
+
+**Decision** Prompt headings on the leftover card (`WITH`, `USING`, …) are `mix(primary, paper, LABEL_MIX)` with `LABEL_MIX` 0.55. Chosen values stay full prompt ink (including the 2× CRT boost). Mixing toward paper works on both white-on-black and black-on-white. The objective under the name is unchanged.
+**Why** Alec: labels needed more contrast from the prompts. `0.8 ×` primary on Black is #CCC on #FFF — too close.
+**Rejected** Painting labels a second theme color; dimming the chosen values; applying the mix to the objective.
+**Consequence** Tune `CARD_FIT.LABEL_MIX`. Do not restore `primary * 0.8` as the label fill.
+
+---
+
+## D-040 — One note per film frame, from a scale
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** reveal-animation.js, animation-manager.js, theme-page.js, theme.html
+
+**Decision** Each time the film playhead lands on a frame, play one sine from `REVEAL.FRAME_SCALE_HZ` (C–D–E–G–A–C pentatonic). Same helper on Customize **Play** and on RUN. The leftover-card auto-preview stays silent. Letter-scramble and image-dot fallbacks keep `SOUND.SCRAMBLE` / `SOUND.REVEAL` on the 50ms clock. Overlay-complete still plays `SOUND.FINAL`. Which degree each frame uses is **D-042**; if `notes` is missing, walk the scale by frame index.
+**Why** Alec: try different sounds; is there a smart way to customize; basically a sound for every frame. The drawing already is a sequence — mapping frame index to a scale is the customization without a frequency editor.
+**Rejected** Keeping the 440Hz / 600Hz beep every 50ms during cover and lift; a per-frame Hz picker (degrees, not Hertz, is D-042).
+**Consequence** Do not restore 50ms chatter on the pixel path. Tune `FRAME_SCALE_HZ` / `FRAME_NOTE_MS` / `FRAME_NOTE_VOL`. Do not store raw Hertz in the JSON. Film notes always play through `playRevealTone` in reveal-animation.js — never `window.playSound` (that envelope is a different beep, so Customize Play would not match RUN).
+
+---
+
+## D-041 — Unused frames stay parked
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** reveal-animation.js, theme-page.js, theme.html
+
+**Decision** `frameCount` is how many drawings play and show in the film strip. `frames[]` may be longer (up to 12). Lowering Frames keeps the extra drawings (and their notes). Raising Frames restores them in order; new slots that were never drawn start empty. **Reset All** truncates to the live count and empties those frames. Play, RUN, and `revealHasPaint` only look at the live count. `FILE_VERSION` 5.
+**Why** Alec: sampling 12→2→12 erased frames 3–12. The slider is a loop length, not a delete.
+**Rejected** Keeping the D-032 truncate; a separate “attic” list with its own UI; confirming before shrink.
+**Consequence** Do not splice `frames` down to `frameCount` in `normalizeRevealState` or `applyRevealShape`. Grid resample must include parked frames so they still match if the slider comes back.
+
+---
+
+## D-042 — Per-frame tone, pentatonic only
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** reveal-animation.js, theme-page.js, theme.html, animation-manager.js
+
+**Decision** Each stored frame has a scale degree in `state.notes`. The film strip shows that name under the thumbnail; click cycles to the next degree and previews the note (silence if mute). Drag-reorder moves the note with the drawing. Missing `notes` walk the sounding pentatonic (D-040). No Hertz field, no off-scale pitches. The live list of degrees is **D-043**.
+**Why** Alec: a way to change the tone of each frame, always tonally harmonic / complementary.
+**Rejected** A Hz or waveform picker; a second scale (major/minor) in this pass; copying the note with Copy to Next (the picture copies; the tone stays on that slot).
+**Consequence** Do not let a frame pick an arbitrary frequency. Tune names on `FRAME_SCALE_NAMES` to match `FRAME_SCALE_HZ`. The second octave and mute are D-043, not a silent lengthening of this list.
+
+---
+
+## D-043 — Second octave up, and mute
+**Date:** 2026-08-30 · **Status:** Superseded by D-049 · **Touches:** reveal-animation.js, theme-page.js, theme.html
+
+**Decision** The click-cycle list is C D E G A, then C1 D1 E1 G1 A1 C2, then **mute**. C1 is one octave above C (old C′). Mute stores as scale index with `FRAME_SCALE_HZ` 0; Play and RUN skip that frame. Defaults never land on mute — they wrap the sounding notes only. Saved 0–5 still map to C D E G A C1.
+**Why** Alec: allow a second octave up (c1 d1 etc.) and mute.
+**Rejected** A third octave; a separate Mute checkbox; dropping mute off the cycle (it has to live on the same control as the tones).
+**Consequence** Do not restore the 6-name list. `playRevealFrameSound` must no-op when Hz is 0 so mute does not play a 0 Hz oscillator.
+
+---
+
+## D-044 — Film stays intact while tiles lift
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** reveal-animation.js, animation-manager.js
+
+**Decision** Custom decoy frames are resampled to the live grid at play time and are **not** flickered. Geometric decoy may still shimmer on the 50ms clock until lift starts; once tiles lift, leftover cells keep a stable picture (`flickerSalt === false`). Shuffle still opens holes — those holes show the prompts, not punched-out ink inside a leftover tile.
+**Why** Alec: part of the animation was masked; where there should be a square a chunk was blacked out; keep the animation intact when shuffling. Flicker of ~3% on a large grid flips many on-cells per tick (paper/black holes in the drawing). A frame shorter than `n×n` left the extra cells empty paper.
+**Rejected** Keeping custom flicker as “life”; painting lifted holes as black instead of skip-through.
+**Consequence** Do not call `flickerFrame` on custom film. Do not pass a numeric flicker salt after `liftStart`. Restore shimmer on leftover custom tiles only with a new decision.
+
+---
+
+## D-045 — Second RUN stops the film and shows the result
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** prompt-generator.js, animation-manager.js, ui-manager.js, sketch-refactored.js
+
+**Decision** While `pixelReveal` is active, RUN / Up / Enter call `skipRevealToResult()`: first press starts the paper-tile land (D-048); a second press during that land jumps to the result. The button label is **STOP**. The film itself **loops until that press** (D-047) — it does not end on a timer. Space still sets `shouldStop` and **clears** the masked prompts (abort, no result). Presses after the result lands still re-roll (R5).
+**Why** Alec: run to animate, second hit to stop. Mid-film RUN used to no-op with a dull beep. Instant unmask on STOP dropped the glitch land (D-048).
+**Rejected** Making second RUN abort like Space (that throws away the draw); ignoring RUN until the film ends (D-012 era).
+**Consequence** Do not treat STOP as a new generate. Letter-scramble fallback (no pixel overlay) still ignores a second generate.
+
+---
+
+## D-046 — Designed land (final) note
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** reveal-animation.js, theme-page.js, theme.html, animation-manager.js
+
+**Decision** `state.finalNote` is a scale degree from the same pentatonic as the film, including mute. Customize **Land** (next to Grid / Frames) cycles it and previews. Overlay-complete and STOP both play `playRevealFinalSound` after the transition land (D-048). Missing value defaults to **C2** (not “highest note”, which moved when D-049 added C3).
+**Why** Alec: allow design of the final reveal sound.
+**Rejected** A second Hz picker; a one-off 1200 Hz factory that sits off the scale.
+**Consequence** Do not restore `SOUND.FINAL` 1200 Hz on the pixel path. Letter-scramble / image-dot fallbacks also use the land note when `playRevealFinalSound` exists. Do not retarget the default to C3 just because it is now the top of the scale.
+
+---
+
+## D-047 — Film loops until STOP; no timed ending
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** animation-manager.js, sketch-refactored.js, sketch.html
+
+**Decision** After RUN, the pixel film loops fully covering the leftover card (same clock as Customize Play). `resolveCount` stays 0. It does **not** lift tiles or unmask after N ticks. STOP begins the land (D-048). Space still aborts/clears.
+**Why** Alec: RUN is still timed and plays a few seconds before stopping — not start/stop; press 1 to start, 2 to stop.
+**Rejected** Keeping auto lift-and-finish (D-036/D-037 on a timer) and only adding a skip that races the timer.
+**Consequence** Do not call `finishPromptReveal` from the looping tick. Tile-lift-on-a-clock would make the overlay end without a second press. Landing on STOP is D-048, not a return of the timer.
+
+---
+
+## D-048 — STOP plays the glitch land, then the land note
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** animation-manager.js, reveal-animation.js, sketch-refactored.js
+
+**Decision** First STOP while the film is looping starts paper-tile lift (D-036) with leftover film still playing (D-037). Each lift tick plays one **gated low square** walking C-1 D-1 E-1 G-1 (`TRANSITION_HZ`), shorter than `TICK_MS` so the gaps read as interruption. When the last tile lifts, the overlay drops, `playRevealFinalSound` plays, and `finishPromptReveal` runs. A second STOP during the lift skips remaining tiles and lands immediately. Tune `TRANSITION_HZ` / `TRANSITION_MS` / `TRANSITION_VOL`.
+**Why** Alec: the glitch should be rapid low or interrupted tones that match the transition. The shhh sounded like a random drum.
+**Rejected** Instant unmask + land note on STOP. A one-shot noise burst (SID hiss / drum). Playing the land note at the start of the lift.
+**Consequence** Do not finish the overlay in `skipRevealToResult` on the first press. Call `playRevealTransitionSound` from the lift tick, not once at STOP. Frame notes pause during lift. Do not restore `TRANSITION_NOISE_*`.
+
+---
+
+## D-049 — Scale from C-1 to C3
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** reveal-animation.js, theme-page.js, theme.html
+
+**Decision** Click-cycle list is C-1 D-1 E-1 G-1 A-1, C D E G A, C1…A1, C2…A2, **C3**, then mute. Same pentatonic; C-1 is one octave below C, C3 is three octaves above. `FILE_VERSION` 6. Saved v5 indices 0–10 (C…C2) shift by +5; old mute (11) stays mute. New frames with no saved note still walk from middle **C**, not C-1. Default **Land** stays C2.
+**Why** Alec: another octave up and below; highest C3, lowest C-1.
+**Rejected** Leaving the D-043 list (too short); putting new notes only at the end of the cycle (C-1 would sit after C3); snapping default land to C3.
+**Consequence** Do not prepend the low octave without remapping saved indices — C would become C-1. Names are relative to this app’s C, not scientific pitch (scientific C1 is ~32 Hz). Missing `finalNote` must default to C2, never index 0 (`Number(null)` is 0). `scaleRev` 2 marks a file as already on this list.
+
+---
+
+## D-050 — Ink-filled buttons use paper for the label
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** theme-manager.js, sketch.html, editor.html, theme.html, ui-manager.js
+
+**Decision** When a control is filled with ink (`--primary-color`) — highlighted / active / RUN / GO TO NEXT / the `...` menu — the label is `--on-primary-color`, which is paper (`--background-color`). Macintosh is black ink on light paper, so filled buttons are light-on-black. CRT neon fill still gets dark paper on the chip.
+**Why** Alec: in Macintosh mode, highlighted buttons do not invert text color (black label on black fill).
+**Rejected** Leaving hardcoded `#000` (assumed CRT neon-on-black). Computing a separate white/black from luminance (paper *is* the invert).
+**Consequence** Do not set filled-button text to `#000`. Tune paper if a custom ink/paper pair still has weak contrast. Outline / muted / hover chips must not keep a paper `-webkit-text-fill-color` — that is D-054.
+
+---
+
+## D-051 — Start chime sits with left / right / down
+**Date:** 2026-08-30 · **Status:** Active · **Touches:** animation-manager.js, prompt-generator.js, sketch.html, ui-manager.js, sketch-refactored.js
+
+**Decision** First RUN / Up / Enter plays `SOUND.START` at 600 Hz / 80 ms — the same sine family as left 300, down 400, right 500. The first film-frame note is skipped so the chime is not stacked under a pentatonic (or mute). The RUN button does not play the Mac click on start (STOP still uses the glitch ticks). Knobs: `SOUND.START` / `NAV_LEFT` / `NAV_RIGHT` / `NAV_DOWN`.
+**Why** Alec: the start chime on first press was more tuneful before and complemented left right down.
+**Rejected** Keeping the Mac click plus 600 Hz plus frame-0 note (three sounds on one press). Letting frame 0 be the start chime (mute or C-1 does not sit with 300/400/500).
+**Consequence** Do not restore `playClickSound` on RUN start. Customize Play still sounds every frame including the first — that page is scoring the film, not the desk loop.
+
+---
+
+## D-052 — Text glitches through the holes
+**Date:** 2026-08-31 · **Status:** Active · **Touches:** animation-manager.js
+
+**Decision** While paper tiles lift, prompt values are spinning glyphs (`getRotatingChars`) that lock to the real letters as `resolveCount` grows — letters for 1–3 word lists, whole words for sentences (D-012 / D-014). Wrap still follows `final` so the card does not bounce. Pictures are D-053 (cropped to the film square, mosaic while lifting). Cover keeps the text fully scrambled so a missed overlay frame cannot flash the answer. Second STOP still jumps to the finished word. No extra beeps — lift already has the gated land tones (D-048).
+**Why** Alec: the text should reveal as glitch too, not only be under animation.
+**Rejected** Leaving finished words under the film (the screenshot: static “Mil” in the holes). Replacing the tile lift with letter-scramble alone (would drop D-036). Scrambling headings / the objective (those are chrome, not the draw).
+**Consequence** Do not set `revealed` to `final` while `pixelMasked` is true. `unmaskPixelPrompts()` is still what lands the real string.
+
+---
+
+## D-053 — Pictures stay in the film square
+**Date:** 2026-08-31 · **Status:** Active · **Touches:** sketch-refactored.js
+
+**Decision** A prompt picture is cover-cropped into the same centered square as the pixel film (`revealSquareGridMetrics` on the leftover card). Several pictures split that square into cell-aligned rows. While tiles lift, the bitmap is drawn **cell by cell** (same cell size as the film). After land — and on recall — it stays that square, sharp, clipped. Not leftover-card width (D-038). Hidden while the film fully covers so a missed frame cannot flash the photo.
+**Why** Alec: maybe images have to be cropped or masked to size of grid; edges of the image grow suddenly which diminishes the effect because it is so uniform and does not match the glitch transition style.
+**Rejected** Aspect-fitting a smooth photo in the leftover slot (edges pop when the overlay drops). Pixelating after land (the land should be the real picture, just not a bigger rectangle).
+**Consequence** Do not restore `drawFittedPromptImage` leftover-width as the live dest. `IMAGE_SLOT*` remains the fallback for wait-dots if the pixel overlay is missing.
+
+---
+
+## D-054 — Button fill-color follows `color`
+**Date:** 2026-09-09 · **Status:** Active · **Touches:** theme-manager.js, sketch.html, ui-manager.js, editor.html, theme.html
+
+**Decision** Every control paints glyphs with `-webkit-text-fill-color` set to the **same CSS token as `color`**: paper (`--on-primary-color`) on ink-filled rest (D-050), ink (`--primary-color`) on paper chips / RE-RUN / hover-invert. Safari/Chrome otherwise keep a parent’s computed fill and ignore `color`.
+**Why** Alec: Macintosh theme — screenshot / report / clear / edit and the RUN circle had no visible labels (text matched the fill). Later GO TO NEXT was a solid ink bar with no “GO TO NEXT”.
+**Rejected** Reverting D-050 to hardcoded `#000` on filled CRT buttons. Using `currentColor` for the fill (native `<button>` may resolve that to ButtonText / ink, so Macintosh filled chips stay ink-on-ink until refresh).
+**Consequence** Do not set `-webkit-text-fill-color` to paper on a chip whose background is paper. Do not use `currentColor` on these native buttons. When `color` swaps on hover or muted, set the fill token in the same rule.
+
+---
+
+## D-055 — Film saves with the activity; Restore defaults
+**Date:** 2026-10-13 · **Status:** Active · **Touches:** reveal-animation.js, theme-page.js, theme.html, editor-settings-manager.js, editor-data-manager.js
+
+**Decision** The live reveal animation still lives in `localStorage` key `revealAnimation` (D-025) so the prompting window can play it. A **clone** of that snapshot is also stored on the open activity (`promptSettings[name].revealAnimation` and the working `promptCategories` copy). File → Save / Save As writes it; Customize edits stamp it onto the current activity as they persist. Loading that activity from History restores the snapshot into `revealAnimation`. An older activity with no snapshot leaves the current film alone. **Restore defaults** on Customize replaces the live film with factory geometric decoy at **6×6 / 2 frames** (D-032), Default Pattern, factory notes — not the same as **Reset All**, which only empties custom frames. CSV still does not carry frames; share a drawing with **Download Animation**.
+**Why** Alec: does the custom animation save with Activity History; there should be a button to restore to defaults. Theme already stamps per activity (D-033); the film was one browser-wide key, so switching activities kept the last drawing.
+**Rejected** Putting pixel frames into the CSV (too large; JSON download is the share format). Making Restore defaults confirm (Reset All has no dialog — D-031). Treating Restore defaults as Reset All.
+**Consequence** Do not “fix” the film back to a single global key. Auto-save must keep `revealAnimation` on `promptCategories` (same as theme knobs). Do not snap Restore defaults to an already-saved custom size — factory is 6×6 / 2.
+
+---
+
+## D-056 — FILE first; Customize under Help
+**Date:** 2026-10-14 · **Status:** Active · **Touches:** editor.html
+
+**Decision** The editor `...` panel lists **FILE** at the top (New / Save / Save As / Share / Load / Restore Last Run), then Help & Instructions, then **Customize**, then Activity History. The trigger label is **FILE**, not File. Customize stays in the panel (D-024 still owns the page itself) but sits under Help because it is an advanced look-and-film editor, not an everyday step.
+**Why** Alec: Customize is too prominent; make Rando as simple to operate as possible. FILE first is the save/load path teachers need; burying Customize under Help keeps the room from looking like a theme app.
+**Rejected** Removing Customize from the panel (still needs a door). Putting it below Activity History (scroll-hidden). Keeping “File” mixed-case.
+**Consequence** Do not restore Customize as the first row. Do not add a Theme dropdown back (D-024). Hidden `#theme-select` can stay next to the Customize button.
+
+---
+
+## D-057 — Quoted CSV Share; pictures as a zip folder
+**Date:** 2026-10-14 · **Status:** Active · **Touches:** activity-pack.js, editor-data-manager.js, editor-settings-manager.js, editor-main.js, data-manager.js, editor.html, sketch.html
+
+**Decision** Share writes RFC 4180 quoted CSV so commas (and quotes) in sentences, grouping names, and headings survive Load. If the activity has picture options (`img:` tokens), Share warns: “Saving this means saving images. The download is a folder (zip) with the prompt list and a media folder.” Buttons **SHARE** / **CANCEL**. Confirm downloads `activity.csv` plus `media/<id>.png` or `.jpg` (uncompressed zip). No pictures → a plain `.csv`. Load accepts `.csv` or `.zip` and puts blobs back in IndexedDB. Class reports use the same quoted CSV block. Film frames stay out of this pack (D-055 / Download Animation).
+**Why** Alec: escape commas so long sentences keep their syntax on load; pictures need to be shared in a folder with the media, with a warning that saving this means saving images.
+**Rejected** Putting binaries or base64 into the CSV (D-015). Requiring a build step / JSZip. Writing a real OS folder (the browser can only download a zip). Silently attaching pictures with no warning.
+**Consequence** Do not revert Load to `line.split(',')`. Do not treat a missing `media/` file as a parser error — the list still loads, that thumb stays broken. Finder may re-zip with deflate; unpack method 8 via `DecompressionStream` when present. Cache-bust tags move together with this new module.
+
+---
+
+## D-058 — Empty Custom uses letter scramble, not Default Pattern
+**Date:** 2026-10-14 · **Status:** Active · **Touches:** reveal-animation.js, animation-manager.js
+
+**Decision** If Customize is on **Custom** and the live frames have no paint (`revealHasPaint` is false — Reset All, or never drawn), the prompting window does **not** play Default Pattern. RUN uses the letter-scramble path (spinning decoy letters, then reveal). Pictures still use flicker dots (D-017). **Default Pattern** still plays the factory geometric film. **Restore defaults** still recalls that factory film (D-055) — it is an explicit switch to default, not “fill in empty custom.”
+**Why** Alec: when custom animation is empty do not put default; we can just scramble text.
+**Rejected** Playing empty paper tiles as a film (the result would show through immediately). Substituting `makeGeometricFrame` whenever custom has no paint (looked like the default animation came back after Reset All).
+**Consequence** Do not “fix” empty Custom by falling back to geometric decoy. Parked frames past `frameCount` still do not count as paint (D-041).
+
+---
+
 ## 3. Known drift (flag, don't silently "fix")
 
 - ~~CHANGELOG's documented module line counts no longer match actual file sizes.~~
@@ -258,11 +643,7 @@ here so the reasoning isn't lost between conversations.
   (e.g. an authoring assistant that helps draft prompt options) should be
   checked against this constraint before being added — assist the teacher's
   curation, don't replace it.
-- **F4 — Customizable animations.** The reveal animation (currently one
-  hardcoded terminal-scramble effect) should become a swappable, parameterized
-  "knob" rather than a single fixed effect — same philosophy as D-tagged
-  knobs elsewhere in this doc. Connects to F1/D-015/D-017: pictures skip letter
-  scramble and chatter on the same beep clock with flickering dots, then appear.
+- **F4 — Customizable animations.** First concrete surface is `theme.html` (D-024 / D-025 / D-027 / D-032): default geometric decoy vs a teacher-sized custom drawing with a theme-ink-first palette, previewed in the leftover-card window. Still open: more parameterized knobs beyond this editor, and how far “their way” goes past one saved animation per browser.
 - **F5 — Low floor, wide walls.** First-time view of the app must be minimal
   — a teacher should be able to open it and successfully build and run an
   activity without touching anything beyond the essentials. Everything else
@@ -277,10 +658,9 @@ here so the reasoning isn't lost between conversations.
   - **Concrete instance of "wide walls":** Alec styled the current look
     himself, but thinks adoption depends on teachers being able to restyle
     it as *their* room, not just use his. The 8-preset theme system (D8) is
-    real, working infrastructure toward this already — but "their way" may
-    mean more than choosing from a fixed preset list (custom colors, fonts,
-    branding). How far "their way" goes — pick-a-preset vs. true
-    customization — is an open scope question, not yet decided.
+    real, working infrastructure toward this already. First custom-color/font/stroke/glow
+    knobs shipped as D-026 (per-preset overlays on Customize). How far “their way”
+    still goes — branding uploads, arbitrary typefaces — remains open.
 
 ## 5. How to use this with AI
 

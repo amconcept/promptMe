@@ -4,7 +4,9 @@
 let scrambleInterval = null;
 let revealInterval = null;
 let imageRevealTimeout = null;
-let isAnimating = false;
+let pixelHoldTimeout = null;
+// Shared with sketch-refactored.js draw() — `let` hid this flag from the canvas loop.
+window.isAnimating = false;
 
 // Animation timing (D-012 knobs — tune by feel)
 const TIMING = {
@@ -31,11 +33,17 @@ const TIMING = {
 
 // Sound settings
 const SOUND = {
+    // Letter-scramble / image-dot fallback. Pixel film uses playRevealFrameSound (D-040).
     SCRAMBLE: { FREQUENCY: 440, DURATION: 15 },
     REVEAL: { FREQUENCY: 600, DURATION: 25 },
     // D-014: word-land pitch — octave-plus above scramble (440) so sentences don't share the letter chatter
     WORD_REVEAL: { FREQUENCY: 880, DURATION: 40 },
     FINAL: { FREQUENCY: 1200, DURATION: 100 },
+    // Desk arrows + first RUN (D-051). Same sine family: left 300, down 400, right 500, start 600.
+    START: { FREQUENCY: 600, DURATION: 80 },
+    NAV_LEFT: { FREQUENCY: 300, DURATION: 80 },
+    NAV_RIGHT: { FREQUENCY: 500, DURATION: 80 },
+    NAV_DOWN: { FREQUENCY: 400, DURATION: 100 },
     RETURN_TO_FIELD: { FREQUENCY: 800, DURATION: 50 }, // New sound for returning to name field
     CLICK: { FREQUENCY: 550, DURATION: 12, TYPE: 'square', VOLUME: 0.30 }, // Mac SE-style click (significantly increased volume)
     TICK: { FREQUENCY: 800, DURATION: 30, TYPE: 'sine', VOLUME: 0.35 }, // Tick sound for checkboxes (significantly increased volume)
@@ -102,6 +110,55 @@ function nextWordEndIndex(text, fromIndex) {
 // Scramble glyphs — letter-sized (not block ▓/█ which are wider/taller and force wrap + bounce)
 function getRotatingChars() {
     return 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789#*+'.split('');
+}
+
+/** How far into `finalText` is locked at this lift ratio (D-052). Sentences lock
+ *  whole words (D-014); short lists lock letters. */
+function glitchLockIndex(finalText, lockRatio) {
+    const t = String(finalText == null ? '' : finalText);
+    const ratio = Math.max(0, Math.min(1, Number(lockRatio) || 0));
+    if (!t.length) return 0;
+    const plan = getRevealPlan(t);
+    if (plan.byWord) {
+        const wordCount = t.trim() ? t.trim().split(/\s+/).length : 0;
+        const lockWords = Math.floor(ratio * wordCount);
+        let idx = 0;
+        for (let w = 0; w < lockWords; w++) {
+            idx = nextWordEndIndex(t, idx);
+        }
+        return idx;
+    }
+    return Math.floor(ratio * t.length);
+}
+
+/** D-052: spinning glyphs under the film; they lock as paper tiles lift. Pictures
+ *  have no letters — they still punch through (D-036). */
+function applyPixelLandGlitch(lockRatio) {
+    if (!window.currentPrompts) return;
+    Object.keys(window.currentPrompts).forEach(function (key) {
+        const p = window.currentPrompts[key];
+        if (!p || typeof p !== 'object' || !p.pixelMasked) return;
+        const text = p.final || p.revealed || '';
+        if (typeof isImagePromptToken === 'function' && isImagePromptToken(text)) return;
+        const lockAt = glitchLockIndex(text, lockRatio);
+        window.currentPrompts[key] = {
+            revealed: text.substring(0, lockAt),
+            rotating: buildScrambleSegment(text, lockAt, text.length),
+            final: text,
+            pixelMasked: true
+        };
+    });
+}
+
+function pixelMaskedPromptState(finalText) {
+    const text = String(finalText == null ? '' : finalText);
+    const image = typeof isImagePromptToken === 'function' && isImagePromptToken(text);
+    return {
+        revealed: '',
+        rotating: image ? '' : buildScrambleSegment(text, 0, text.length),
+        final: text,
+        pixelMasked: true
+    };
 }
 
 /** Build scramble glyphs from a template. Spaces/punctuation stay so wrap stays stable;
@@ -308,10 +365,44 @@ function startScrambleAnimation(finalText, category, promptType, selectedCategor
         if (generationStep + 1 < maxPrompts) {
         generationStep++;
             generateNextAttribute();
+        } else if (typeof abortGeneration === 'function') {
+            abortGeneration(typeof RUN_EMPTY_GROUPING_MSG === 'string'
+                ? RUN_EMPTY_GROUPING_MSG
+                : 'Every grouping needs at least one option in each prompt. Fill the empty list.');
         } else {
             debugLog('Generation complete after error');
             isGenerationComplete = true;
+            isGenerating = false;
+            window.isGenerating = false;
         }
+        return;
+    }
+
+    // D-025: pixel fill-then-resolve is the student-facing scramble (masks word / phrase / image)
+    // D-058: empty Custom does not borrow Default Pattern — drop through to letter scramble
+    // D-028: one overlay per RUN — earlier columns stash silently; the last plays the card
+    const revealCfg = (typeof loadRevealAnimation === 'function') ? loadRevealAnimation() : null;
+    const usePixelFilm = (typeof revealUsesPixelFilm === 'function')
+        ? revealUsesPixelFilm(revealCfg)
+        : !(revealCfg && revealCfg.mode === 'custom');
+    if (usePixelFilm && typeof startPixelRevealAnimation === 'function') {
+        const maxPrompts = (typeof shuffledPromptTypes !== 'undefined' && shuffledPromptTypes)
+            ? shuffledPromptTypes.length
+            : 1;
+        const moreComing = generationStep + 1 < maxPrompts;
+        if (moreComing) {
+            if (!window.currentPrompts) window.currentPrompts = {};
+            window.currentPrompts[category] = pixelMaskedPromptState(finalText);
+            if (typeof isImagePromptToken === 'function' && isImagePromptToken(finalText)
+                && typeof window.prefetchPromptImage === 'function') {
+                window.prefetchPromptImage(finalText);
+            }
+            commitPromptPending(finalText, category, promptType, selectedCategory);
+            generationStep += 1;
+            if (typeof generateNextAttribute === 'function') generateNextAttribute();
+            return;
+        }
+        startPixelRevealAnimation(finalText, category, promptType, selectedCategory);
         return;
     }
     
@@ -348,7 +439,7 @@ function startScrambleAnimation(finalText, category, promptType, selectedCategor
                     rotating: '',
                     final: finalText
                 };
-                playSound(SOUND.FINAL);
+                playLandSound();
                 finishPromptReveal(finalText, category, promptType, selectedCategory);
                 return;
             }
@@ -449,48 +540,66 @@ function startRevealAnimation(finalText, category, promptType, selectedCategory,
             charIndex = nextIndex;
         } else {
             clearInterval(revealInterval);
-            playSound(SOUND.FINAL);
+            playLandSound();
             finishPromptReveal(finalText, category, promptType, selectedCategory);
         }
     }, plan.intervalMs);
 }
 
 /** After a prompt (text or image) has landed — pending/in-play bookkeeping, then next column. */
-function finishPromptReveal(finalText, category, promptType, selectedCategory) {
-            // Add to pending prompts (not committed until student changes)
-            // This allows regeneration for the same student without depleting options
-            if (promptType && finalText) {
-                // Track as pending - will be committed when student changes
-                if (window.pendingPrompts === undefined) {
-                    window.pendingPrompts = [];
-                }
-                window.pendingPrompts.push({
-                    promptType: promptType,
-                    prompt: finalText,
-                    selectedCategory: selectedCategory
-                });
-                debugLog('Added to pending prompts:', finalText, 'for prompt type:', promptType);
-                
-                // Temporarily mark as used to prevent duplicates during current generation
-                // But these will be uncommitted if student regenerates
-                if (window.usedPrompts) {
-                    // Initialize tracking for this prompt type if needed
-                    if (!window.usedPrompts[promptType]) {
-                        window.usedPrompts[promptType] = new Set();
-                    }
-                    window.usedPrompts[promptType].add(finalText);
-                    debugLog('Temporarily marked prompt as used (pending):', finalText, 'for prompt type:', promptType);
-                    
-                    // Also track globally (temporarily)
-                    if (selectedCategory && window.globalUsedPrompts) {
-                        const globalKey = `${promptType}_${selectedCategory}_${finalText}`;
-                        if (!window.globalUsedPrompts[globalKey]) {
-                            window.globalUsedPrompts[globalKey] = true;
-                            debugLog('Added to global tracking (pending):', globalKey);
-                        }
-                    }
-                }
+function commitPromptPending(finalText, category, promptType, selectedCategory) {
+    if (!promptType || !finalText) return;
+    if (window.pendingPrompts === undefined) {
+        window.pendingPrompts = [];
+    }
+    window.pendingPrompts.push({
+        promptType: promptType,
+        prompt: finalText,
+        selectedCategory: selectedCategory
+    });
+    debugLog('Added to pending prompts:', finalText, 'for prompt type:', promptType);
+    if (window.usedPrompts) {
+        if (!window.usedPrompts[promptType]) {
+            window.usedPrompts[promptType] = new Set();
+        }
+        window.usedPrompts[promptType].add(finalText);
+        debugLog('Temporarily marked prompt as used (pending):', finalText, 'for prompt type:', promptType);
+        if (selectedCategory && window.globalUsedPrompts) {
+            const globalKey = `${promptType}_${selectedCategory}_${finalText}`;
+            if (!window.globalUsedPrompts[globalKey]) {
+                window.globalUsedPrompts[globalKey] = true;
+                debugLog('Added to global tracking (pending):', globalKey);
             }
+        }
+    }
+}
+
+function unmaskPixelPrompts() {
+    if (!window.currentPrompts) return;
+    Object.keys(window.currentPrompts).forEach(function (key) {
+        const p = window.currentPrompts[key];
+        if (p && typeof p === 'object' && p.pixelMasked) {
+            const text = p.final || p.revealed || '';
+            window.currentPrompts[key] = {
+                revealed: text,
+                rotating: '',
+                final: text
+            };
+        }
+    });
+}
+
+function clearPixelMaskedPrompts() {
+    if (!window.currentPrompts) return;
+    Object.keys(window.currentPrompts).forEach(function (key) {
+        if (window.currentPrompts[key] && window.currentPrompts[key].pixelMasked) {
+            delete window.currentPrompts[key];
+        }
+    });
+}
+
+function finishPromptReveal(finalText, category, promptType, selectedCategory) {
+            commitPromptPending(finalText, category, promptType, selectedCategory);
             
             // Clear animation flag
             isAnimating = false;
@@ -576,7 +685,139 @@ function clearAnimations() {
         clearTimeout(imageRevealTimeout);
         imageRevealTimeout = null;
     }
+    if (pixelHoldTimeout) {
+        clearTimeout(pixelHoldTimeout);
+        pixelHoldTimeout = null;
+    }
     isAnimating = false;
+    if (window.pixelReveal) {
+        clearPixelMaskedPrompts();
+        window.pixelReveal.active = false;
+    }
+}
+
+/**
+ * D-025 / D-032 / D-035 / D-047 / D-048: play the saved film on FRAME_MS in a
+ * loop until STOP. STOP starts the paper-tile land (not a timer). Letter
+ * scramble / image-dot paths stay below as fallback.
+ */
+function startPixelRevealAnimation(finalText, category, promptType, selectedCategory) {
+    if (scrambleInterval) clearInterval(scrambleInterval);
+    if (revealInterval) clearInterval(revealInterval);
+    if (imageRevealTimeout) {
+        clearTimeout(imageRevealTimeout);
+        imageRevealTimeout = null;
+    }
+    if (pixelHoldTimeout) {
+        clearTimeout(pixelHoldTimeout);
+        pixelHoldTimeout = null;
+    }
+
+    const cfg = (typeof loadRevealAnimation === 'function') ? loadRevealAnimation() : { mode: 'default', frames: [] };
+    const size = (typeof revealGridSize === 'function')
+        ? revealGridSize(cfg)
+        : ((cfg && cfg.gridSize) || (window.REVEAL && window.REVEAL.GRID_SIZE) || 6);
+    if (!window.currentPrompts) window.currentPrompts = {};
+    window.currentPrompts[category] = pixelMaskedPromptState(finalText);
+    const ranks = (typeof ranksPuzzleShuffle === 'function')
+        ? ranksPuzzleShuffle(size)
+        : [];
+    const tickMs = (window.REVEAL && window.REVEAL.TICK_MS) || 50;
+    const frameMs = (window.REVEAL && window.REVEAL.FRAME_MS) || 120;
+    const frameCount = (typeof revealFrameCount === 'function')
+        ? revealFrameCount(cfg)
+        : ((cfg && cfg.frameCount) || (window.REVEAL && window.REVEAL.FRAME_COUNT) || 2);
+
+    isAnimating = true;
+    Object.keys(window.currentPrompts).forEach(function (key) {
+        const p = window.currentPrompts[key];
+        const val = (p && (p.final || p.revealed)) || '';
+        if (val && typeof isImagePromptToken === 'function' && isImagePromptToken(val)
+            && typeof window.prefetchPromptImage === 'function') {
+            window.prefetchPromptImage(val);
+        }
+    });
+
+    let cycle = 0;
+    let lastSoundFrame = null;
+    const decoyFor = function (frameTick, flickerSalt) {
+        if (typeof getRevealDecoyFrame !== 'function') return [];
+        return getRevealDecoyFrame(cfg, frameTick, flickerSalt);
+    };
+    const totalCells = size * size;
+    const convergeTicks = (typeof convergeTicksForSize === 'function')
+        ? convergeTicksForSize(size)
+        : ((window.REVEAL && window.REVEAL.CONVERGE_TICKS) || 8);
+    const cellsPerTick = Math.max(1, Math.ceil(totalCells / Math.max(1, convergeTicks)));
+
+    window.pixelReveal = {
+        active: true,
+        landing: false,
+        category: category,
+        size: size,
+        decoy: decoyFor(0, 0),
+        ranks: ranks,
+        resolveCount: 0,
+        frameTick: 0,
+        finishArgs: {
+            finalText: finalText,
+            category: category,
+            promptType: promptType,
+            selectedCategory: selectedCategory
+        }
+    };
+
+    const tick = function () {
+        if (shouldStop) {
+            if (scrambleInterval) clearInterval(scrambleInterval);
+            scrambleInterval = null;
+            if (window.pixelReveal) window.pixelReveal.active = false;
+            clearPixelMaskedPrompts();
+            return;
+        }
+        const pr = window.pixelReveal;
+        if (!pr || !pr.active) return;
+        cycle += 1;
+        const frameTick = Math.floor(((cycle - 1) * tickMs) / frameMs);
+        pr.frameTick = frameTick;
+        if (pr.landing) {
+            // D-048 / D-044: lift paper tiles; leftover film stays intact (no flicker).
+            // One gated low tone per tick so the sound stutters with the holes.
+            pr.decoy = decoyFor(frameTick, false);
+            pr.resolveCount = Math.min(totalCells, (pr.resolveCount || 0) + cellsPerTick);
+            // D-052: letters lock with the holes — not finished text sitting under the film
+            applyPixelLandGlitch(pr.resolveCount / totalCells);
+            if (pr.resolveCount >= totalCells) {
+                completePixelLand();
+                return;
+            }
+            if (typeof playRevealTransitionSound === 'function') {
+                playRevealTransitionSound();
+            } else {
+                playSound(SOUND.REVEAL);
+            }
+            return;
+        }
+        // D-047: loop the film until STOP. Do not lift or unmask on a timer.
+        pr.decoy = decoyFor(frameTick, cycle);
+        pr.resolveCount = 0;
+        applyPixelLandGlitch(0);
+        const frameIdx = ((frameTick % Math.max(1, frameCount)) + Math.max(1, frameCount)) % Math.max(1, frameCount);
+        // D-040: one note when the picture changes, not a beep every 50ms
+        if (typeof playRevealFrameSound === 'function') {
+            // D-051: start chime already spoke on RUN; don't stack the first film note on it
+            if (lastSoundFrame === null) {
+                lastSoundFrame = frameIdx;
+            } else if (lastSoundFrame !== frameIdx) {
+                lastSoundFrame = frameIdx;
+                playRevealFrameSound(frameIdx, frameCount, cfg);
+            }
+        } else {
+            playSound(SOUND.SCRAMBLE);
+        }
+    };
+    tick();
+    scrambleInterval = setInterval(tick, tickMs);
 }
 
 /**
@@ -602,8 +843,60 @@ function playNextHintCueSound(onBeat) {
 
 window.playNextHintCueSound = playNextHintCueSound;
 
+function playLandSound(state) {
+    const cfg = state || ((typeof loadRevealAnimation === 'function') ? loadRevealAnimation() : null);
+    if (typeof playRevealFinalSound === 'function') {
+        playRevealFinalSound(cfg);
+        return;
+    }
+    playSound(SOUND.FINAL);
+}
+
+/**
+ * D-048: overlay drops, land note, prompts unmask. Shared by the lift finishing
+ * and by a second STOP that skips the rest of the tiles.
+ */
+function completePixelLand() {
+    const pr = window.pixelReveal;
+    if (!pr || !pr.active) return;
+    const args = pr.finishArgs || {};
+    if (scrambleInterval) {
+        clearInterval(scrambleInterval);
+        scrambleInterval = null;
+    }
+    pr.active = false;
+    pr.landing = false;
+    unmaskPixelPrompts();
+    playLandSound();
+    isAnimating = false;
+    finishPromptReveal(args.finalText, args.category, args.promptType, args.selectedCategory);
+}
+
+/**
+ * D-045 / D-048: first STOP starts the paper-tile land + transition sound.
+ * A second STOP while tiles are still lifting jumps to the result.
+ * Space still aborts and clears (does not generate).
+ */
+function skipRevealToResult() {
+    const pr = window.pixelReveal;
+    if (!pr || !pr.active) return false;
+    if (pr.landing) {
+        completePixelLand();
+        return true;
+    }
+    pr.landing = true;
+    pr.resolveCount = 0;
+    // D-052: scramble before the first hole opens so a missed overlay frame
+    // cannot flash the finished word.
+    applyPixelLandGlitch(0);
+    return true;
+}
+
+window.skipRevealToResult = skipRevealToResult;
+
 // Export functions to window
 window.startScrambleAnimation = startScrambleAnimation;
+window.startPixelRevealAnimation = startPixelRevealAnimation;
 window.clearAnimations = clearAnimations; // Export clearAnimations (was incorrectly named stopAnimation)
 window.playSound = playSound; // Export playSound for use in other files
 window.SOUND = SOUND; // Export SOUND for use in other files

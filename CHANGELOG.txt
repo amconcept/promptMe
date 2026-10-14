@@ -9,14 +9,15 @@ OVERVIEW
 --------
 Rando Calrissian is a creative prompt generation tool that lets a teacher combine one
 objective with up to four prompts, optionally organized into groupings, and draw random
-combinations without repetition. Three components:
+combinations without repetition. Four components:
 - Editor (editor.html + modular JS): creating and managing activities
 - Prompting window (sketch.html + modular JS): generating and displaying prompts
+- Customize (theme.html): theme presets + reveal-animation editor
 - Index (index.html): landing page + first-visit welcome
 
 Companion documents (read these first):
 - RANDOMIZER_LOGIC_SPEC.md - required draw behavior (R1-R7, I1-I6, scenarios S1-S10)
-- DESIGN_DECISIONS.md      - why visual/UX choices are what they are (D1-D23) + future directions
+- DESIGN_DECISIONS.md      - why visual/UX choices are the way they are (D1-D58) + future directions
 - README.md                - how a teacher uses the app
 - .cursorrules             - how to work on this project
 
@@ -36,11 +37,10 @@ than leave them contradicting reality, they are retracted here explicitly.
 RETRACTED: "THEME SYSTEM REMOVAL"
    Claimed all theming was removed. This was never true, and the entry has been deleted.
    The theme system is fully live: 8 presets (orangeCRT, blueCRT, windows, greenCRT,
-   purpleCRT, pinkCRT, macintosh, black) in theme-manager.js, a theme menu in editor.html,
-   per-activity persistence, CSV round-trip, and themeChanged/backgroundChanged events
-   consumed by the prompting window. See DESIGN_DECISIONS.md D8, which treats theming as
-   working infrastructure toward letting teachers restyle the app as their own room, not
-   as legacy weight to be removed.
+   purpleCRT, pinkCRT, macintosh, black) in theme-manager.js, picked on theme.html
+   (the editor ... Theme dropdown was removed — D-024), per-activity persistence,
+   CSV round-trip, and themeChanged/backgroundChanged events consumed by the prompting
+   window. See DESIGN_DECISIONS.md D8.
    Only accurate part of the old entry: number-key (1-5) theme switching is gone.
 
 RETRACTED: module line counts under "MODULAR ARCHITECTURE (Version 2025.2)"
@@ -88,14 +88,17 @@ CURRENT FEATURE SET
 
 ACTIVITY DESIGN (EDITOR)
 - Up to 4 prompts (MAX_PROMPTS) and 6 groupings (MAX_CATEGORIES)
-- One objective per activity, shown at the top of the prompting window
+- One objective per activity, shown under the name field on the leftover card (D-028)
 - Options entered one per line per cell; drop or paste PNG/JPG onto a cell (D-015)
 - Image thumbs sit inside the prompt box; drop from another window is captured (D-019)
 - Dropped files are PNG/JPG if their first bytes say so; remote http(s) URLs are never fetched (D-020)
 - Finder drop: box lights while a file is held over it; dragenter is claimed so Safari delivers the file (D-021)
 - Prompt headings are optional; a blank heading is omitted on the card (D-018)
 - Desktop grid layout; phone/narrow layout switches to a single-prompt cube (D-023)
-- Eight themes, saved per activity
+- Eight themes, chosen on the Customize page (`theme.html`), saved per activity (D-024)
+- Each preset can be tuned (ink, paper, stroke, glow, font family, size, style) in this browser; factory palettes stay resettable. Ink/paper/stroke use four short web-color palettes (Pastel, Primary, Neon, Shades) spanning the Tune panel (D-030, D-033). The 8 cards are leftover-card thumbnails: **Save look** stamps the mix on that card, **Factory** recalls the original recipe, **Use on [activity]** stamps the look onto the open activity (D-033). Customize chrome shows the live look (D-026)
+- Hidden `#theme-select` remains in the editor for legacy save/load reads; the visible Theme dropdown is gone
+- Reveal animation: fill overlay (default geometric decoy, or a custom drawing) that **loops until STOP** (D-047). STOP plays a rapid gated low-tone glitch, then paper tiles lift over the result, then the land note (D-048). Teacher picks grid size (6–20) and frame count (2–12); a new animation starts at 6×6 with 2 frames (D-032). Lowering Frames parks extra drawings so raising it brings them back (D-041). Sketch plays those frames on the same 120ms clock as Customize Play (D-035). Each film frame plays a pentatonic note (C-1 through C3, or mute); click the name under a thumbnail to cycle (D-040, D-042, D-049). Land (Customize) is the ping when the prompts appear (D-046); default C2. Custom drawings play as painted (D-044). Custom frames sit centered above the draw grid; drag to reorder; Shift-click a range; Shift while drawing flips pen/eraser; Clear Frame / Reset All (D-031). Square cells centered in the card; empty cells are page background (D-028). One leftover-card preview for both modes; pixel palette defaults to theme ink (D-027). Copy to Next duplicates a frame onto the next slot. Saved in localStorage (`revealAnimation`) and downloadable as JSON; the prompting window plays it (D-025)
 - Delete `[ X ]` uses the theme primary color, not a separate red (D5)
 - Help & Instructions popup, deep-linkable via editor.html?help=1
 
@@ -113,8 +116,12 @@ PROMPTING WINDOW
 - Keyboard: UP ARROW / Enter generate, DOWN ARROW confirms and advances,
   LEFT/RIGHT navigate students and browse history, SPACE interrupts a scramble in
   progress (it does not generate)
-- Generate presses during the scramble animation are ignored
-- Image options chatter on the scramble beep, then appear on the card (D-017)
+- First RUN plays the film in a loop; STOP plays the glitch land then the result (D-045, D-047, D-048). Space still aborts and clears. Empty Custom skips the film and scrambles letters (D-058)
+- Image options fill-then-resolve like text (D-025); the overlay plays the saved film in a loop until STOP (D-035, D-047); STOP lifts paper tiles with rapid gated low tones then the land note (D-048); through those holes the words scramble and lock (D-052); custom film stays intact (D-044); one pentatonic note per film frame plus a designed land ping (D-040, D-042, D-049, D-046); empty Custom uses letter-scramble / flicker-dot instead of Default Pattern (D-058)
+- Pictures fill leftover height on the leftover card after name, objective, labels, and text; `IMAGE_SLOT` is the floor (D-038)
+- Prompt pictures are cover-cropped to the film square; they mosaic while tiles lift and do not grow past that square (D-053)
+- Prompt labels mix toward paper so they recede from the chosen values (D-039)
+- Reveal grid stays square and centered in the card; objective sits under the name field; prompts cluster below (D-028)
 - Re-running a finished result puts that student's options back and draws again (R5)
 - Controls: screenshot, report, clear, edit
 
@@ -143,8 +150,9 @@ REPORTS (PER ACTIVITY)
 
 FILE MENU
 - New, Save, Save As, Share, Load, Restore Last Run
-- CSV export/import carries activity name, theme, background, objective, grouping labels,
-  prompt headers, and all grouping content (image files are not in the CSV; see D-015)
+- Share writes quoted CSV so commas in sentences survive Load. Pictures download as a
+  zip folder (activity.csv + media/) after a SHARE/CANCEL warning; no pictures → plain
+  CSV. Load accepts .csv or .zip (D-057; D-015 still forbids binaries inside the CSV)
 - Sample activity loads from Sample-activity-2025-10-27.csv, which is its source of truth,
   and is restored to Activity History automatically if deleted
 
@@ -154,8 +162,9 @@ LANDING PAGE
 - Shown once, remembered as randoCalrissianWelcomeSeen in localStorage
 
 DATA PERSISTENCE
-- localStorage is the source of truth for activity text and `img:` tokens
-- PNG/JPG blobs live in IndexedDB (`promptMeImages`); they are not stored in localStorage
+- localStorage is the source of truth for activity text, `img:` tokens, `selectedTheme`, `themeCustomizations`, and `revealAnimation`
+- PNG/JPG blobs live in IndexedDB (`promptMeImages`); they are not stored in localStorage.
+  Share with pictures packs them into a zip media/ folder (D-057), not into the CSV.
 - Editor and prompting window sync via a promptDataUpdated custom event, and across tabs
   via the storage event
 - Auto-save on edit; save paths preserve report data so editing prompts mid-session does
@@ -166,10 +175,10 @@ DEVELOPMENT CONVENTIONS
 =======================
 
 CACHE BUSTING
-- Fourteen local module <script> tags carry ?v=20260830l (seven on editor.html, seven
-  on sketch.html). After editing any of those modules, bump that value on all fourteen
-  together. theme-manager.js is loaded on editor.html, sketch.html, and index.html with
-  no ?v=; index.html has no other local modules.
+- Twenty-three local module <script> tags carry ?v=20260830az (nine on editor.html, ten
+  on sketch.html, three on theme.html, one on index.html). After editing any of those
+  modules, bump that value on all twenty-three together. theme-manager.js is tagged on
+  every page so Macintosh paper-on-ink (D-050) cannot load from a stale untagged copy.
 - Mismatched values load a mix of old and new modules and produce confusing bugs
 - The Sample activity CSV fetch uses the same ?v= value as the tagged modules
 
@@ -196,30 +205,36 @@ DEBUG LOGGING
 FILE STRUCTURE
 ==============
 PromptMe App_2025/
-|-- index.html                          landing page + welcome popup      (271 lines)
-|-- editor.html                         activity editor                  (2211 lines)
-|-- sketch.html                         prompting window                  (200 lines)
+|-- index.html                          landing page + welcome popup      (276 lines)
+|-- editor.html                         activity editor                  (2209 lines)
+|-- sketch.html                         prompting window                  (227 lines)
+|-- theme.html                          Customize: themes + reveal editor (635 lines)
 |-- sketch-test.html                    test harness                       (35 lines)
 |
 |-- Editor modules
-|   |-- editor-main.js                  main orchestrator                 (728 lines)
-|   |-- editor-ui-manager.js            UI elements & forms              (1257 lines)
-|   |-- editor-data-manager.js          data persistence & CSV            (643 lines)
-|   |-- editor-settings-manager.js      activity management              (1452 lines)
+|   |-- editor-main.js                  main orchestrator                 (674 lines)
+|   |-- editor-ui-manager.js            UI elements & forms              (1258 lines)
+|   |-- editor-data-manager.js          data persistence & CSV            (552 lines)
+|   |-- editor-settings-manager.js      activity management              (1441 lines)
 |   |-- editor-prompt-cube.js           phone cube layout & gestures      (457 lines)
 |   |-- editor-image-prompts.js         drop/paste PNG/JPG onto cells     (383 lines)
 |
 |-- Prompting modules
-|   |-- sketch-refactored.js            main orchestrator                (1564 lines)
-|   |-- ui-manager.js                   UI elements & buttons            (1298 lines)
-|   |-- animation-manager.js            animations & sound                (612 lines)
-|   |-- data-manager.js                 data persistence & reports       (1429 lines)
+|   |-- sketch-refactored.js            main orchestrator                (1723 lines)
+|   |-- ui-manager.js                   UI elements & buttons            (1299 lines)
+|   |-- animation-manager.js            animations & sound                (783 lines)
+|   |-- data-manager.js                 data persistence & reports       (1406 lines)
 |   |-- student-manager.js              student navigation                (203 lines)
 |   |-- prompt-generator.js             draw logic (implements R1-R7)     (664 lines)
 |
+|-- Customize
+|   |-- theme-page.js                   preset cards + pixel editor       (976 lines)
+|
 |-- Shared
-|   |-- theme-manager.js                themes & CSS variables            (481 lines)
+|   |-- theme-manager.js                themes & CSS variables            (858 lines)
 |   |-- image-store.js                  IndexedDB blobs + img: tokens     (179 lines)
+|   |-- reveal-animation.js             fill-then-resolve + persist       (522 lines)
+|   |-- activity-pack.js                quoted CSV + zip picture pack     (475 lines)
 |
 |-- Sample-activity-2025-10-27.csv      sample activity (source of truth)
 |
@@ -239,7 +254,7 @@ PromptMe App_2025/
 Line counts above are current as of August 2026. If you cite counts, re-measure - stale
 counts are what made this file misleading in the first place.
 
-Module totals: prompting 5770 lines, editor 4920 lines, shared 660 lines.
+Module totals: prompting 6078 lines, editor 4765 lines, customize 976 lines, shared 2034 lines.
 
 
 TECHNICAL STACK
@@ -274,7 +289,10 @@ EDITOR UI
 - Delete buttons render as [x] in brackets and follow the theme color (D4, D5)
 - Column alignment resolved via a 120px offset matching grouping label + gap (D3)
 - Objective section moved above the Add controls
-- Settings/File/Theme consolidated into dropdown menus
+- Settings/File/Theme consolidated into dropdown menus; Theme dropdown later removed in favor of theme.html (D-024)
+- Per-preset ink/paper/stroke/glow/font family/size/style knobs on Customize; the eight cards are leftover-card thumbnails (D-026, D-033)
+- Ink, paper, and stroke pick from curated Pastel / Primary / Neon / Shades swatches, not the OS color picker (D-030)
+- Reveal editor: teacher-chosen grid (6–20) and frames (2–12), default 6×6 / 2 (D-032); leftover frames stay parked when the count shrinks (D-041); per-frame pentatonic tones on the thumbnails from C-1 to C3 plus mute (D-042, D-049); film strip centered, drag-reorder, Shift-flip tool, Shift-select, Reset All (D-031); one leftover-card preview; pixel and theme palettes are one compact row of small squares; pixel palette defaults to theme ink (D-027)
 - Phone cube layout added, later gaining swipe gestures (D-023)
 - Fixed: iOS bug where only one character registered when typing the objective, by
   replacing width-limiting on input.value with a hidden mirror span and soft trimming (D-022)
@@ -292,6 +310,38 @@ PROMPTING WINDOW
 - Sentence prompts (4+ words) reveal in about a second, wrap instead of shrinking unreadably, and tick per word (D-012)
 - Scramble no longer matches the chosen prompt’s length; it borrows another option from the same list so the silhouette doesn’t give the answer away (D-013)
 - Sentence reveal is word-by-word at 880Hz, distinct from the 440Hz letter scramble (D-014)
+- Visible scramble became a fill overlay so word / phrase / image are masked until STOP (D-025, D-047); grid size and frame count are teacher-chosen (D-032; was a fixed 10×10 / 8 in D-029); film plays on FRAME_MS (D-035); paper-tile lift on a timer (D-036, D-037) is unused while D-047 holds; letter decoy (D-013) and image dots (D-017) remain as fallback
+- Reveal cells stay square and centered; objective sits under the name field; prompts cluster below (D-028)
+- Fixed: prompting window background flashing white (p5 default clear + overlay clip)
+- Fixed: pixel scramble playing once per prompt column (two columns looked like the sequence twice)
+- Fixed: pixel scramble reading as noise-then-prompt because the film stepped every 50ms sound tick and default geometry regenerated each tick (D-035)
+- Fixed: reveal felt paused — overlay cleared to empty paper, held 1s, then popped the prompts (D-034). Landing is now paper tiles lifting so the result shows through (D-036)
+- Fixed: film then a separate paper-grid act read as two processes; leftover tiles now keep playing while holes open (D-037)
+- Pictures on the leftover card fill leftover height after the other chrome instead of a fixed 110px box (D-038)
+- Prompt labels recede toward paper so they contrast the chosen values (D-039)
+- Pixel-film sounds one note per frame from a pentatonic instead of 50ms chatter; Customize Play uses the same helper (D-040)
+- Lowering the Frames slider parks extra drawings instead of deleting them (D-041)
+- Each film thumbnail has a click-to-cycle pentatonic tone (D-042)
+- Film notes include a second octave (C1–C2) and mute (D-043)
+- Scale extended to C-1 through C3 (D-049; D-043 superseded)
+- Custom film no longer loses squares to flicker while tiles lift; decoy is resampled to the live grid (D-044)
+- Second RUN stops the film and shows the result; button reads STOP (D-045)
+- Pixel film loops until STOP instead of ending on a timer (D-047)
+- STOP restores the paper-tile glitch land plus rapid gated low tones before the land note (D-048)
+- Film notes use the same sine ping on Customize Play and on RUN (D-040)
+- Macintosh (and any dark-ink) filled buttons invert the label to paper (D-050)
+- First RUN plays a 600 Hz start chime with left/right/down, not a click stacked on the first film note (D-051)
+- STOP land: prompt words scramble in the holes and lock as tiles lift, instead of sitting finished under the film (D-052)
+- Pictures are cover-cropped to the film square and mosaic with the tiles, so edges do not pop as a leftover-width rectangle (D-053)
+- Macintosh outline chips (screenshot / report / clear / edit) and RE-RUN keep ink labels; WebKit fill follows `color` instead of staying paper-on-paper (D-054)
+- Macintosh GO TO NEXT / RUN paint paper labels with an explicit fill token (not currentColor). Split isGenerating/isAnimating flags no longer hide prompts until refresh. Tune font-size does not clip the NEXT chip to an empty ink bar (D-054)
+- Empty grouping in one prompt no longer sticks on GENERATING…; RUN shows a popup to fill the empty list, then the film can start. Draw rules unchanged. (The first attempt at this fix never loaded: startGenerationInternal declared promptTypes twice, so the browser skipped the whole prompt-generator file.)
+- Custom reveal animation saves with the open activity (Activity History / Save). Customize has Restore defaults (factory geometric 6×6 / 2 frames). CSV still does not carry frames (D-055)
+- Editor … menu: FILE is first; Customize sits under Help & Instructions as an advanced item (D-056)
+- Share quotes CSV cells so commas in sentences survive Load. Pictures share as a zip folder (activity.csv + media/) after a SHARE/CANCEL warning; Load accepts .csv or .zip (D-057)
+- Empty Custom film does not play Default Pattern; RUN scrambles text (D-058)
+- Film scale runs C-1 through C3, then mute (D-049)
+- Land note on Customize designs the final ping (D-046)
 
 REPORTS
 - Report data persists across editor visits
@@ -303,7 +353,8 @@ REPORTS
 
 ACTIVITIES
 - Save/load with named activities and Activity History
-- CSV export/import for teacher-to-teacher sharing, preserving activity name
+- CSV export/import for teacher-to-teacher sharing, preserving activity name; quoted
+  cells; picture activities download as a zip with a media folder (D-057)
 - Sample activity always loads from its CSV; auto-restored to History if deleted
 - Fixed: cube data being wiped on load, by refreshing the cube before saving
   (that load-path fix was incomplete: desktop auto-save still flushed the hidden
@@ -322,7 +373,7 @@ FUTURE DIRECTIONS
 Captured in DESIGN_DECISIONS.md section 4, not repeated here. Summary: multi-format
 prompts (F1; local PNG/JPG shipped as D-015, hosted still open), invisible teacher
 curation extending the paused prompt1InterestsMode question (F2), AI that assists
-curation without replacing teacher intent (F3), customizable animations (F4), and
+curation without replacing teacher intent (F3), customizable animations (F4; first surface shipped as theme.html / D-025 / D-027 / D-032), and
 low-floor/wide-walls progressive disclosure as a cross-cutting constraint (F5).
 
 Do not build against these without confirming scope first.

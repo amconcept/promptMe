@@ -96,6 +96,13 @@ function saveChanges() {
     // Preserve prompting-window name mode/settings
     if (typeof existingData.requireStudentNames === 'boolean') data.requireStudentNames = existingData.requireStudentNames;
     if (typeof existingData.unnamedRunCounter === 'number') data.unnamedRunCounter = existingData.unnamedRunCounter;
+    // D-033 / D-055: auto-save rebuilds this object from the grid — keep stamped look + film.
+    if (existingData.theme) data.theme = existingData.theme;
+    if (existingData.background) data.background = existingData.background;
+    if (existingData.themeKnobs && typeof existingData.themeKnobs === 'object') data.themeKnobs = existingData.themeKnobs;
+    if (existingData.revealAnimation && typeof existingData.revealAnimation === 'object') {
+        data.revealAnimation = existingData.revealAnimation;
+    }
 
     localStorage.setItem('promptCategories', JSON.stringify(data));
     window.dispatchEvent(new CustomEvent('promptDataUpdated', { detail: { timestamp: Date.now() } }));
@@ -289,350 +296,252 @@ function loadSavedData() {
     }
 }
 
-// Export settings as CSV
-function exportSettings() {
-    // Get current data (not just selected activity)
+function collectShareActivityData() {
     const currentData = {
-        activityName: currentLoadedActivity || 'Untitled Activity',
+        activityName: (typeof currentLoadedActivity !== 'undefined' && currentLoadedActivity) ? currentLoadedActivity : 'Untitled Activity',
         objective: document.getElementById('objective-input').value,
         theme: localStorage.getItem('selectedTheme') || 'windows',
         background: localStorage.getItem('selectedBackground') || 'black',
         prompt1InterestsMode: false, // UI removed — feature not ready
         criterionLabels: criterionLabels,
         categories: {},
-        promptHeaders: [],
-        timestamp: new Date().toISOString()
+        promptHeaders: []
     };
-    
-    console.log('DEBUG: Exporting data:', currentData);
-    
-    // Collect prompt headers
-    const headerInputs = document.querySelectorAll('.header-input');
-    headerInputs.forEach(header => {
+
+    document.querySelectorAll('.header-input').forEach(function (header) {
         currentData.promptHeaders.push(header.value.trim());
     });
-    
-    // Collect all category data using new grid structure
+
     const criterionInputs = document.querySelectorAll('.criterion-label-input');
     const textareas = document.querySelectorAll('.textarea-container textarea');
     const promptCount = document.querySelectorAll('.header-input').length;
-    
-    criterionInputs.forEach((criterionInput, rowIndex) => {
-        const categoryLabel = criterionInput.value.trim() || `Category ${rowIndex + 1}`;
-        
-        // Save data from all prompt columns for this category
+
+    criterionInputs.forEach(function (criterionInput, rowIndex) {
+        const categoryLabel = criterionInput.value.trim() || ('Category ' + (rowIndex + 1));
         const categoryData = [];
         for (let colIndex = 0; colIndex < promptCount; colIndex++) {
-            const textareaIndex = rowIndex * promptCount + colIndex;
-            const textarea = textareas[textareaIndex];
+            const textarea = textareas[rowIndex * promptCount + colIndex];
             if (textarea) {
                 const lines = (typeof getPromptLinesFromTextarea === 'function')
                     ? getPromptLinesFromTextarea(textarea)
-                    : (textarea.value.trim() ? textarea.value.trim().split('\n').filter((line) => line.trim()) : []);
+                    : (textarea.value.trim() ? textarea.value.trim().split('\n').filter(function (line) { return line.trim(); }) : []);
                 categoryData.push(lines);
             } else {
                 categoryData.push([]);
             }
         }
-        
         if (categoryData.length > 0) {
             currentData.categories[categoryLabel] = categoryData;
         }
     });
-    
-    // Create CSV export data
-    let csvContent = `PromptMe Activity Export\n`;
-    csvContent += `Exported: ${new Date().toLocaleString()}\n`;
-    csvContent += `Activity Name: ${currentData.activityName}\n`;
-    csvContent += `Objective: ${currentData.objective || 'No objective set'}\n`;
-    csvContent += `Theme: ${currentData.theme}\n`;
-    csvContent += `Background: ${currentData.background}\n`;
-    csvContent += `Prompt 1 Interests Mode: ${currentData.prompt1InterestsMode ? 'Yes' : 'No'}\n`;
-    csvContent += `Criterion Labels: ${currentData.criterionLabels.join(', ')}\n\n`;
-    
-    console.log('DEBUG: CSV content so far:', csvContent);
-    
-    // Add headers
-    let headers = currentData.promptHeaders;
-    if (headers.length === 0) {
-        // Generate default headers based on category data
-        const maxColumns = Math.max(...Object.values(currentData.categories).map(arr => Array.isArray(arr) ? arr.length : 0), 1);
-        headers = Array.from({length: maxColumns}, () => '');
+
+    if (currentData.promptHeaders.length === 0) {
+        const maxColumns = Math.max.apply(null, Object.keys(currentData.categories).map(function (k) {
+            const arr = currentData.categories[k];
+            return Array.isArray(arr) ? arr.length : 0;
+        }).concat([1]));
+        currentData.promptHeaders = Array.from({ length: maxColumns }, function () { return ''; });
     }
-    csvContent += `Category,${headers.join(',')}\n`;
-    
-    // Add category data
-    Object.keys(currentData.categories).forEach(category => {
-        const categoryData = currentData.categories[category];
-        if (Array.isArray(categoryData)) {
-            // New format: array of arrays
-            const maxRows = Math.max(...categoryData.map(arr => arr.length));
-            for (let i = 0; i < maxRows; i++) {
-                const row = [category];
-                categoryData.forEach(promptData => {
-                    row.push(promptData[i] || '');
-                });
-                csvContent += row.join(',') + '\n';
-            }
-        } else {
-            // Old format fallback
-            csvContent += `${category},${(categoryData || []).join(',')}\n`;
-        }
-    });
-    
-    // Create and download CSV file
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    return currentData;
+}
+
+function downloadShareFile(blob, filename) {
+    if (typeof downloadBlob === 'function') {
+        downloadBlob(blob, filename);
+        return;
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `promptme-activity-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
-    alert('Activity exported as CSV successfully!');
 }
 
-// Import settings from CSV
+function notifyShareResult(message, isError) {
+    if (typeof showThemedAlert === 'function') showThemedAlert(message);
+    else alert(message);
+    if (isError) console.error(message);
+}
+
+// Share: quoted CSV (D-057). Pictures → zip with media/ after a SHARE/CANCEL warning.
+function exportSettings() {
+    const currentData = collectShareActivityData();
+    const csvContent = (typeof serializeActivityCsv === 'function')
+        ? serializeActivityCsv(currentData)
+        : '';
+    if (!csvContent) {
+        notifyShareResult('Could not share this activity.');
+        return;
+    }
+    const dateStamp = new Date().toISOString().split('T')[0];
+    const stem = (typeof safeShareStem === 'function')
+        ? safeShareStem(currentData.activityName)
+        : 'activity';
+    const tokens = (typeof listImageTokensFromGrid === 'function')
+        ? listImageTokensFromGrid(currentData.categories)
+        : [];
+
+    function downloadCsv() {
+        downloadShareFile(new Blob([csvContent], { type: 'text/csv' }), 'promptme-' + stem + '-' + dateStamp + '.csv');
+        notifyShareResult('Activity shared as CSV.');
+    }
+
+    function downloadZip() {
+        const fetchFiles = (typeof fetchImageFilesForTokens === 'function')
+            ? fetchImageFilesForTokens(tokens)
+            : Promise.resolve([]);
+        fetchFiles.then(function (files) {
+            const zipBlob = buildActivityZip(csvContent, files);
+            downloadShareFile(zipBlob, 'promptme-' + stem + '-' + dateStamp + '.zip');
+            notifyShareResult('Activity shared as a folder with images.');
+        }).catch(function (err) {
+            notifyShareResult('Could not pack the images. ' + (err && err.message ? err.message : ''), true);
+        });
+    }
+
+    if (!tokens.length) {
+        downloadCsv();
+        return;
+    }
+    const warning = (typeof SHARE_IMAGES_WARNING === 'string')
+        ? SHARE_IMAGES_WARNING
+        : 'Saving this means saving images. The download is a folder (zip) with the prompt list and a media folder.';
+    if (typeof showThemedConfirm === 'function') {
+        showThemedConfirm(warning, { confirm: 'SHARE', cancel: 'CANCEL' }, function (ok) {
+            if (ok) downloadZip();
+        });
+        return;
+    }
+    if (window.confirm(warning)) downloadZip();
+}
+
+function applyImportedActivity(parsed) {
+    const activityName = parsed.activityName || '';
+    const objective = parsed.objective || '';
+    const theme = parsed.theme || 'windows';
+    const background = parsed.background || 'black';
+    const criterionLabelsImported = Array.isArray(parsed.criterionLabels) ? parsed.criterionLabels : [];
+    const promptHeaders = parsed.promptHeaders || [];
+    const categories = parsed.categories || {};
+
+    if (theme) {
+        localStorage.setItem('selectedTheme', theme);
+        if (typeof changeTheme === 'function') changeTheme(theme);
+        const themeSelect = document.getElementById('theme-select');
+        if (themeSelect) themeSelect.value = theme;
+    }
+    if (background) {
+        localStorage.setItem('selectedBackground', background);
+        if (typeof changeBackground === 'function') changeBackground(background);
+        const bgSelect = document.getElementById('bg-select');
+        if (bgSelect) bgSelect.value = background;
+    }
+
+    const interestsCheckbox = document.getElementById('prompt1-interests-mode');
+    if (interestsCheckbox) interestsCheckbox.checked = false;
+
+    window.criterionLabels = criterionLabelsImported;
+    if (typeof criterionLabels !== 'undefined') criterionLabels = criterionLabelsImported;
+
+    const objectiveInput = document.getElementById('objective-input');
+    if (objectiveInput) {
+        objectiveInput.value = objective;
+        if (window.enforceObjectiveWidthLimit) setTimeout(window.enforceObjectiveWidthLimit, 0);
+    }
+
+    const promptHeadersEl = document.getElementById('prompt-headers');
+    const addButton = promptHeadersEl.querySelector('.add-prompt-button');
+    if (addButton) addButton.remove();
+    promptHeadersEl.innerHTML = '';
+    if (addButton) promptHeadersEl.appendChild(addButton);
+
+    document.getElementById('categories-container').innerHTML = '';
+    promptCounter = 0;
+    categoryCounter = 0;
+
+    promptHeaders.forEach(function (headerName) {
+        addNewPrompt();
+        const newHeaderInputs = document.querySelectorAll('.header-input');
+        const lastHeader = newHeaderInputs[newHeaderInputs.length - 1];
+        if (lastHeader) {
+            lastHeader.value = (typeof promptHeaderEditorValue === 'function')
+                ? promptHeaderEditorValue(headerName)
+                : headerName;
+        }
+    });
+
+    Object.keys(categories).forEach(function (categoryName) {
+        addNewCategory();
+        const criterionInputs = document.querySelectorAll('.criterion-label-input');
+        const textareas = document.querySelectorAll('.textarea-container textarea');
+        const lastRowIndex = criterionInputs.length - 1;
+        const promptCount = document.querySelectorAll('.header-input').length;
+        if (criterionInputs[lastRowIndex]) {
+            criterionInputs[lastRowIndex].value = categoryName;
+        }
+        const categoryData = categories[categoryName];
+        (categoryData || []).forEach(function (columnData, colIndex) {
+            const textarea = textareas[lastRowIndex * promptCount + colIndex];
+            if (textarea && Array.isArray(columnData)) {
+                textarea.value = columnData.join('\n');
+            } else if (textarea && columnData) {
+                textarea.value = Array.isArray(columnData) ? columnData.join('\n') : columnData;
+            }
+        });
+    });
+
+    if (window.updateGridColumns) window.updateGridColumns();
+    if (typeof updateColumnCounts === 'function') updateColumnCounts();
+    if (window.refreshPromptCube) window.refreshPromptCube();
+    if (typeof window.hydrateAllPromptImageFields === 'function') {
+        window.hydrateAllPromptImageFields();
+    }
+    saveChanges();
+
+    const historyName = activityName || ('Imported Activity ' + new Date().toLocaleString());
+    if (typeof saveActivityWithName === 'function') saveActivityWithName(historyName);
+    if (typeof updateButtonStates === 'function') updateButtonStates();
+}
+
+// Load a quoted CSV or a zip pack with media/ (D-057).
 function importSettings() {
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
-    fileInput.accept = '.csv';
+    fileInput.accept = '.csv,.zip,text/csv,application/zip';
     fileInput.style.display = 'none';
-        
-        fileInput.onchange = function(event) {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                        const csvText = e.target.result;
-                        const lines = csvText.split('\n');
-                        
-                        // Parse CSV data
-                        let activityName = '';
-                        let objective = '';
-                        let theme = 'windows';
-                        let background = 'black';
-                        let prompt1InterestsMode = false;
-                        let criterionLabels = ['', '', '', '']; // No hardcoded defaults - start empty
-                        let promptHeaders = [];
-                        let categories = {};
-                        
-                        // Extract metadata
-                        for (let i = 0; i < lines.length; i++) {
-                            const line = lines[i].trim();
-                            console.log(`DEBUG: Parsing line ${i}:`, line);
-                            if (line.startsWith('Activity Name: ')) {
-                                activityName = line.replace('Activity Name: ', '');
-                                console.log('DEBUG: Found activity name:', activityName);
-                            } else if (line.startsWith('Objective: ')) {
-                                objective = line.replace('Objective: ', '');
-                                console.log('DEBUG: Found objective:', objective);
-                            } else if (line.startsWith('Theme: ')) {
-                                theme = line.replace('Theme: ', '');
-                                console.log('DEBUG: Found theme:', theme);
-                            } else if (line.startsWith('Background: ')) {
-                                background = line.replace('Background: ', '');
-                                console.log('DEBUG: Found background:', background);
-                            } else if (line.startsWith('Prompt 1 Interests Mode: ')) {
-                                prompt1InterestsMode = line.replace('Prompt 1 Interests Mode: ', '') === 'Yes';
-                                console.log('DEBUG: Found prompt1InterestsMode:', prompt1InterestsMode);
-                            } else if (line.startsWith('Criterion Labels: ')) {
-                                const labelsText = line.replace('Criterion Labels: ', '');
-                                criterionLabels = labelsText.split(', ').map(label => label.trim());
-                                console.log('DEBUG: Found criterionLabels:', criterionLabels);
-                            } else if (line.includes(',') && !line.startsWith('PromptMe') && !line.startsWith('Exported') && !line.startsWith('Activity Name') && !line.startsWith('Objective') && !line.startsWith('Theme') && !line.startsWith('Background') && !line.startsWith('Prompt 1') && !line.startsWith('Criterion')) {
-                                // This is the header row or data row
-                                if (line.startsWith('Category,')) {
-                                    // Header row - extract prompt headers
-                                    const headers = line.split(',').slice(1);
-                                    promptHeaders = headers.map(h => h.trim());
-                                    console.log('DEBUG: Found prompt headers:', promptHeaders);
-                                } else if (line.includes(',')) {
-                                    // Data row
-                                    const parts = line.split(',');
-                                    const category = parts[0].trim();
-                                    const items = parts.slice(1).map(item => item.trim().replace(/"/g, ''));
-                                    
-                                    console.log('DEBUG: Processing data row - category:', category, 'items:', items);
-                                    
-                                    if (category) {
-                                        if (!categories[category]) {
-                                            // Initialize as array of arrays - one for each prompt column
-                                            categories[category] = items.map(() => []);
-                                        }
-                                        
-                                        // Add items to each prompt column
-                                        items.forEach((item, index) => {
-                                            if (item) {
-                                                categories[category][index].push(item);
-                                            }
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // Apply theme settings
-                        if (theme) {
-                            console.log('DEBUG: Applying theme:', theme);
-                            localStorage.setItem('selectedTheme', theme);
-                            changeTheme(theme);
-                            // Update theme dropdown
-                            const themeSelect = document.getElementById('theme-select');
-                            if (themeSelect) {
-                                themeSelect.value = theme;
-                                console.log('DEBUG: Updated theme dropdown to:', theme);
-                            }
-                        }
-                        if (background) {
-                            console.log('DEBUG: Applying background:', background);
-                            localStorage.setItem('selectedBackground', background);
-                            changeBackground(background);
-                            // Update background dropdown
-                            const bgSelect = document.getElementById('bg-select');
-                            if (bgSelect) {
-                                bgSelect.value = background;
-                                console.log('DEBUG: Updated background dropdown to:', background);
-                            }
-                        }
-                        
-                        // Criteria-selectable UI removed — keep off until feature is ready
-                        const interestsCheckbox = document.getElementById('prompt1-interests-mode');
-                        if (interestsCheckbox) interestsCheckbox.checked = false;
-                        
-                        // Apply criterion labels
-                        window.criterionLabels = criterionLabels;
-                        
-                        // Apply objective
-                        const objectiveInput = document.getElementById('objective-input');
-                        if (objectiveInput) {
-                            objectiveInput.value = objective;
-                            if (window.enforceObjectiveWidthLimit) setTimeout(window.enforceObjectiveWidthLimit, 0);
-                        }
-                        
-                        // Clear existing prompts and categories
-                        const promptHeadersEl = document.getElementById('prompt-headers');
-                        const addButton = promptHeadersEl.querySelector('.add-prompt-button');
-                        
-                        if (addButton) {
-                            addButton.remove();
-                        }
-                        promptHeadersEl.innerHTML = '';
-                        
-                        if (addButton) {
-                            promptHeadersEl.appendChild(addButton);
-                        }
-                        
-                        const categoriesContainer = document.getElementById('categories-container');
-                        categoriesContainer.innerHTML = '';
-                        
-                        // Reset counters
-                    promptCounter = 0;
-                    categoryCounter = 0;
-                    
-                        // Add prompt headers
-                        console.log('DEBUG: Adding prompt headers:', promptHeaders);
-                        promptHeaders.forEach(headerName => {
-                            addNewPrompt();
-                            const newHeaderInputs = document.querySelectorAll('.header-input');
-                            const lastHeader = newHeaderInputs[newHeaderInputs.length - 1];
-                            if (lastHeader) {
-                                lastHeader.value = (typeof promptHeaderEditorValue === 'function')
-                                    ? promptHeaderEditorValue(headerName)
-                                    : headerName;
-                                console.log('DEBUG: Set header value:', headerName);
-                            }
-                        });
-                        
-                        // Add categories using new grid structure
-                        console.log('DEBUG: Adding categories:', Object.keys(categories));
-                        Object.keys(categories).forEach(categoryName => {
-                            addNewCategory();
-                            
-                            // Get newly added row using grid structure
-                            const criterionInputs = document.querySelectorAll('.criterion-label-input');
-                            const textareas = document.querySelectorAll('.textarea-container textarea');
-                            const lastRowIndex = criterionInputs.length - 1;
-                            const promptCount = document.querySelectorAll('.header-input').length;
-                            
-                            // Set criterion label
-                            if (criterionInputs[lastRowIndex]) {
-                                criterionInputs[lastRowIndex].value = categoryName;
-                            }
-                            
-                            const categoryData = categories[categoryName];
-                            console.log('DEBUG: Adding category data for', categoryName, ':', categoryData);
-                            
-                            // Add data to each prompt column
-                            categoryData.forEach((columnData, colIndex) => {
-                                const textareaIndex = lastRowIndex * promptCount + colIndex;
-                                const textarea = textareas[textareaIndex];
-                                if (textarea && Array.isArray(columnData)) {
-                                    // Join array items with newlines to match original format
-                                    textarea.value = columnData.join('\n');
-                                    console.log('DEBUG: Set textarea', colIndex, 'to:', columnData.length, 'items');
-                                } else if (textarea && columnData) {
-                                    // Fallback for non-array data
-                                    textarea.value = Array.isArray(columnData) ? columnData.join('\n') : columnData;
-                                }
-                            });
-                        });
-                        
-                        // Update grid columns after importing
-                        if (window.updateGridColumns) {
-                            window.updateGridColumns();
-                        }
-                        
-                        // Update prompt counts
-                        updateColumnCounts();
 
-                        // Sync cube from grid before save so flush doesn't wipe loaded cells
-                        if (window.refreshPromptCube) {
-                            window.refreshPromptCube();
-                        }
-                        if (typeof window.hydrateAllPromptImageFields === 'function') {
-                            window.hydrateAllPromptImageFields();
-                        }
-                        
-                        // Save to main promptCategories localStorage
-                        saveChanges();
-                        
-                        // Add to Activity History using the imported activity name
-                        if (activityName) {
-                            saveNewSettings(activityName);
-                            console.log('DEBUG: Added imported activity to history:', activityName);
-                        } else {
-                            const fallbackName = `Imported Activity ${new Date().toLocaleString()}`;
-                            saveNewSettings(fallbackName);
-                            console.log('DEBUG: Added imported activity to history with fallback name:', fallbackName);
-                        }
-                        
-                        // Update button states
-                        updateButtonStates();
-                        
-                        console.log('DEBUG: Import completed successfully');
-                        console.log('DEBUG: Final parsed data:', {
-                            activityName, objective, theme, background, prompt1InterestsMode, 
-                            criterionLabels, promptHeaders, categories
-                        });
-                        
-                        alert('Activity imported successfully!');
-                        
-                } catch (error) {
-                        alert('Error importing CSV file: ' + error.message);
-                }
-            };
-            reader.readAsText(file);
-        }
-        };
-        
-        document.body.appendChild(fileInput);
-        fileInput.click();
-        document.body.removeChild(fileInput);
-    }
+    fileInput.onchange = function (event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const readPack = (typeof readActivityPack === 'function')
+            ? readActivityPack(file)
+            : new Promise(function (resolve, reject) {
+                const reader = new FileReader();
+                reader.onload = function () { resolve({ csvText: String(reader.result || ''), images: [] }); };
+                reader.onerror = function () { reject(new Error('Could not read that file.')); };
+                reader.readAsText(file);
+            });
+        readPack.then(function (pack) {
+            const parsed = (typeof parseActivityCsv === 'function')
+                ? parseActivityCsv(pack.csvText)
+                : null;
+            if (!parsed) throw new Error('Could not read that activity.');
+            const store = (typeof storeImportedImages === 'function')
+                ? storeImportedImages(pack.images)
+                : Promise.resolve();
+            return store.then(function () { applyImportedActivity(parsed); });
+        }).catch(function (error) {
+            notifyShareResult('Error loading activity: ' + (error && error.message ? error.message : error), true);
+        });
+    };
+
+    document.body.appendChild(fileInput);
+    fileInput.click();
+    document.body.removeChild(fileInput);
+}
 
 // Make functions globally available
 window.saveChanges = saveChanges;
