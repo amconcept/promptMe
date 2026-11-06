@@ -1156,18 +1156,10 @@ function fitObjectiveToWidth(value, input) {
 }
 
 function enforceObjectiveWidthLimit() {
-    const input = document.getElementById('objective-input');
-    if (!input) return;
-    if (!isPhoneObjectiveLayout()) return;
-    const fitted = fitObjectiveToWidth(input.value, input);
-    if (fitted !== input.value) {
-        const start = input.selectionStart;
-        input.value = fitted;
-        if (typeof start === 'number') {
-            const pos = Math.min(start, fitted.length);
-            try { input.setSelectionRange(pos, pos); } catch (e) { /* ignore */ }
-        }
-    }
+    // D-068: do not slice the objective to the phone field's width.
+    // That cut used to land in the saved sentence, so the card dropped the ending
+    // ("…and make" instead of "…and make an object that…"). The field can scroll;
+    // the leftover card wraps (D-061).
 }
 
 function bindObjectiveWidthLimit() {

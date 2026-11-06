@@ -17,7 +17,7 @@ combinations without repetition. Four components:
 
 Companion documents (read these first):
 - RANDOMIZER_LOGIC_SPEC.md - required draw behavior (R1-R7, I1-I6, scenarios S1-S10)
-- DESIGN_DECISIONS.md      - why visual/UX choices are the way they are (D1-D67) + future directions
+- DESIGN_DECISIONS.md      - why visual/UX choices are the way they are (D1-D69) + future directions
 - README.md                - how a teacher uses the app
 - .cursorrules             - how to work on this project
 
@@ -174,7 +174,7 @@ DEVELOPMENT CONVENTIONS
 =======================
 
 CACHE BUSTING
-- Twenty-three local module <script> tags carry ?v=20260830br (nine on editor.html, ten
+- Twenty-three local module <script> tags carry ?v=20260830bu (nine on editor.html, ten
   on sketch.html, three on theme.html, one on index.html). After editing any of those
   modules, bump that value on all twenty-three together. theme-manager.js is tagged on
   every page so Macintosh paper-on-ink (D-050) cannot load from a stale untagged copy.
@@ -350,9 +350,12 @@ PROMPTING WINDOW
 - Grouping chips are radio: tapping one deselects the others; exactly one stays on (D-064)
 - Classroom sessions SIMPLE, SOD+A, and SOD+A w/ Groupings restore in Activity History if missing (D-065)
 - SOD+A w/ Groupings baked lists match the desk: physical / digital / textiles (felt, rubber, microcontroller, simple mechanism, speaker, elasticity; wearable electronics / LEDs) (D-065)
-- SIMPLE and SOD+A baked lists are the union of SOD+A w/ Groupings (same items; SIMPLE is one INCORPORATES list) (D-065)
+- SIMPLE and SOD+A baked lists are the union of SOD+A w/ Groupings (same items; SIMPLE is one INCORPORATES list) (D-065). Superseded for SIMPLE only: the baked SIMPLE list is the shorter desk edit, not that union (D-069)
 - New browsers restore only those three sessions; first-visit opens SIMPLE; Help is Run / Edit / Save (GO TO NEXT vs RE-RUN) (D-066)
 - Leftover-card name field shows placeholder "name" and an underline when empty, so the slot is visible on load (D-067)
+- Phone objective is no longer sliced to one window-width line. That slice was what the card showed, so the ending ("an object that…") disappeared. The field scrolls; the card wraps the whole sentence. A working copy that is only the start of the saved sentence gets the ending back (D-068)
+- Baked SIMPLE matches the desk edit: machines, sensors, rubber, 3D modelling, embroidery, and sewing are out. SOD+A and SOD+A w/ Groupings are unchanged (D-069)
+- SIMPLE lists elasticity once. The second copy, at the end of the list, is removed (D-069)
 - Film scale runs C-1 through C3, then mute (D-049)
 - Land note on Customize designs the final ping (D-046)
 

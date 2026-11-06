@@ -163,6 +163,37 @@ function copyWorkingReportToActivityReports(activityName) {
     }
 }
 
+/**
+ * D-068: the phone editor used to cut the objective to one window-width line,
+ * and RUN saved that cut. Activity History often still has the rest of the
+ * sentence. When the working text is only the start of the saved one, put
+ * the ending back. A sentence the teacher shortened and then Saved is left alone.
+ */
+function restoreObjectiveTailIfPhoneTrimmed(parsedData) {
+    if (!parsedData || typeof parsedData !== 'object') return;
+    const working = String(parsedData.objective || '').trim();
+    const name = parsedData.activityName;
+    if (!working || !name) return;
+    let saved = '';
+    try {
+        const all = JSON.parse(localStorage.getItem('promptSettings') || '{}');
+        const row = all[name];
+        saved = String((row && row.objective) || '').trim();
+    } catch (e) {
+        return;
+    }
+    if (!saved || saved.length <= working.length || saved.indexOf(working) !== 0) return;
+    parsedData.objective = saved;
+    try {
+        const raw = localStorage.getItem('promptCategories');
+        const stored = raw ? JSON.parse(raw) : null;
+        if (stored && stored.activityName === name && String(stored.objective || '').trim() === working) {
+            stored.objective = saved;
+            localStorage.setItem('promptCategories', JSON.stringify(stored));
+        }
+    } catch (e) { /* in-memory sentence still has the ending */ }
+}
+
 // Load saved data
 function loadSavedData() {
     console.log('Loading saved data...');
@@ -177,8 +208,9 @@ function loadSavedData() {
         // Set objective
             const objectiveInput = document.getElementById('objective-input');
             if (objectiveInput) {
+                // D-068: put back an ending the phone field sliced off, when History still has it.
+                restoreObjectiveTailIfPhoneTrimmed(data);
                 objectiveInput.value = data.objective || '';
-                if (window.enforceObjectiveWidthLimit) setTimeout(window.enforceObjectiveWidthLimit, 0);
             }
 
             // D-063: restore after rows exist so the switch can show at 2+ groupings

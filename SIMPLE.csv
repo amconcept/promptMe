@@ -13,7 +13,6 @@ A,wire
 A,packaging
 A,wood
 A,felt
-A,rubber
 A,light
 A,shadow
 A,sound
@@ -24,20 +23,8 @@ A,paper
 A,string
 A,fabric scraps
 A,biomaterial
-A,a cutting machine
-A,a printing machine
-A,a microcontroller
-A,a simple mechanism
-A,a speaker
-A,a scanner
-A,a sound sensor
-A,a servo motor
-A,a capacitive sensor
 A,projection
 A,vectors
-A,3D modelling
-A,embroidery
-A,sewing
 A,folding
 A,wearable electronics
 A,LEDs
@@ -57,4 +44,3 @@ A,slowness
 A,rhythm
 A,patterns
 A,texture
-A,elastic

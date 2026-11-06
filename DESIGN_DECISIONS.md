@@ -49,7 +49,7 @@ Routine visual tweaks are CHANGELOG-only (see Documentation routing in `.cursorr
 | D19 | Image thumbs sit inside the prompt box; drop uses capture so a picture from another window does not open a new tab. Remote `http(s)` URLs are never fetched (D-020). | Thumbs outside the border looked like leftover UI; without `preventDefault` the browser navigates to the file | editor.html, editor-image-prompts.js |
 | D20 | Accept PNG/JPG by file contents, not just MIME/name; do not fetch dropped http(s) URLs | Browser drops often omit type; fetching another site’s URL is blocked and looked like a “bad file” | image-store.js, editor-image-prompts.js |
 | D21 | File drop: cancel `dragenter` and `dragover`, always `dropEffect = copy`, remember the box under the cursor, light it while a file is held over it | Paste already had the bytes. Safari skips `drop` if `dragenter` is not cancelled, and `dropEffect = none` (used when hit-testing missed) makes Finder withhold the file | `editor-image-prompts.js`, `.is-drop-target` in editor.html |
-| D22 | Phone/narrow objective: measure width with a hidden mirror span; trim after `input`, never rewrite `input.value` on keydown | iOS Safari drops characters / breaks the caret if the field is rewritten mid-keystroke | `getObjectiveMirror()` / `enforceObjectiveWidthLimit()` in editor-ui-manager.js |
+| D22 | *Superseded by D-068 — the phone objective is not sliced to one window-width line.* | That slice was saved on RUN, so the card dropped the end of the sentence. | `enforceObjectiveWidthLimit()` |
 | D23 | Phone or narrow window uses the cube editor (one prompt at a time), not the desktop grid. Grid stays in the DOM as the data store. | A 4×N grid does not fit a phone; two DOM copies need an explicit live layout | `editor-prompt-cube.js`, `.prompt-cube-wrap` / `.editor-cube-layout` in editor.html |
 | D24 | Theme picker is a dedicated `theme.html` page (8 preset cards). The editor `...` panel’s Theme dropdown is **gone**, replaced by a Customize link. Hidden `#theme-select` stays in the editor for legacy `.value` reads. **Panel order is D-056.** | Alec: “remove old one.” A future session restoring the dropdown would duplicate the picker. | editor.html settings panel; theme.html; theme-manager.js still syncs `#theme-select` |
 | D25 | Reveal animation is a fill-then-resolve overlay. Custom drawings persist in `localStorage` (`revealAnimation`) and as a downloadable JSON file (not IndexedDB). **Per-activity snapshot is D-055.** `sketch.html` plays the saved mode. Grid size and frame count: **D-032**. Film clock: **D-035**. Landing: **D-036** (paper tiles lift, prompts show through). Film and lift **overlap** (**D-037**). Film notes: **D-040**. | Filling the card first masks word vs phrase vs image. IndexedDB is for PNG blobs (D-015); this payload is small. | `reveal-animation.js`, theme.html, animation-manager.js, sketch-refactored.js |
@@ -95,6 +95,8 @@ Routine visual tweaks are CHANGELOG-only (see Documentation routing in `.cursorr
 | D65 | Three classroom sessions always restore in History if missing: **SIMPLE**, **SOD+A**, **SOD+A w/ Groupings**. Groupings session is physical / digital / **textiles**, Students pick grouping on. History click uses the saved copy (not a CSV reload), so later desk edits stick. First-visit default is **D-066**. | Alec: set up three prompt sessions in memory; then bake the live groupings lists. | `WORKSHOP_SESSIONS`; `SIMPLE.csv`; `SOD-A.csv`; `SOD-A-w-Groupings.csv` |
 | D66 | New browsers restore **only** SIMPLE, SOD+A, SOD+A w/ Groupings. First-visit opens **SIMPLE** and a three-step walkthrough (pick / edit / run). Help is the same short Run / Edit / Save path. D-062 sample names are not auto-restored. | Alec: if we push, they should only see the three; new teachers need concise run / edit / save, with GO TO NEXT defined. | `ensureBakedSamplesInHistory()`; `EDITOR_TOUR_STEPS`; Help popup; `index.html` welcome |
 | D67 | Leftover-card name field shows placeholder **name** (dim) and a bottom rule when empty. Names stay optional. | Alec: on load it was not clear a space to type a name existed. Placeholder was a space on a transparent input. | `NAME_FIELD`; `.sketch-name-input` |
+| D68 | Phone objective is **not** cut to one line. The field scrolls; the card wraps the whole sentence (D-061). A working copy that is only the start of the History sentence gets the ending back. | Alec: on the phone the card stopped at “and make” and dropped “an object that…”. | `enforceObjectiveWidthLimit()`; `restoreObjectiveTailIfPhoneTrimmed()` |
+| D69 | Baked **SIMPLE** is the shorter desk list in `SIMPLE.csv`, not a fresh union of SOD+A w/ Groupings. SOD+A and the groupings session stay as they are. | Alec edited SIMPLE in the app and asked to bake that list. Rebuilding it from the groupings would put the machines and sensors back. | `SIMPLE.csv` |
 
 ---
 
@@ -244,7 +246,7 @@ still holds as a general principle. It just doesn't need a D-row pinning specifi
 ---
 
 ## D-022 — iOS objective: measure with a mirror span, trim after input
-**Date:** 2026-08-30 · **Status:** Active · **Touches:** editor-ui-manager.js
+**Date:** 2026-08-30 · **Status:** Superseded by D-068 · **Touches:** editor-ui-manager.js
 
 **Decision** On phone/cube layout, the objective is one line the width of the window. Width is measured with a hidden off-screen `<span>` that copies the input’s font. Trimming happens on `input` / `compositionend` / paste / resize — never by rewriting `input.value` inside `keydown` or `beforeinput`.
 **Why** iOS Safari only registered one character when the field was rewritten mid-keystroke (caret and IME broke).
@@ -676,7 +678,7 @@ still holds as a general principle. It just doesn't need a D-row pinning specifi
 ## D-065 — Three classroom sessions in Activity History
 **Date:** 2026-11-04 · **Status:** Active · **Touches:** editor-settings-manager.js, SIMPLE.csv, SOD-A.csv, SOD-A-w-Groupings.csv
 
-**Decision** Activity History always restores **SIMPLE**, **SOD+A**, and **SOD+A w/ Groupings** if those names are missing. Groupings is the split (physical / digital / **textiles**, Students pick grouping on). **SOD+A** is that same union in one grouping (INCLUDES / USES / EXPLORES). **SIMPLE** is that same union in one **INCORPORATES** list. First-time editor opens **SIMPLE** (**D-066**). Clicking a workshop name in History loads the saved copy, not a fresh CSV, so later list edits persist. Existing **SOD+A 2.0** is not renamed or overwritten.
+**Decision** Activity History always restores **SIMPLE**, **SOD+A**, and **SOD+A w/ Groupings** if those names are missing. Groupings is the split (physical / digital / **textiles**, Students pick grouping on). **SOD+A** is that same union in one grouping (INCLUDES / USES / EXPLORES). **SIMPLE** is its own desk list in `SIMPLE.csv` (**D-069**), not a regenerated copy of that union. First-time editor opens **SIMPLE** (**D-066**). Clicking a workshop name in History loads the saved copy, not a fresh CSV, so later list edits persist. Existing **SOD+A 2.0** is not renamed or overwritten.
 **Why** Alec: set up three prompt sessions in memory — simple one-prompt, SOD+A combined, SOD+A with physical / digital / textiles.
 **Rejected** Reloading from CSV on every History click (would wipe desk edits). First-visit default and dropping D-062 samples: **D-066**.
 **Consequence** Do not drop these three from History restore without a new decision. Do not treat `SOD+A` and `SOD+A 2.0` as the same activity.
@@ -700,6 +702,26 @@ still holds as a general principle. It just doesn't need a D-row pinning specifi
 **Why** Alec: when we load, it is not clear that a space to input a name is available. The field was transparent with placeholder `" "` so the slot disappeared into the card.
 **Rejected** Leaving the space placeholder. Requiring a name before RUN. Auto-focus (would pop the phone keyboard).
 **Consequence** Do not set the name placeholder to a space or empty string. Do not hide the underline on the empty field.
+
+---
+
+## D-068 — Phone objective keeps the whole sentence
+**Date:** 2026-11-06 · **Status:** Active · **Touches:** editor-ui-manager.js, editor.html, editor-data-manager.js, data-manager.js
+
+**Decision** The phone objective field does not delete characters that pass the window edge. The field scrolls sideways. **RUN** saves the whole sentence, and the leftover card wraps it (D-061), including a third line on a narrow phone. If the working copy is only the start of that activity’s saved sentence, the ending is put back.
+**Why** Alec, on a phone: the card showed “Try a tool you have never / used before and make” and cut off “an object that…”. The phone editor measured one line and sliced the field; starting a run then stored that slice.
+**Rejected** Keeping the one-line trim (D-022) and only wrapping on the card — the slice was already what got saved, so the card had nothing left to wrap. Rewriting the field during a keystroke (the iOS bug D-022 was avoiding).
+**Consequence** Do not restore `enforceObjectiveWidthLimit` slicing. A long objective scrolls in the phone field and wraps on the card. A sentence shortened and then saved with **FILE → Save** stays short.
+
+---
+
+## D-069 — SIMPLE is the shorter desk list
+**Date:** 2026-11-06 · **Status:** Active · **Touches:** SIMPLE.csv
+
+**Decision** The baked **SIMPLE** activity is the INCORPORATES list Alec edited in the app (no rubber, no machines or sensors, no 3D modelling / embroidery / sewing). It is not rebuilt from **SOD+A w/ Groupings**. **SOD+A** stays the union of that groupings session. History still loads a teacher’s saved copy, not a fresh CSV.
+**Why** Alec updated SIMPLE and asked for the hard-coded file to match. D-065 had described SIMPLE as that same union, which would put the removed lines back on the next bake.
+**Rejected** Regenerating SIMPLE from the groupings lists. Changing SOD+A or SOD+A w/ Groupings to match the shorter list.
+**Consequence** Do not refill `SIMPLE.csv` from the other two sessions. `elasticity` appears once (the extra copy at the end of the list was removed).
 
 ---
 

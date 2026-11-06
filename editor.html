@@ -1717,7 +1717,8 @@
             box-sizing: border-box;
             background: transparent;
             white-space: nowrap;
-            overflow: hidden;
+            /* D-068: scroll the rest of the sentence. Do not clip it away. */
+            overflow-x: auto;
             text-overflow: clip;
         }
 
@@ -2027,7 +2028,7 @@
             bottom: 8px;
         }
     </style>
-    <script src="theme-manager.js?v=20260830br"></script>
+    <script src="theme-manager.js?v=20260830bu"></script>
     <script>
         if (typeof applyThemeFromStorage === 'function') applyThemeFromStorage();
     </script>
@@ -2219,13 +2220,13 @@
         </div>
     </div>
 
-    <script src="image-store.js?v=20260830br"></script>
-    <script src="activity-pack.js?v=20260830br"></script>
-    <script src="editor-image-prompts.js?v=20260830br"></script>
-    <script src="editor-ui-manager.js?v=20260830br"></script>
-    <script src="editor-prompt-cube.js?v=20260830br"></script>
-    <script src="editor-data-manager.js?v=20260830br"></script>
-    <script src="editor-settings-manager.js?v=20260830br"></script>
-    <script src="editor-main.js?v=20260830br"></script>
+    <script src="image-store.js?v=20260830bu"></script>
+    <script src="activity-pack.js?v=20260830bu"></script>
+    <script src="editor-image-prompts.js?v=20260830bu"></script>
+    <script src="editor-ui-manager.js?v=20260830bu"></script>
+    <script src="editor-prompt-cube.js?v=20260830bu"></script>
+    <script src="editor-data-manager.js?v=20260830bu"></script>
+    <script src="editor-settings-manager.js?v=20260830bu"></script>
+    <script src="editor-main.js?v=20260830bu"></script>
 </body>
 </html>

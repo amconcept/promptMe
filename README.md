@@ -280,11 +280,11 @@ Editor and prompting window sync through a `promptDataUpdated` custom event and 
 
 ### Cache busting
 
-Twenty-three local module `<script>` tags carry `?v=20260830br` (nine on `editor.html`,
+Twenty-three local module `<script>` tags carry `?v=20260830bu` (nine on `editor.html`,
 ten on `sketch.html`, three on `theme.html`, one on `index.html`). After editing any of those modules, bump that value on **all
 twenty-three together**. Mismatched values load a mix of old and new files.
 
-`sketch.html` also loads p5.js from a CDN (untagged). Classroom session CSV fetches use the same `?v=20260830br`
+`sketch.html` also loads p5.js from a CDN (untagged). Classroom session CSV fetches use the same `?v=20260830bu`
 value as the tagged modules.
 
 ### Companion documents
