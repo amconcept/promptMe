@@ -54,6 +54,14 @@ function getUnionUniqueOptionsForPromptType(promptType, categoryKeys) {
     return set;
 }
 
+/** R6: put only this union back — do not clear pottery slips when robotics refreshes. */
+function clearInPlayForUnion(promptType, categoryKeys) {
+    const union = getUnionUniqueOptionsForPromptType(promptType, categoryKeys);
+    const used = ensureUsedSetForType(promptType);
+    union.forEach(function (v) { used.delete(v); });
+    window.usedPrompts = usedPrompts;
+}
+
 /** R6 / I5: every option in the union has been drawn at least once for this type. */
 function isUnionFullyUsedForType(promptType, categoryKeys) {
     const union = getUnionUniqueOptionsForPromptType(promptType, categoryKeys);
@@ -154,8 +162,7 @@ function pickLeaderOptionAndCategory(leaderType, candidateCategories) {
     // R6 only: refresh when every option in the global union has been in play
     if (candidates.length === 0 && isUnionFullyUsedForType(leaderType, candidateCategories)) {
         debugLog('Leader: global union exhausted for', leaderType, '- refresh in-play (R6)');
-        usedPrompts[leaderType].clear();
-        window.usedPrompts = usedPrompts;
+        clearInPlayForUnion(leaderType, candidateCategories);
         candidates = filterViable(filterUnused(values, true));
     }
 
@@ -200,13 +207,9 @@ function pickLeaderOptionAndCategory(leaderType, candidateCategories) {
 const RUN_EMPTY_GROUPING_MSG = 'Every grouping needs at least one option in each prompt. Fill the empty list.';
 
 function listPromptTypesForRun() {
-    let promptTypes = Object.keys(categories || {}).filter(function (cat) {
+    return Object.keys(categories || {}).filter(function (cat) {
         return cat !== 'objective' && cat !== 'prompt1InterestsMode';
     });
-    if (categories && categories.prompt1InterestsMode && promptTypes.length > 0) {
-        promptTypes = promptTypes.slice(1);
-    }
-    return promptTypes;
 }
 
 /** Groupings that have at least one option in every prompt column — otherwise the run cannot lock. */
@@ -291,7 +294,10 @@ function startGenerationInternal() {
         shared = shared.filter(function (cat) { return selectedInterests.indexOf(cat) !== -1; });
     }
     if (!shared.length) {
-        abortGeneration(RUN_EMPTY_GROUPING_MSG);
+        const filteredOut = selectedInterests !== 'all' && Array.isArray(selectedInterests);
+        abortGeneration(filteredOut
+            ? 'That grouping needs at least one option in each prompt. Fill the empty list.'
+            : RUN_EMPTY_GROUPING_MSG);
         return;
     }
     
@@ -581,16 +587,16 @@ function generateNextAttribute() {
 
             debugLog('CONSTRAINT - Prompt type:', currentPromptType, 'unused in locked category:', unusedItems.length, 'pool size:', promptOptions.length);
 
-            // R6 / I5: clear in-play only when the global union is exhausted.
+            // R6 / I5: put this union back only when every eligible grouping is exhausted.
             // Category-local empty must NOT clear — that caused early repeats (e.g. A1 before B1/BB1).
+            // D-063: eligible = selected grouping chips when Students pick grouping is on.
             if (unusedItems.length === 0) {
                 const cats = generationCandidateCategoriesForRun.length
                     ? generationCandidateCategoriesForRun
                     : (selectedCategory ? [selectedCategory] : []);
                 if (isUnionFullyUsedForType(currentPromptType, cats)) {
                     debugLog('R6: full union exhausted for', currentPromptType, '- refresh in-play set');
-                    usedPrompts[currentPromptType].clear();
-                    window.usedPrompts = usedPrompts;
+                    clearInPlayForUnion(currentPromptType, cats);
                     unusedItems = promptOptions.filter(
                         item => !usedPrompts[currentPromptType].has(item)
                     );

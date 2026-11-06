@@ -7,7 +7,7 @@
     <title>Prompt Generator</title>
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
-    <script src="theme-manager.js?v=20260830ba"></script>
+    <script src="theme-manager.js?v=20260830br"></script>
     <style>
         :root {
             /* Default theme - will be overridden by editor theme system */
@@ -188,6 +188,51 @@
             font-weight: bold;
             line-height: 1;
         }
+
+        /* D-063: grouping labels between tools and GO TO NEXT (Students pick grouping). */
+        .sketch-grouping-picker {
+            position: absolute;
+            z-index: 5000;
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            overflow-x: auto;
+            box-sizing: border-box;
+            pointer-events: auto;
+        }
+        .sketch-grouping-picker[hidden] {
+            display: none !important;
+        }
+        .sketch-grouping-chip {
+            flex: 0 0 auto;
+            max-width: 140px;
+            height: 32px;
+            padding: 0 12px;
+            border: 1px solid var(--primary-color);
+            border-radius: 16px;
+            background: var(--background-color);
+            color: var(--primary-color);
+            -webkit-text-fill-color: var(--primary-color);
+            font-family: var(--ui-font, 'VT323', monospace);
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 0.04em;
+            line-height: 30px;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        .sketch-grouping-chip[aria-checked="true"] {
+            background: var(--primary-color);
+            color: var(--on-primary-color, var(--background-color));
+            -webkit-text-fill-color: var(--on-primary-color, var(--background-color));
+        }
     </style>
     <script>
         if (typeof applyThemeFromStorage === 'function') applyThemeFromStorage();
@@ -196,19 +241,20 @@
 <body>
     <!-- Phone RUN (same action as UP arrow); edit is in the top tool strip -->
     <button type="button" id="sketch-run-btn" class="sketch-run" onclick="runSketchFromButton()" aria-label="Generate prompts">RUN</button>
+    <div id="grouping-picker" class="sketch-grouping-picker" hidden role="radiogroup" aria-label="Grouping"></div>
     
     <!-- Load modules (theme-manager already in <head>) -->
-    <script src="image-store.js?v=20260830ba"></script>
-    <script src="activity-pack.js?v=20260830ba"></script>
-    <script src="ui-manager.js?v=20260830ba"></script>
-    <script src="reveal-animation.js?v=20260830ba"></script>
-    <script src="animation-manager.js?v=20260830ba"></script>
-    <script src="data-manager.js?v=20260830ba"></script>
-    <script src="student-manager.js?v=20260830ba"></script>
-    <script src="prompt-generator.js?v=20260830ba"></script>
-    <script src="sketch-refactored.js?v=20260830ba"></script>
+    <script src="image-store.js?v=20260830br"></script>
+    <script src="activity-pack.js?v=20260830br"></script>
+    <script src="ui-manager.js?v=20260830br"></script>
+    <script src="reveal-animation.js?v=20260830br"></script>
+    <script src="animation-manager.js?v=20260830br"></script>
+    <script src="data-manager.js?v=20260830br"></script>
+    <script src="student-manager.js?v=20260830br"></script>
+    <script src="prompt-generator.js?v=20260830br"></script>
+    <script src="sketch-refactored.js?v=20260830br"></script>
     <script>
-        console.log('PromptMe sketch build 20260830ba');
+        console.log('PromptMe sketch build 20260830br');
         // Phone RUN → same path as UP arrow
         function runSketchFromButton() {
             if (window.pixelReveal && window.pixelReveal.active

@@ -205,7 +205,7 @@
             padding: 10px 28px;
         }
     </style>
-    <script src="theme-manager.js?v=20260830ba"></script>
+    <script src="theme-manager.js?v=20260830br"></script>
     <script>
         if (typeof applyThemeFromStorage === 'function') applyThemeFromStorage();
     </script>
@@ -233,11 +233,11 @@
         <div class="welcome-dialog">
             <div class="welcome-header" id="welcome-title">Welcome to Rando Calrissian</div>
             <div class="welcome-body">
-                <p>Rando Calrissian helps you set an objective, then guide an activity through thoughtful combinations of prompts and constraints that spark creativity and unexpected connections.</p>
-                <p>Visit <a href="editor.html?help=1" id="welcome-help-link">Help &amp; Instructions</a> to learn how to build and run your first activity.</p>
+                <p>Three sessions are ready: <strong>SIMPLE</strong>, <strong>SOD+A</strong>, and <strong>SOD+A w/ Groupings</strong>.</p>
+                <p>Open the editor, then <strong>Help</strong> for how to run, edit, and save.</p>
             </div>
             <div class="welcome-actions">
-                <button type="button" id="welcome-close-btn">OK</button>
+                <button type="button" id="welcome-close-btn" onclick="window.location.href='editor.html'">Design your prompts</button>
             </div>
         </div>
     </div>

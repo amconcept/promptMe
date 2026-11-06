@@ -17,7 +17,7 @@ combinations without repetition. Four components:
 
 Companion documents (read these first):
 - RANDOMIZER_LOGIC_SPEC.md - required draw behavior (R1-R7, I1-I6, scenarios S1-S10)
-- DESIGN_DECISIONS.md      - why visual/UX choices are the way they are (D1-D59) + future directions
+- DESIGN_DECISIONS.md      - why visual/UX choices are the way they are (D1-D67) + future directions
 - README.md                - how a teacher uses the app
 - .cursorrules             - how to work on this project
 
@@ -52,12 +52,10 @@ RETRACTED: "assets/ (font files)" in the file structure
    That directory does not exist. Fonts load from Google Fonts via <link>.
 
 CLARIFIED: student-interest / category-selection system
-   Earlier entries describe this as a shipped feature. The mechanism is fully built
-   (checkbox UI, wiring, CSV round-trip) but prompt1InterestsMode is hardcoded off and the
-   checkbox is hidden and disabled. It is an open question, not dead code, and not a
-   shipped feature - see DESIGN_DECISIONS.md D9. The unsolved problem is how a student's
-   interest gets identified, not the widget. Direction is captured as F2 (invisible teacher
-   curation).
+   Earlier entries treated this as always-on, then as hidden (D9). Shipped as D-063:
+   **Students pick grouping** in the editor (2+ grouping rows); grouping labels are
+   tappable chips on the prompting window. Identification is the grouping label, not
+   Prompt 1. F2 (invisible teacher curation) is a separate future direction.
 
 REMOVED FROM THIS FILE: features that no longer exist
    The following were documented as current but are absent from the code. Their entries
@@ -121,7 +119,7 @@ PROMPTING WINDOW
 - Pictures fill leftover height on the leftover card after name, objective, labels, and text; `IMAGE_SLOT` is the floor (D-038)
 - Prompt pictures are cover-cropped to the film square; they mosaic while tiles lift and do not grow past that square (D-053)
 - Prompt labels mix toward paper so they recede from the chosen values (D-039)
-- Reveal grid stays square and centered in the card; objective sits under the name field; prompts cluster below (D-028)
+- Reveal grid stays square and centered in the card; objective sits under the name field in sentence case, centered, with no 1–2-word last wrap line (D-028, D-061); prompts cluster below
 - Re-running a finished result puts that student's options back and draws again (R5)
 - Controls: screenshot, report, clear, edit
 
@@ -129,8 +127,9 @@ RANDOMIZATION
 - Behavior is specified in RANDOMIZER_LOGIC_SPEC.md; prompt-generator.js cites the rule
   IDs (R2/R3, R4, R6, R7, I5) at the code sites that implement them
 - One option per prompt per run, all from a single locked grouping
-- In-play tracking is per prompt type across all groupings
-- A prompt type's in-play set refreshes only when its full union is exhausted
+- In-play tracking is per prompt type across eligible groupings
+- A prompt type's in-play set refreshes only when its eligible union is exhausted (all groupings, or the selected chips when Students pick grouping is on) (D-063)
+- Students pick grouping (editor, 2+ rows): grouping labels are tappable in the prompting window; chips are radio — one grouping at a time, that row is forced (R7) (D-063, D-064)
 
 STUDENT HANDLING
 - Names are optional; unnamed runs are auto-labelled "Run 1", "Run 2", ...
@@ -153,12 +152,12 @@ FILE MENU
 - Share writes quoted CSV so commas in sentences survive Load. Pictures download as a
   zip folder (activity.csv + media/) after a SHARE/CANCEL warning; no pictures → plain
   CSV. Load accepts .csv or .zip (D-057; D-015 still forbids binaries inside the CSV)
-- Sample activity loads from Sample-activity-2025-10-27.csv, which is its source of truth,
-  and is restored to Activity History automatically if deleted
+- Three classroom sessions restore if missing: SIMPLE, SOD+A, SOD+A w/ Groupings
+  (physical / digital / textiles; Students pick grouping on for the last) (D-065, D-066)
+- One prompt sample, Two prompt sample, and Design challenge are no longer auto-restored (D-062 superseded by D-066)
 
 LANDING PAGE
-- First-visit welcome popup explaining the objective/prompt/grouping model, with a link
-  into Help & Instructions
+- First-visit welcome names the three classroom sessions; editor opens SIMPLE and a short walkthrough (D-066)
 - Shown once, remembered as randoCalrissianWelcomeSeen in localStorage
 
 DATA PERSISTENCE
@@ -175,7 +174,7 @@ DEVELOPMENT CONVENTIONS
 =======================
 
 CACHE BUSTING
-- Twenty-three local module <script> tags carry ?v=20260830ba (nine on editor.html, ten
+- Twenty-three local module <script> tags carry ?v=20260830br (nine on editor.html, ten
   on sketch.html, three on theme.html, one on index.html). After editing any of those
   modules, bump that value on all twenty-three together. theme-manager.js is tagged on
   every page so Macintosh paper-on-ink (D-050) cannot load from a stale untagged copy.
@@ -236,7 +235,9 @@ PromptMe App_2025/
 |   |-- reveal-animation.js             fill-then-resolve + persist       (522 lines)
 |   |-- activity-pack.js                quoted CSV + zip picture pack     (475 lines)
 |
-|-- Sample-activity-2025-10-27.csv      sample activity (source of truth)
+|-- One-prompt-sample.csv               baked starter (D-062)
+|-- Two-prompt-sample.csv               baked starter (D-062)
+|-- Design-challenge.csv                baked starter, physical/digital (D-062)
 |
 |-- .cursor/
 |   |-- rules/                          project rules (.mdc)
@@ -341,6 +342,17 @@ PROMPTING WINDOW
 - Share quotes CSV cells so commas in sentences survive Load. Pictures share as a zip folder (activity.csv + media/) after a SHARE/CANCEL warning; Load accepts .csv or .zip (D-057)
 - Empty Custom film does not play Default Pattern; RUN scrambles text (D-058)
 - Leftover-card outline on the prompting window is a Tune knob (Card frame 0–8px; 0 = none) (D-059)
+- Three baked starters in Activity History (One prompt sample, Two prompt sample, Design challenge). First-time editor opened Two prompt sample and a six-step walkthrough (D-062). Superseded: new browsers only restore SIMPLE, SOD+A, SOD+A w/ Groupings; first-visit opens SIMPLE (D-066)
+- Walkthrough Prompts highlight is one prompt column (heading + list box); Groupings highlight is each horizontal row and does not wrap the prompt headings (D-062)
+- Leftover-card objective was Title Case and left-aligned (D-060); superseded: sentence case, centered, last wrap line at least 3 words (D-061)
+- Leftover-card objective is sentence case and centered; wrapping will not leave 1–2 leftover words on the last line; prompt headings stay ALL CAPS / centered (D-061)
+- Students pick grouping: editor switch (2+ grouping rows) makes grouping labels tappable in the prompting window so robotics vs pottery draw from different rows. Does not skip Prompt 1. Off by default (D-063)
+- Grouping chips are radio: tapping one deselects the others; exactly one stays on (D-064)
+- Classroom sessions SIMPLE, SOD+A, and SOD+A w/ Groupings restore in Activity History if missing (D-065)
+- SOD+A w/ Groupings baked lists match the desk: physical / digital / textiles (felt, rubber, microcontroller, simple mechanism, speaker, elasticity; wearable electronics / LEDs) (D-065)
+- SIMPLE and SOD+A baked lists are the union of SOD+A w/ Groupings (same items; SIMPLE is one INCORPORATES list) (D-065)
+- New browsers restore only those three sessions; first-visit opens SIMPLE; Help is Run / Edit / Save (GO TO NEXT vs RE-RUN) (D-066)
+- Leftover-card name field shows placeholder "name" and an underline when empty, so the slot is visible on load (D-067)
 - Film scale runs C-1 through C3, then mute (D-049)
 - Land note on Customize designs the final ping (D-046)
 
@@ -373,7 +385,7 @@ FUTURE DIRECTIONS
 =================
 Captured in DESIGN_DECISIONS.md section 4, not repeated here. Summary: multi-format
 prompts (F1; local PNG/JPG shipped as D-015, hosted still open), invisible teacher
-curation extending the paused prompt1InterestsMode question (F2), AI that assists
+curation (F2; D-063 is the visible grouping-pick path, F2 is invisible steering), AI that assists
 curation without replacing teacher intent (F3), customizable animations (F4; first surface shipped as theme.html / D-025 / D-027 / D-032), and
 low-floor/wide-walls progressive disclosure as a cross-cutting constraint (F5).
 

@@ -354,6 +354,24 @@
             margin: 30px 0;
         }
 
+        /* D-063: Students pick grouping — only with 2+ rows so a first-time editor stays simple (F5). */
+        .grouping-select-row {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin: 0 0 20px;
+        }
+        .grouping-select-row.is-available {
+            display: flex;
+        }
+        body.editor-cube-layout .grouping-select-row {
+            margin: 8px 0 16px;
+        }
+        body.editor-cube-layout .grouping-select-row.is-available {
+            display: flex;
+        }
+
         .add-prompt-button, .add-category-button {
             display: inline-flex;
             align-items: center;
@@ -2009,7 +2027,7 @@
             bottom: 8px;
         }
     </style>
-    <script src="theme-manager.js?v=20260830ba"></script>
+    <script src="theme-manager.js?v=20260830br"></script>
     <script>
         if (typeof applyThemeFromStorage === 'function') applyThemeFromStorage();
     </script>
@@ -2056,9 +2074,6 @@
         </select>
     </div>
     
-    <!-- Criteria selectable — not ready; keep DOM id for save/load, never show -->
-    <input type="checkbox" id="prompt1-interests-mode" class="settings-checkbox-input" hidden disabled aria-hidden="true" tabindex="-1" style="display:none !important; visibility:hidden !important; position:absolute !important; width:0 !important; height:0 !important; pointer-events:none !important;">
-
     <!-- Phone cube: A1 leads objective; swipe or ‹ › / + for prompt sets & categories -->
     <div class="prompt-cube-wrap">
         <div id="prompt-cube" class="prompt-cube" tabindex="0" aria-label="Prompt editor cube">
@@ -2119,6 +2134,12 @@
         <button class="add-prompt-button" onclick="addNewPrompt()" type="button">+ Add Prompt</button>
         <button class="add-category-button" onclick="addNewCategory()" type="button">+ Add Grouping</button>
     </div>
+
+    <!-- D-063: grouping labels become tappable in the prompting window. Storage key stays prompt1InterestsMode (CSV). -->
+    <label class="grouping-select-row" id="grouping-select-row" for="prompt1-interests-mode">
+        <input type="checkbox" id="prompt1-interests-mode" class="settings-checkbox-input">
+        <span class="settings-checkbox-label">Students pick grouping</span>
+    </label>
     
         <div class="prompt-grid">
             <!-- Empty placeholder for first column (grouping labels go here) -->
@@ -2198,13 +2219,13 @@
         </div>
     </div>
 
-    <script src="image-store.js?v=20260830ba"></script>
-    <script src="activity-pack.js?v=20260830ba"></script>
-    <script src="editor-image-prompts.js?v=20260830ba"></script>
-    <script src="editor-ui-manager.js?v=20260830ba"></script>
-    <script src="editor-prompt-cube.js?v=20260830ba"></script>
-    <script src="editor-data-manager.js?v=20260830ba"></script>
-    <script src="editor-settings-manager.js?v=20260830ba"></script>
-    <script src="editor-main.js?v=20260830ba"></script>
+    <script src="image-store.js?v=20260830br"></script>
+    <script src="activity-pack.js?v=20260830br"></script>
+    <script src="editor-image-prompts.js?v=20260830br"></script>
+    <script src="editor-ui-manager.js?v=20260830br"></script>
+    <script src="editor-prompt-cube.js?v=20260830br"></script>
+    <script src="editor-data-manager.js?v=20260830br"></script>
+    <script src="editor-settings-manager.js?v=20260830br"></script>
+    <script src="editor-main.js?v=20260830br"></script>
 </body>
 </html>

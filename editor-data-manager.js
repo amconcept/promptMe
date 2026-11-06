@@ -23,6 +23,25 @@ window.isUnlabeledPromptHeader = isUnlabeledPromptHeader;
 window.promptHeaderStorageKey = promptHeaderStorageKey;
 window.promptHeaderEditorValue = promptHeaderEditorValue;
 
+/** D-063: teacher switch — grouping labels become tappable in the prompting window. */
+function isGroupingSelectModeOn() {
+    const el = document.getElementById('prompt1-interests-mode');
+    return !!(el && el.checked);
+}
+function setGroupingSelectMode(on) {
+    const el = document.getElementById('prompt1-interests-mode');
+    if (el) {
+        el.disabled = false;
+        el.removeAttribute('hidden');
+        el.checked = !!on;
+    }
+    if (typeof window.syncGroupingSelectRow === 'function') {
+        window.syncGroupingSelectRow({ skipSave: true });
+    }
+}
+window.isGroupingSelectModeOn = isGroupingSelectModeOn;
+window.setGroupingSelectMode = setGroupingSelectMode;
+
 // Save changes to localStorage (editor prompts/categories; working report and usedPrompts preserved)
 let _saveChangesFlushing = false;
 function saveChanges() {
@@ -51,7 +70,7 @@ function saveChanges() {
     const data = {
         objective: document.getElementById('objective-input').value,
         constraintEnabled: true,
-        prompt1InterestsMode: false, // UI removed — feature not ready
+        prompt1InterestsMode: isGroupingSelectModeOn(),
         criterionLabels: criterionLabels,
         activityName: currentLoadedActivity,
         categories: {}
@@ -162,9 +181,7 @@ function loadSavedData() {
                 if (window.enforceObjectiveWidthLimit) setTimeout(window.enforceObjectiveWidthLimit, 0);
             }
 
-            // Criteria-selectable UI removed — keep off until feature is ready
-            const prompt1InterestsModeCheckbox = document.getElementById('prompt1-interests-mode');
-            if (prompt1InterestsModeCheckbox) prompt1InterestsModeCheckbox.checked = false;
+            // D-063: restore after rows exist so the switch can show at 2+ groupings
 
             // Don't load class list from localStorage - start fresh each time
             classList = [];
@@ -244,6 +261,8 @@ function loadSavedData() {
                 window.updateGridColumns();
             }
 
+            setGroupingSelectMode(data.prompt1InterestsMode === true);
+
             // Update add button visibility based on number of prompts
             if (addButton) {
                 addButton.style.display = promptCounter >= MAX_PROMPTS ? 'none' : 'flex';
@@ -302,7 +321,7 @@ function collectShareActivityData() {
         objective: document.getElementById('objective-input').value,
         theme: localStorage.getItem('selectedTheme') || 'windows',
         background: localStorage.getItem('selectedBackground') || 'black',
-        prompt1InterestsMode: false, // UI removed — feature not ready
+        prompt1InterestsMode: isGroupingSelectModeOn(),
         criterionLabels: criterionLabels,
         categories: {},
         promptHeaders: []
@@ -440,8 +459,7 @@ function applyImportedActivity(parsed) {
         if (bgSelect) bgSelect.value = background;
     }
 
-    const interestsCheckbox = document.getElementById('prompt1-interests-mode');
-    if (interestsCheckbox) interestsCheckbox.checked = false;
+    // D-063: apply after grouping rows exist (end of this function)
 
     window.criterionLabels = criterionLabelsImported;
     if (typeof criterionLabels !== 'undefined') criterionLabels = criterionLabelsImported;
@@ -499,6 +517,7 @@ function applyImportedActivity(parsed) {
     if (typeof window.hydrateAllPromptImageFields === 'function') {
         window.hydrateAllPromptImageFields();
     }
+    setGroupingSelectMode(parsed.prompt1InterestsMode === true);
     saveChanges();
 
     const historyName = activityName || ('Imported Activity ' + new Date().toLocaleString());

@@ -6,7 +6,6 @@ let studentName = '';
 let previousName = ''; // Store completed name for display
 window.clearPreviousNameForNavigation = function () { previousName = ''; };
 let classList = []; // Array to store student names from class list
-let p5CategoryCheckboxes = []; // Global array to store p5.js checkbox elements
 // Shared with prompt-generator.js / animation-manager.js (classic scripts).
 // `let` here used to shadow their writes, so GENERATING… / STOP could stick until refresh.
 window.isGenerating = false;
@@ -124,10 +123,45 @@ const CARD_FIT = {
     OBJECTIVE_BELOW_NAME_PHONE: 6,
     OBJECTIVE_PROMPT_GAP: 12,
     OBJECTIVE_PROMPT_GAP_PHONE: 8,
+    // D-061: last wrap line of the objective must not be 1–2 leftover words.
+    OBJECTIVE_MIN_LAST_LINE_WORDS: 3,
     // D-039: mix labels toward paper so they recede from the chosen values.
     // 0 = same as prompt ink; 1 = paper (invisible). Was a flat 0.8× primary.
     LABEL_MIX: 0.55
 };
+
+/** D-061: leftover-card objective is sentence case, not Title Case or ALL CAPS. */
+function toSentenceCase(text) {
+    const raw = String(text == null ? '' : text).trim();
+    if (!raw) return '';
+    return raw.toLowerCase().replace(/(^|[.!?]\s+)(\S)/g, function (match, prefix, ch) {
+        return prefix + ch.toUpperCase();
+    });
+}
+
+/**
+ * D-061: after a greedy wrap, move words down so the last line is not a
+ * 1–2-word leftover. Stops if the last line would overflow, or the previous
+ * line would empty. Unavoidable when the whole phrase is only a few words.
+ */
+function balanceLastWrapLine(lines, maxW, measureWidth) {
+    const minLast = CARD_FIT.OBJECTIVE_MIN_LAST_LINE_WORDS;
+    const out = (lines && lines.length) ? lines.slice() : [''];
+    while (out.length >= 2) {
+        const lastIdx = out.length - 1;
+        const lastWords = out[lastIdx].split(/\s+/).filter(Boolean);
+        if (lastWords.length >= minLast) break;
+        const prevWords = out[lastIdx - 1].split(/\s+/).filter(Boolean);
+        if (prevWords.length <= 1) break;
+        const moved = prevWords[prevWords.length - 1];
+        const newLast = moved + ' ' + lastWords.join(' ');
+        if (measureWidth(newLast) > maxW) break;
+        prevWords.pop();
+        out[lastIdx - 1] = prevWords.join(' ');
+        out[lastIdx] = newLast;
+    }
+    return out;
+}
 
 // p5.Image cache for img: tokens (D-015). Values: Image | 'loading' | 'fail'
 const promptImageCache = {};
@@ -448,571 +482,39 @@ document.addEventListener('DOMContentLoaded', function() {
     loadInitialThemeFromEditor();
 });
 
-// Student interest selection functions
+// D-063: grouping chips live in ui-manager.js leftover-card chrome.
 function refreshInterestSection() {
-    populateInterestCheckboxes();
-    updateInterestSelection();
+    if (typeof window.refreshGroupingPicker === 'function') window.refreshGroupingPicker();
 }
-
 function populateInterestCheckboxes() {
-    const interestCheckboxes = document.getElementById('interest-checkboxes');
-    if (!interestCheckboxes) {
-        debugLog('interest-checkboxes element not found');
-        return;
-    }
-    
-    // Check if prompt1InterestsMode is enabled - look in global variable first
-    let prompt1InterestsMode = false;
-    // First check if global variable is set (loaded from data-manager.js)
-    if (typeof window.criterionSelectable !== 'undefined') {
-        prompt1InterestsMode = window.criterionSelectable;
-                debugLog('Using window.criterionSelectable:', prompt1InterestsMode);
-    } else {
-        // Fallback: check localStorage
-        const promptData = localStorage.getItem('promptCategories');
-        if (promptData) {
-            try {
-                const parsedData = JSON.parse(promptData);
-                prompt1InterestsMode = parsedData.prompt1InterestsMode === true;
-            } catch (e) {
-                console.error('Error parsing prompt data for interests mode:', e);
-            }
-        }
-        debugLog('Using localStorage prompt1InterestsMode:', prompt1InterestsMode);
-    }
-    // Get parent container using p5.js methods
-    const interestContainer = interestCheckboxes.elt ? interestCheckboxes.elt.parentElement : null;
-    
-    debugLog('populateInterestCheckboxes called, prompt1InterestsMode:', prompt1InterestsMode);
-    
-    if (!prompt1InterestsMode) {
-        // Hide the interest selection section if mode is disabled
-        debugLog('Hiding interest section');
-        // Hide using p5.js method (primary method)
-        const p5Container = select('[data-p5-container="interest"]');
-        if (p5Container) {
-            p5Container.hide();
-        }
-        // Also hide DOM element directly
-        if (interestContainer) {
-            if (interestContainer.elt) {
-                interestContainer.elt.style.display = 'none';
-            }
-        }
-        return;
-    } else {
-        // Show the interest selection section if mode is enabled
-        debugLog('Showing interest section, prompt1InterestsMode:', prompt1InterestsMode);
-        // Show using p5.js method (primary method)
-        const p5Container = select('[data-p5-container="interest"]');
-        if (p5Container) {
-            p5Container.show();
-            debugLog('Interest container shown via p5.js');
-        }
-        // Also show DOM element directly
-        if (interestContainer) {
-            if (interestContainer.elt) {
-                interestContainer.elt.style.display = 'block';
-            }
-        }
-        debugLog('Interest container display set to block');
-    }
-    
-    // Clear existing category checkboxes (keep "All Categories")
-    // IMPORTANT: Clear both DOM elements and p5.js elements to prevent duplication
-    // First, remove all p5.js elements
-    p5CategoryCheckboxes.forEach(checkbox => {
-        if (checkbox) {
-            // Remove from p5.js parent
-            if (checkbox.parent && checkbox.parent.removeChild) {
-                try {
-                    checkbox.parent.removeChild(checkbox);
-                } catch (e) {
-                    console.log('Error removing p5.js element:', e);
-                }
-            }
-            // Also try to remove from DOM directly
-            if (checkbox.elt && checkbox.elt.parentElement) {
-                try {
-                    checkbox.elt.parentElement.removeChild(checkbox.elt);
-                } catch (e) {
-                    console.log('Error removing DOM element:', e);
-                }
-            }
-        }
-    });
-    p5CategoryCheckboxes = []; // Reset the array
-    
-    // Now clear all DOM elements with the category-interest-checkbox class
-    const existingCheckboxes = interestCheckboxes.querySelectorAll('.category-interest-checkbox');
-    existingCheckboxes.forEach(checkbox => {
-        // Remove from DOM
-        if (checkbox && checkbox.parentElement) {
-            checkbox.parentElement.removeChild(checkbox);
-        }
-    });
-    
-    // Also clear any remaining children that aren't "All Categories"
-    // More aggressive clearing - remove all divs except the one containing "All Categories"
-    if (interestCheckboxes) {
-        // CRITICAL: interestCheckboxes is retrieved via document.getElementById, so it's a DOM element
-        // But we need to be careful when finding the "All Categories" checkbox
-        // First, try to find it using document.getElementById (most reliable)
-        let allCategoriesCheckboxEl = document.getElementById('all-categories-checkbox');
-        let allCategoriesDiv = null;
-        
-        if (allCategoriesCheckboxEl) {
-            // Find the parent div that contains the checkbox and label
-            allCategoriesDiv = allCategoriesCheckboxEl.closest('div');
-            debugLog('All Categories checkbox element found');
-        } else {
-            // Fallback: try querySelector on the container
-            allCategoriesCheckboxEl = interestCheckboxes.querySelector('#all-categories-checkbox');
-            if (allCategoriesCheckboxEl) {
-                allCategoriesDiv = allCategoriesCheckboxEl.closest('div');
-                debugLog('All Categories checkbox found via querySelector');
-            } else {
-                console.log('WARNING: All Categories checkbox not found at all!');
-            }
-        }
-        
-        // Remove all children except "All Categories"
-        const children = Array.from(interestCheckboxes.children || []);
-        debugLog('Clearing category checkboxes, total children:', children.length);
-        children.forEach((child, index) => {
-            // Only keep the "All Categories" div, remove everything else
-            // Check if this child contains the "All Categories" checkbox
-            const containsAllCategories = allCategoriesDiv && (child === allCategoriesDiv || child.contains(allCategoriesCheckboxEl));
-            
-            if (!containsAllCategories) {
-                // This is not the "All Categories" div, remove it
-                debugLog('Removing child', index);
-                try {
-                    child.remove();
-                } catch (e) {
-                    console.log('Error removing child:', e);
-                    // Fallback: try to remove via parent
-                    if (child.parentNode) {
-                        child.parentNode.removeChild(child);
-                    }
-                }
-            } else {
-                debugLog('Preserving All Categories div');
-            }
-        });
-        
-        // Double-check: query again and remove any remaining category-interest-checkbox elements
-        // But preserve the "All Categories" div
-        const remainingCheckboxes = interestCheckboxes.querySelectorAll('.category-interest-checkbox');
-        remainingCheckboxes.forEach(checkbox => {
-            // Only remove if it's not the "All Categories" div or doesn't contain it
-            const isAllCategoriesDiv = allCategoriesDiv && (checkbox === allCategoriesDiv || checkbox.contains(allCategoriesCheckboxEl));
-            if (!isAllCategoriesDiv) {
-                try {
-                    checkbox.remove();
-                } catch (e) {
-                    console.log('Error removing remaining checkbox:', e);
-                }
-            }
-        });
-        
-        // Verify "All Categories" still exists after clearing
-        const verifyAllCategories = document.getElementById('all-categories-checkbox');
-        debugLog('All Categories checkbox verification:', !!verifyAllCategories);
-        
-        // If "All Categories" checkbox doesn't exist, log an error
-        if (!verifyAllCategories) {
-            console.error('ERROR: All Categories checkbox was removed during clearing!');
-            console.error('ERROR: This will cause updateInterestSelection to fail.');
-            console.error('ERROR: The checkbox should be created in ui-manager.js createUI() function.');
-        }
-    }
-    
-    // Get criterion labels from the global variable (loaded in loadPromptsFromLocalStorage)
-    // Note: criterionLabels are no longer required - we use actual category names from data
-    const criterionLabels = window.criterionLabels || ['', '', '', ''];
-    
-    debugLog('Populating interest checkboxes, categories:', Object.keys(categories).length);
-    debugLog('Criterion labels found:', criterionLabels);
-    
-    // Check which categories have content before creating checkboxes
-    // The data structure is: categories[promptType][categoryName] = [items]
-    // We need to find all unique category names across all prompt types
-    const allCategoryNames = new Set();
-    
-    if (categories && Object.keys(categories).length > 0) {
-        Object.keys(categories).forEach(promptType => {
-            if (promptType !== 'objective' && promptType !== 'prompt1InterestsMode') {
-                const categoryData = categories[promptType];
-                if (categoryData && typeof categoryData === 'object') {
-                    Object.keys(categoryData).forEach(categoryName => {
-                        const items = categoryData[categoryName];
-                        // Check if this category has any non-empty items
-                        if (Array.isArray(items) && items.length > 0) {
-                            const hasNonEmptyItems = items.some(item => 
-                                item && item.trim && item.trim().length > 0
-                            );
-                            if (hasNonEmptyItems) {
-                                allCategoryNames.add(categoryName);
-                            }
-                        }
-                    });
-                }
-            }
-        });
-    }
-    
-    debugLog('Category names found:', Array.from(allCategoryNames).length);
-    
-    // Create categories with content - use actual category names from data
-    // Always display the actual category names, not the criterion labels
-    const categoriesWithContent = [];
-    const categoryNamesArray = Array.from(allCategoryNames);
-    
-    categoryNamesArray.forEach((categoryName, index) => {
-        // Always use the actual category name for display (e.g., "Furniture", "textiles", "electronics")
-        // The criterion labels are just row labels in the editor, but the category names are what matter
-        categoriesWithContent.push({
-            label: categoryName, // Always use actual category name for display
-            categoryName: categoryName, // Always use actual category name for data lookup
-            categoryLetter: String.fromCharCode(65 + index),
-            index: index
-        });
-        debugLog('Category will be displayed:', categoryName);
-    });
-    
-    debugLog('Categories with content:', categoriesWithContent.length);
-    
-    // If no categories have content, hide the interest section
-    if (categoriesWithContent.length === 0) {
-        debugLog('No categories have content, hiding interest section');
-        const p5Container = select('[data-p5-container="interest"]');
-        if (p5Container) {
-            p5Container.hide();
-        }
-        if (interestContainer && interestContainer.elt) {
-            interestContainer.elt.style.display = 'none';
-        }
-        return;
-    }
-    
-    // Create checkboxes only for categories with content
-    categoriesWithContent.forEach((categoryInfo) => {
-        const { label, categoryName, categoryLetter, index } = categoryInfo;
-        const displayName = label; // Use the criterion label for display
-        const dataCategoryName = categoryName || label; // Use actual category name for data lookup
-        
-        const categoryDiv = createDiv('');
-        categoryDiv.parent(interestCheckboxes);
-        categoryDiv.className = 'category-interest-checkbox';
-        categoryDiv.style('display', 'flex');
-        categoryDiv.style('align-items', 'center');
-        categoryDiv.style('margin-bottom', '4px');
-        
-        // Create custom retro checkbox
-        const checkbox = createDiv('');
-        checkbox.parent(categoryDiv);
-        checkbox.class('category-checkbox');
-        checkbox.elt.className = 'category-checkbox'; // Set class on actual DOM element
-        checkbox.attribute('data-category', dataCategoryName); // Use actual category name for data lookup
-        checkbox.attribute('data-checked', 'false');
-        
-        // Store reference to p5.js element
-        p5CategoryCheckboxes.push(checkbox);
-        checkbox.style('width', '12px');
-        checkbox.style('height', '12px');
-        checkbox.style('border', '1px solid var(--primary-color)');
-        checkbox.style('background-color', 'var(--background-color)');
-        checkbox.style('margin-right', '6px');
-        checkbox.style('cursor', 'pointer');
-        checkbox.style('position', 'relative');
-        
-        const labelElement = createDiv(displayName);
-        labelElement.parent(categoryDiv);
-        labelElement.style('color', 'var(--primary-color)');
-        labelElement.style('font-size', '18px');  // Match editor settings-item
-        labelElement.style('cursor', 'pointer');
-        labelElement.mousePressed(() => {
-            // Play click sound for checkbox - ensure audio context is resumed
-            if (window.audioCtx) {
-                if (window.audioCtx.state === 'suspended') {
-                    window.audioCtx.resume().then(() => {
-                        // Play sound after context is resumed
-                        if (window.playSound && window.SOUND) {
-                            window.playSound(window.SOUND.CLICK);
-                        }
-                    }).catch(e => {
-                        console.log('Could not resume audio context:', e);
-                        // Try to play anyway
-                        if (window.playSound && window.SOUND) {
-                            window.playSound(window.SOUND.CLICK);
-                        }
-                    });
-                } else {
-                    // Context is already running, play immediately
-                    if (window.playSound && window.SOUND) {
-                        window.playSound(window.SOUND.CLICK);
-                    }
-                }
-            } else if (window.playSound && window.SOUND) {
-                // No audio context available, try to play anyway
-                window.playSound(window.SOUND.CLICK);
-            }
-            
-            debugLog('Individual checkbox clicked via label');
-            const isChecked = checkbox.attribute('data-checked') === 'true';
-            checkbox.attribute('data-checked', !isChecked);
-            if (!isChecked) {
-                checkbox.style('background-color', 'var(--primary-color)');
-                debugLog('Checkbox set to checked');
-            } else {
-                checkbox.style('background-color', 'var(--background-color)');
-                debugLog('Checkbox set to unchecked');
-            }
-            
-            // IMPORTANT: Uncheck "All Categories" when individual category is selected
-            const allCategoriesCheckbox = document.getElementById('all-categories-checkbox');
-            if (allCategoriesCheckbox) {
-                allCategoriesCheckbox.setAttribute('data-checked', 'false');
-                allCategoriesCheckbox.style.backgroundColor = 'var(--background-color)';
-                debugLog('Unchecked All Categories');
-            }
-            
-            updateInterestSelection();
-        });
-        
-        // Handle checkbox click
-        checkbox.mousePressed(() => {
-            // Play click sound for checkbox - ensure audio context is resumed
-            if (window.audioCtx) {
-                if (window.audioCtx.state === 'suspended') {
-                    window.audioCtx.resume().then(() => {
-                        // Play sound after context is resumed
-                        if (window.playSound && window.SOUND) {
-                            window.playSound(window.SOUND.CLICK);
-                        }
-                    }).catch(e => {
-                        console.log('Could not resume audio context:', e);
-                        // Try to play anyway
-                        if (window.playSound && window.SOUND) {
-                            window.playSound(window.SOUND.CLICK);
-                        }
-                    });
-                } else {
-                    // Context is already running, play immediately
-                    if (window.playSound && window.SOUND) {
-                        window.playSound(window.SOUND.CLICK);
-                    }
-                }
-            } else if (window.playSound && window.SOUND) {
-                // No audio context available, try to play anyway
-                window.playSound(window.SOUND.CLICK);
-            }
-            
-            debugLog('Individual checkbox clicked directly');
-            const isChecked = checkbox.attribute('data-checked') === 'true';
-            const newState = !isChecked;
-            
-            // Update checkbox state
-            checkbox.attribute('data-checked', newState);
-            if (newState) {
-                checkbox.style('background-color', 'var(--primary-color)');
-                debugLog('Checkbox set to checked');
-            } else {
-                checkbox.style('background-color', 'var(--background-color)');
-                debugLog('Checkbox set to unchecked');
-            }
-            
-            // IMPORTANT: Uncheck "All Categories" when individual category is selected
-            const allCategoriesCheckbox = document.getElementById('all-categories-checkbox');
-            if (allCategoriesCheckbox) {
-                allCategoriesCheckbox.setAttribute('data-checked', 'false');
-                allCategoriesCheckbox.style.backgroundColor = 'var(--background-color)';
-                debugLog('Unchecked All Categories');
-            }
-            
-            // Use setTimeout to ensure checkbox state is fully updated before reading
-            // This is necessary because p5.js attribute updates might not be immediately available
-            setTimeout(() => {
-                debugLog('Calling updateInterestSelection after state update');
-                updateInterestSelection();
-            }, 10);
-        });
-    });
+    refreshInterestSection();
 }
-
 function updateInterestSelection() {
-    debugLog('updateInterestSelection() called');
-    const allCategoriesCheckbox = document.getElementById('all-categories-checkbox');
-    
-    if (!allCategoriesCheckbox) {
-        debugLog('allCategoriesCheckbox not found - returning early');
-        return;
+    if (typeof window.readGroupingPickerSelection === 'function') {
+        const sel = window.readGroupingPickerSelection();
+        if (sel === 'all') localStorage.setItem('selectedInterests', 'all');
+        else localStorage.setItem('selectedInterests', JSON.stringify(sel));
     }
-    
-    // Check if prompt1InterestsMode is enabled - look in global variable first
-    let prompt1InterestsMode = false;
-    // First check if global variable is set (loaded from data-manager.js)
-    if (typeof window.criterionSelectable !== 'undefined') {
-        prompt1InterestsMode = window.criterionSelectable;
-        debugLog('updateInterestSelection using window.criterionSelectable:', prompt1InterestsMode);
-    } else {
-        // Fallback: check localStorage
-        const promptData = localStorage.getItem('promptCategories');
-        if (promptData) {
-            try {
-                const parsedData = JSON.parse(promptData);
-                prompt1InterestsMode = parsedData.prompt1InterestsMode === true;
-            } catch (e) {
-                console.error('Error parsing prompt data for interests mode:', e);
-            }
-        }
-        debugLog('updateInterestSelection using localStorage prompt1InterestsMode:', prompt1InterestsMode);
-    }
-    
-    if (!prompt1InterestsMode) {
-        // Default to all categories when interest mode is disabled
-        localStorage.setItem('selectedInterests', 'all');
-        return;
-    }
-    
-    debugLog('Individual checkboxes found:', p5CategoryCheckboxes.length);
-    const allCategoriesChecked = allCategoriesCheckbox.getAttribute('data-checked') === 'true';
-    
-    if (allCategoriesChecked) {
-        // If "All Categories" is checked, ensure all individual categories are OFF
-        debugLog('All Categories is checked - forcing individual categories OFF');
-        p5CategoryCheckboxes.forEach(checkbox => {
-            checkbox.attribute('data-checked', 'false');
-            checkbox.style('background-color', 'var(--background-color)');
-        });
-        // Store that all categories are selected
-        localStorage.setItem('selectedInterests', 'all');
-        console.log('All categories selected - all individual categories OFF');
-        console.log('DEBUG: Stored "all" in localStorage');
-    } else {
-        console.log('DEBUG: All Categories is NOT checked - checking individual checkboxes');
-        // Check if any individual categories are selected
-        // IMPORTANT: Read checkbox states directly from DOM to ensure we get the latest values
-        console.log('DEBUG: Checking individual checkbox states...');
-        console.log('DEBUG: p5CategoryCheckboxes.length:', p5CategoryCheckboxes.length);
-        
-        const selectedCategories = [];
-        p5CategoryCheckboxes.forEach((checkbox, index) => {
-            // Try to read from both p5.js attribute and DOM element to ensure we get the latest value
-            const p5Checked = checkbox.attribute('data-checked') === 'true';
-            const domChecked = checkbox.elt && checkbox.elt.getAttribute('data-checked') === 'true';
-            const isChecked = domChecked || p5Checked; // Prefer DOM value as it's more reliable
-            const categoryName = checkbox.attribute('data-category');
-            console.log('DEBUG: Checkbox', index, 'category:', categoryName, 'p5 checked:', p5Checked, 'DOM checked:', domChecked, 'final checked:', isChecked);
-            if (isChecked) {
-                selectedCategories.push(categoryName);
-            }
-        });
-        
-        console.log('DEBUG: Selected categories after reading all checkboxes:', selectedCategories);
-        console.log('DEBUG: Number of selected categories:', selectedCategories.length, 'out of', p5CategoryCheckboxes.length);
-        
-        if (selectedCategories.length === 0) {
-            // If no categories selected, default back to "All Categories"
-            console.log('DEBUG: No categories selected - defaulting to "All Categories"');
-            allCategoriesCheckbox.setAttribute('data-checked', 'true');
-            allCategoriesCheckbox.style.backgroundColor = 'var(--primary-color)';
-            // All categories checked
-            localStorage.setItem('selectedInterests', 'all');
-            console.log('No individual categories selected - defaulting to all categories');
-        } else if (selectedCategories.length === p5CategoryCheckboxes.length) {
-            // If ALL individual categories are selected, switch to "All Categories"
-            console.log('DEBUG: All individual categories selected, switching to "All Categories"');
-            console.log('DEBUG: selectedCategories.length:', selectedCategories.length, 'p5CategoryCheckboxes.length:', p5CategoryCheckboxes.length);
-            allCategoriesCheckbox.setAttribute('data-checked', 'true');
-            allCategoriesCheckbox.style.backgroundColor = 'var(--primary-color)';
-            // Uncheck all individual categories
-            p5CategoryCheckboxes.forEach(checkbox => {
-                checkbox.attribute('data-checked', 'false');
-                checkbox.style('background-color', 'var(--background-color)');
-            });
-            localStorage.setItem('selectedInterests', 'all');
-            console.log('All individual categories selected - switching to "All Categories"');
-        } else {
-            // Store selected categories
-            console.log('DEBUG: Storing', selectedCategories.length, 'selected categories:', selectedCategories);
-            localStorage.setItem('selectedInterests', JSON.stringify(selectedCategories));
-            console.log('Individual categories selected:', selectedCategories);
-            console.log('DEBUG: Stored in localStorage as:', JSON.stringify(selectedCategories));
-            console.log('DEBUG: These category names should match the actual category names in the data structure');
-            console.log('DEBUG: Verifying storage - reading back:', localStorage.getItem('selectedInterests'));
-        }
-    }
-    
-    console.log('Interest selection updated:', localStorage.getItem('selectedInterests'));
 }
-
 function getSelectedInterests() {
-    const selectedInterests = localStorage.getItem('selectedInterests');
-    console.log('getSelectedInterests - raw value:', selectedInterests);
-    
-    if (!selectedInterests) {
-        console.log('getSelectedInterests - no value, returning all');
-        return 'all';
+    if (window.criterionSelectable !== true) return 'all';
+    if (typeof window.readGroupingPickerSelection === 'function') {
+        return window.readGroupingPickerSelection();
     }
-    
-    if (selectedInterests === 'all') {
-        console.log('getSelectedInterests - returning all');
-        return 'all';
-    }
-    
+    const raw = localStorage.getItem('selectedInterests');
+    if (!raw || raw === 'all') return 'all';
     try {
-        const parsed = JSON.parse(selectedInterests);
-        console.log('getSelectedInterests - returning parsed:', parsed);
-        return parsed;
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : 'all';
     } catch (e) {
-        console.log('getSelectedInterests - parse error, returning all');
         return 'all';
     }
 }
-
-// Listen for localStorage changes to refresh interest section
-window.addEventListener('storage', (e) => {
-    if (e.key === 'prompt1InterestsMode') {
-        console.log('DEBUG: prompt1InterestsMode changed, refreshing interest section');
+window.addEventListener('storage', function (e) {
+    if (e.key === 'promptCategories' || e.key === 'selectedInterests') {
         refreshInterestSection();
     }
 });
-
-// Also check periodically for changes (in case of same-tab updates)
-let lastPrompt1InterestsMode = false;
-// Get initial value
-const initialData = localStorage.getItem('promptCategories');
-if (initialData) {
-    try {
-        const parsedData = JSON.parse(initialData);
-        lastPrompt1InterestsMode = parsedData.prompt1InterestsMode === true;
-    } catch (e) {
-        console.error('Error parsing initial prompt data:', e);
-    }
-}
-console.log('DEBUG: Initial prompt1InterestsMode:', lastPrompt1InterestsMode);
-
-setInterval(() => {
-    let currentPrompt1InterestsMode = false;
-    const promptData = localStorage.getItem('promptCategories');
-    if (promptData) {
-        try {
-            const parsedData = JSON.parse(promptData);
-            currentPrompt1InterestsMode = parsedData.prompt1InterestsMode === true;
-        } catch (e) {
-            console.error('Error parsing prompt data for polling:', e);
-        }
-    }
-    
-    if (currentPrompt1InterestsMode !== lastPrompt1InterestsMode) {
-        console.log('DEBUG: prompt1InterestsMode changed via polling, refreshing interest section');
-        console.log('DEBUG: Old value:', lastPrompt1InterestsMode, 'New value:', currentPrompt1InterestsMode);
-        lastPrompt1InterestsMode = currentPrompt1InterestsMode;
-        refreshInterestSection();
-    }
-}, 1000); // Check every second
 
 // Helper function to convert hex to RGB
 function hexToRgb(hex) {
@@ -1434,9 +936,8 @@ function draw() {
     const innerWidth = cardWidth - padX * 2;
 
     const objectiveText = (categories?.objective || '').trim();
-    const prompt1InterestsMode = categories.prompt1InterestsMode || false;
     const promptHeaders = Object.keys(categories).filter(cat => cat !== 'objective' && cat !== 'prompt1InterestsMode');
-    const headersToDraw = prompt1InterestsMode && promptHeaders.length > 0 ? promptHeaders.slice(1) : promptHeaders;
+    const headersToDraw = promptHeaders;
     const promptValueTexts = headersToDraw.map(header => {
         const prompt = window.currentPrompts[header];
         if (prompt && typeof prompt === 'object') {
@@ -1533,6 +1034,32 @@ function draw() {
         return lines.length ? lines : [''];
     }
 
+    function wrapObjectiveToWidth(str, maxW) {
+        const minLast = CARD_FIT.OBJECTIVE_MIN_LAST_LINE_WORDS;
+        const words = String(str || '').split(/\s+/).filter(Boolean);
+        if (!words.length) return [''];
+        // D-061: 6+ words wrap to two even lines when both fit, so a long
+        // brief is not a single banner and the second line is never 1–2 words.
+        if (words.length >= minLast * 2) {
+            let bestI = null;
+            let bestDiff = Infinity;
+            for (let i = minLast; i <= words.length - minLast; i++) {
+                const a = words.slice(0, i).join(' ');
+                const b = words.slice(i).join(' ');
+                if (textWidth(a) > maxW || textWidth(b) > maxW) continue;
+                const diff = Math.abs(textWidth(a) - textWidth(b));
+                if (diff < bestDiff) {
+                    bestDiff = diff;
+                    bestI = i;
+                }
+            }
+            if (bestI != null) {
+                return [words.slice(0, bestI).join(' '), words.slice(bestI).join(' ')];
+            }
+        }
+        return balanceLastWrapLine(wrapTextToWidth(str, maxW), maxW, textWidth);
+    }
+
     // Line count follows final prompt (layout); display may scramble but must not add/remove lines
     function linesForPrompt(displayStr, layoutStr, maxW) {
         const layoutLines = wrapTextToWidth(layoutStr || displayStr || '', maxW);
@@ -1552,7 +1079,7 @@ function draw() {
         if (!objectiveText) return 0;
         textSize(objectiveSize);
         textStyle(cardTextStyle);
-        return wrapTextToWidth(objectiveText.toUpperCase(), wrapW).length * objectiveLineH;
+        return wrapObjectiveToWidth(toSentenceCase(objectiveText), wrapW).length * objectiveLineH;
     }
 
     function measurePromptClusterHeight() {
@@ -1687,12 +1214,13 @@ function draw() {
     }
 
     // D-028: objective sits under the name field, full inner width
+    // D-061: sentence case, centered; last wrap line is not 1–2 leftover words
     if (objectiveText) {
         fill(primaryRgb.r * .8, primaryRgb.g * .8, primaryRgb.b * .8);
         textSize(objectiveSize);
         textStyle(cardTextStyle);
         textAlign(CENTER, TOP);
-        const objLines = wrapTextToWidth(objectiveText.toUpperCase(), innerWidth);
+        const objLines = wrapObjectiveToWidth(toSentenceCase(objectiveText), innerWidth);
         const objY = cardY + padY + nameRowHeight + belowNameGap;
         for (let li = 0; li < objLines.length; li++) {
             text(objLines[li], centerX, objY + li * objectiveLineH);

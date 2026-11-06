@@ -25,7 +25,7 @@ Use this document to verify implementation against desired behaviour. When behav
 | **In play** | Prompts currently drawn and not put back. Cannot be drawn again until put back or pool exhausted. Tracked per prompt type, across all categories. |
 | **Leader prompt** | First prompt type in a run when no category is forced. Drawn from combined pool (all categories); its category locks the run. |
 | **Locking** | After leader (or when category forced), all other prompts in that run come only from that category's pools. |
-| **Exhaustion** | A prompt type is exhausted when every option for that type (across all categories) has been in play at least once. Then that type's in-play set is cleared (refresh). |
+| **Exhaustion** | A prompt type is exhausted when every option for that type in the eligible categories has been in play at least once. Then those options are put back (refresh). Eligible categories are the selected grouping(s) when Students pick grouping is on; otherwise all categories. |
 | **Forcing** | User selects a category; every prompt in the run (including first) is drawn only from that category's pools. |
 | **Put-back** | When a student changes result, their old combo leaves "in play" so others can draw it; that student must not get the same combo on next draw. |
 
@@ -38,18 +38,15 @@ Use this document to verify implementation against desired behaviour. When behav
 - **R3** The category of the chosen leader option **locks** the run: all other prompt types in that run use **only** that category's pools (same category for the whole run).
 - **R4** No option that is in play may be drawn. In play is tracked **per prompt type**, **across all categories**.
 - **R5** When a student changes result (new draw for same slot): (a) their old combo is put back (no longer in play); (b) their new draw must not be the same combo.
-- **R6** A prompt type is exhausted only when **all** its options (all categories) have been in play at least once. On exhaustion, that type's in-play set is cleared (refresh).
+- **R6** A prompt type is exhausted only when **all** its options in the **eligible** categories have been in play at least once. Eligible = all categories when none are filtered; when Students pick grouping (D-063) is on, eligible = the selected grouping(s). On exhaustion, those options are put back (refresh). Options from groupings that were not eligible stay in play.
 - **R7** When a category is forced, **all** prompts in the run (including the first) are drawn only from that category's pools. No combined leader pool; category is fixed before any draw.
 
-> **Status of forcing (R7 / I6).** There is currently **no UI path** for a teacher to force
-> a category. The interest/category-selection controls that used to expose it live inside the
-> hidden control panel, and `prompt1InterestsMode` is hardcoded off (see `DESIGN_DECISIONS.md`
-> D9 — an open question, not dead code). R7's code path is still live, but is reached only
-> **structurally**, when a run has exactly one eligible category
-> (`candidateCategories.length === 1` in `prompt-generator.js`). Consequence: scenarios
-> **S6** and **S10** below cannot be exercised as written until forcing is reachable again.
-> Keep the rule and the scenarios — they define required behaviour for when it returns, and
-> the single-eligible-category case must obey them today.
+> **Status of forcing (R7 / I6).** Forcing is reachable when **Students pick grouping**
+> is on (D-063 / D-064): chips are radio, so the selected row is always the forced
+> category for the run. It is also still reached **structurally** when an activity has
+> only one eligible grouping (`candidateCategories.length === 1`). Scenarios **S6**
+> and **S10** can be exercised by turning the editor switch on and tapping a grouping
+> label.
 
 ---
 
@@ -59,7 +56,7 @@ Use this document to verify implementation against desired behaviour. When behav
 - **I2** After the first draw in a run, every subsequent draw in that run uses only the locked category's pool for each prompt type.
 - **I3** usedPrompts (or equivalent) is keyed by prompt type only, not by (prompt type + category). Same option string in different categories shares one "in play" state.
 - **I4** Put-back runs only when a result is changed (same slot, new draw); it removes that slot's previous prompts from in play and excludes that combo for the next draw for that student.
-- **I5** Exhaustion/reset for a prompt type happens only when the count (or set) of drawn options for that type equals the full set of options for that type across all categories.
+- **I5** Exhaustion/reset for a prompt type happens only when the set of drawn options for that type covers the full eligible union (all categories, or the selected grouping(s) when Students pick grouping is on). Refresh removes only that union from in-play.
 - **I6** Forced category: no random category choice; first and all other prompts are drawn only from the forced category's pools.
 
 ---
@@ -75,11 +72,11 @@ Use these to verify behaviour; if the system disagrees, one of the rules or inva
 | S3 | Student A got Item 1 + Thing 3. Student B runs. | Item 1 and Thing 3 not available for B. B gets e.g. Item 3 + Thing 2 (or any valid combo from remaining). |
 | S4 | Student A changes result (randomizer again). | A's old combo (Item 1, Thing 3) goes back to pool. A gets a new combo that is not Item 1 + Thing 3. |
 | S5 | All Items (1,2,3,4,5) have been in play. Next run. | Item pool is refreshed; all five are available again. |
-| S6 | Category 2 forced. Run. **(Not currently exercisable — no UI path to force; see R7 status note.)** | First draw is one of Item 4,5. Thing is one of 6,7,8. No Item 1,2,3 or Thing 1,2,3 in this run. |
+| S6 | Category 2 forced (Students pick grouping on, only Cat2 chip selected). Run. | First draw is one of Item 4,5. Thing is one of 6,7,8. No Item 1,2,3 or Thing 1,2,3 in this run. |
 | S7 | Cat1: Item 1,2,3 / Thing 1,2,3; Cat2: Item 4,5 / Thing 6,7,8. All Things (1–8) exhausted and refreshed; all Items still in play except Item 1. Student D runs (no forced category). | Leader: one of Item 2,3,4,5 (Item 1 in play). If leader is Item 2 or 3, Thing from 1,2,3; if Item 4 or 5, Thing from 6,7,8. |
 | S8 | Same as S7. Student E runs after D got Item 1 + Thing 4 (so Item 1 and Thing 4 now in play). Thing pool had refreshed so 1,2,3,4,5,6,7,8 available; only Thing 4 in play. | Leader: one of Item 2,3,4,5. Things available per category: Cat1: 1,2,3 (4 in play); Cat2: 5,6,7,8 (4 in play). E gets e.g. Item 3 + Thing 2, or Item 5 + Thing 6. |
 | S9 | Teacher removes Thing 3 from design. Student C had Item 1 + Thing 3; teacher goes back, "removes" for C (change result). C randomizes again. | C's old combo put back (Item 1, Thing 3). Thing 3 no longer in pool (removed). C gets Item 1 + one of remaining Things (e.g. 1,2,4,5,…). No Thing 3. |
-| S10 | Category 1 forced. Item 1,2,3 and Thing 1,2,3 only. Item 1 and Thing 2 in play. Run. **(Not currently exercisable — no UI path to force; but an activity with only Category 1 hits the same path structurally.)** | First draw one of Item 2,3. Thing one of 1,3 (not 2). |
+| S10 | Category 1 forced (Students pick grouping on, only Cat1 chip selected; or an activity with only Category 1). Item 1,2,3 and Thing 1,2,3 only. Item 1 and Thing 2 in play. Run. | First draw one of Item 2,3. Thing one of 1,3 (not 2). |
 
 ---
 

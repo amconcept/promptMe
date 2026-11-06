@@ -4,6 +4,14 @@
 // When true: no sidebar control panel — wireframe chrome around the card
 const SKETCH_HIDE_CONTROL_PANEL = true;
 
+// D-067: empty name slot must read as a field. Placeholder was a space, so the
+// transparent input vanished into the leftover card.
+const NAME_FIELD = {
+    PLACEHOLDER: 'name',
+    UNDERLINE: '2px solid var(--primary-color)',
+    PLACEHOLDER_OPACITY: '0.4'
+};
+
 // D-054: Native <button> can ignore CSS `color` and paint ButtonText (ink).
 // Set -webkit-text-fill-color to the same token as color — paper on ink fill
 // (D-050), ink on paper chips. Do not use currentColor; WebKit may resolve
@@ -101,19 +109,26 @@ function getSketchChromeMetrics(w, h) {
     const nextH = phone ? 36 : 38;
     const navH = phone ? 28 : 30;
     const runSize = 64;
+    // D-063: grouping chips sit between tools and GO TO NEXT when the teacher
+    // turned on Students pick grouping. Height is 0 otherwise so the card does not shrink.
+    const groupingH = (typeof window.groupingPickerIsOpen === 'function' && window.groupingPickerIsOpen())
+        ? (phone ? 34 : 36)
+        : 0;
     // Fixed chrome bands (card fills the middle leftover)
-    const fixed = toolH + nextH + navH + runSize;
+    const fixed = toolH + groupingH + nextH + navH + runSize;
     const free = Math.max(120, vh - edgeTop - edgeBottom - fixed);
     // Even gaps (capped) so phone chrome stays tight; card takes the rest
     const minGap = phone ? 10 : 14;
     const maxGap = phone ? 18 : 24;
     const idealGap = Math.min(maxGap, Math.max(minGap, free * 0.04));
-    const cardH = Math.max(160, free - idealGap * 4);
-    const gap = Math.max(minGap, (free - cardH) / 4);
+    const gapCount = groupingH ? 5 : 4;
+    const cardH = Math.max(160, free - idealGap * gapCount);
+    const gap = Math.max(minGap, (free - cardH) / gapCount);
 
     const toolsTop = edgeTop;
     const toolsBottom = toolsTop + toolH;
-    const nextTop = toolsBottom + gap;
+    const groupingTop = toolsBottom + (groupingH ? gap : 0);
+    const nextTop = groupingTop + groupingH + gap;
     const cardY = nextTop + nextH + gap;
     const resultsTop = cardY + cardH + gap;
     const runTop = resultsTop + navH + gap;
@@ -126,6 +141,8 @@ function getSketchChromeMetrics(w, h) {
         nextH,
         runSize,
         runGap: gap,
+        groupingH,
+        groupingTop,
         bottomPad: edgeBottom,
         topChrome: cardY,
         bottomChrome: vh - (cardY + cardH),
@@ -140,6 +157,169 @@ function getSketchChromeMetrics(w, h) {
     };
 }
 if (typeof window !== 'undefined') window.getSketchChromeMetrics = getSketchChromeMetrics;
+
+// D-063: grouping labels as leftover-card chrome (not the hidden control panel).
+function groupingPickerEl() {
+    return document.getElementById('grouping-picker');
+}
+
+function ensureGroupingPicker() {
+    if (document.getElementById('grouping-picker')) return;
+    const root = document.createElement('div');
+    root.id = 'grouping-picker';
+    root.className = 'sketch-grouping-picker';
+    root.setAttribute('role', 'radiogroup');
+    root.setAttribute('aria-label', 'Grouping');
+    root.hidden = true;
+    document.body.appendChild(root);
+}
+
+function listGroupingPickerNames() {
+    const names = [];
+    const seen = {};
+    const cats = (typeof categories === 'object' && categories) ? categories : {};
+    Object.keys(cats).forEach(function (pt) {
+        if (pt === 'objective' || pt === 'prompt1InterestsMode') return;
+        const byCat = cats[pt];
+        if (!byCat || typeof byCat !== 'object') return;
+        Object.keys(byCat).forEach(function (name) {
+            if (seen[name]) return;
+            const arr = byCat[name];
+            const has = Array.isArray(arr) && arr.some(function (v) {
+                return v != null && String(v).trim() !== '';
+            });
+            if (!has) return;
+            seen[name] = true;
+            names.push(name);
+        });
+    });
+    return names;
+}
+
+function groupingPickerIsOpen() {
+    return window.criterionSelectable === true && listGroupingPickerNames().length >= 2;
+}
+
+function groupingChipLabel(name, index) {
+    const t = String(name || '').trim();
+    if (!t || /^Category\s+\d+$/i.test(t)) return String.fromCharCode(65 + index);
+    return t;
+}
+
+function styleGroupingChip(btn, on) {
+    if (on) {
+        btn.style.background = 'var(--primary-color)';
+        btn.style.color = 'var(--on-primary-color, var(--background-color))';
+        btn.style.webkitTextFillColor = 'var(--on-primary-color, var(--background-color))';
+    } else {
+        btn.style.background = 'var(--background-color)';
+        btn.style.color = 'var(--primary-color)';
+        btn.style.webkitTextFillColor = 'var(--primary-color)';
+    }
+    btn.setAttribute('aria-checked', on ? 'true' : 'false');
+}
+
+function groupingChipIsOn(btn) {
+    return btn && btn.getAttribute('aria-checked') === 'true';
+}
+
+function readGroupingPickerSelection() {
+    if (!groupingPickerIsOpen()) return 'all';
+    const root = groupingPickerEl();
+    if (!root) return 'all';
+    const chips = Array.from(root.querySelectorAll('[data-grouping]'));
+    const on = chips.filter(groupingChipIsOn).map(function (c) {
+        return c.getAttribute('data-grouping');
+    });
+    // D-064: exactly one grouping. Fall back to the first chip if none is on.
+    if (on.length === 1) return on;
+    if (chips.length) return [chips[0].getAttribute('data-grouping')];
+    return 'all';
+}
+
+function persistGroupingPickerSelection() {
+    const sel = readGroupingPickerSelection();
+    if (sel === 'all') localStorage.setItem('selectedInterests', 'all');
+    else localStorage.setItem('selectedInterests', JSON.stringify(sel));
+}
+
+/** D-064: radio — tapping a grouping turns every other chip off. */
+function selectGroupingChip(btn) {
+    const root = groupingPickerEl();
+    if (!root || !btn) return;
+    const chips = Array.from(root.querySelectorAll('[data-grouping]'));
+    chips.forEach(function (chip) {
+        styleGroupingChip(chip, chip === btn);
+    });
+    persistGroupingPickerSelection();
+    if (typeof playClickSound === 'function') playClickSound();
+}
+
+function refreshGroupingPicker() {
+    ensureGroupingPicker();
+    const root = groupingPickerEl();
+    if (!root) return;
+    const names = listGroupingPickerNames();
+    const open = window.criterionSelectable === true && names.length >= 2;
+    root.hidden = !open;
+    if (!open) {
+        localStorage.setItem('selectedInterests', 'all');
+        if (typeof positionControlPanel === 'function') positionControlPanel();
+        if (typeof positionNameInputAndButtons === 'function') positionNameInputAndButtons();
+        return;
+    }
+    let stored = 'all';
+    try {
+        const raw = localStorage.getItem('selectedInterests');
+        if (raw && raw !== 'all') stored = JSON.parse(raw);
+    } catch (e) {
+        stored = 'all';
+    }
+    // D-064: one chip on. Prefer the last chosen name if it still exists; else the first row.
+    let chosen = names[0];
+    if (Array.isArray(stored)) {
+        for (let i = 0; i < stored.length; i++) {
+            if (names.indexOf(stored[i]) !== -1) {
+                chosen = stored[i];
+                break;
+            }
+        }
+    }
+    root.innerHTML = '';
+    names.forEach(function (name, i) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'sketch-grouping-chip';
+        btn.setAttribute('role', 'radio');
+        btn.setAttribute('data-grouping', name);
+        btn.textContent = groupingChipLabel(name, i);
+        styleGroupingChip(btn, name === chosen);
+        btn.addEventListener('click', function () { selectGroupingChip(btn); });
+        root.appendChild(btn);
+    });
+    persistGroupingPickerSelection();
+    if (typeof positionControlPanel === 'function') positionControlPanel();
+    if (typeof positionNameInputAndButtons === 'function') positionNameInputAndButtons();
+}
+
+function positionGroupingPicker() {
+    const root = groupingPickerEl();
+    if (!root || root.hidden) return;
+    const chrome = getSketchChromeMetrics();
+    const y = (typeof chrome.groupingTop === 'number') ? chrome.groupingTop : chrome.toolsBottom;
+    const w = Math.min(chrome.width - 24, 640);
+    root.style.left = Math.round((chrome.width - w) / 2) + 'px';
+    root.style.top = y + 'px';
+    root.style.width = w + 'px';
+    root.style.height = (chrome.groupingH || 36) + 'px';
+}
+
+if (typeof window !== 'undefined') {
+    window.groupingPickerIsOpen = groupingPickerIsOpen;
+    window.refreshGroupingPicker = refreshGroupingPicker;
+    window.readGroupingPickerSelection = readGroupingPickerSelection;
+    window.positionGroupingPicker = positionGroupingPicker;
+}
 
 // Update button sizes to be dynamic with minimum constraints
 const BUTTON_SIZES = {
@@ -176,6 +356,7 @@ function positionControlPanel() {
             btn.position(x, topY);
             x += btnW + gap;
         });
+        if (typeof positionGroupingPicker === 'function') positionGroupingPicker();
         return;
     }
 
@@ -375,6 +556,8 @@ function positionNameInputAndButtons() {
         nextHintWrapper.elt.style.display = 'flex';
     }
 
+    if (typeof positionGroupingPicker === 'function') positionGroupingPicker();
+
     // RUN / RE-RUN — pinned to visible bottom
     ensureSketchRunButton();
     const runBtn = document.getElementById('sketch-run-btn');
@@ -451,6 +634,26 @@ function ensureSketchRunButton() {
     document.body.appendChild(btn);
 }
 if (typeof window !== 'undefined') window.ensureSketchRunButton = ensureSketchRunButton;
+
+function ensureNameFieldPlaceholderStyle() {
+    if (document.getElementById('sketch-name-placeholder-style')) return;
+    const style = document.createElement('style');
+    style.id = 'sketch-name-placeholder-style';
+    style.textContent = [
+        '.sketch-name-input{',
+        'border:none;border-bottom:' + NAME_FIELD.UNDERLINE + ';',
+        'background:transparent;outline:none;',
+        'color:var(--primary-color);-webkit-text-fill-color:var(--primary-color);',
+        'caret-color:var(--primary-color);font:inherit;font-weight:bold;text-align:center;',
+        'padding:0 0 2px;margin:0;display:inline-block;width:100%;min-width:6em;',
+        '}',
+        '.sketch-name-input::placeholder{',
+        'color:var(--primary-color);-webkit-text-fill-color:var(--primary-color);',
+        'opacity:' + NAME_FIELD.PLACEHOLDER_OPACITY + ';font-weight:normal;',
+        '}'
+    ].join('');
+    document.head.appendChild(style);
+}
 
 // Create UI elements (control panel omitted when SKETCH_HIDE_CONTROL_PANEL)
 function createUI() {
@@ -652,8 +855,11 @@ function createUI() {
         });
         // Name focus hides the flash cue but keeps RE-RUN muted until GO TO NEXT
         resultNameInput = createInput('');
-        resultNameInput.elt.setAttribute('placeholder', ' ');
-        resultNameInput.elt.style.cssText = 'border:none; background:transparent; outline:none; color:var(--primary-color); -webkit-text-fill-color:var(--primary-color); caret-color:var(--primary-color); font:inherit; font-weight:bold; text-align:center; padding:0; margin:0; display:inline-block; width:100%; min-width:6em;';
+        resultNameInput.elt.className = 'sketch-name-input';
+        resultNameInput.elt.setAttribute('placeholder', NAME_FIELD.PLACEHOLDER);
+        resultNameInput.elt.setAttribute('aria-label', 'Name (optional)');
+        resultNameInput.elt.autocomplete = 'off';
+        ensureNameFieldPlaceholderStyle();
         resultNameWrapper.elt.appendChild(resultNameInput.elt);
         if (resultNameInput.elt) resultNameInput.elt.addEventListener('focus', stopArrowFlash);
         resultNameInput.input(() => {

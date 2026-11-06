@@ -7,8 +7,29 @@ let promptCounter = 0;
 const MAX_CATEGORIES = 6;
 const MAX_PROMPTS = 4;
 
-// Criterion labels for student interests
+// Criterion labels for grouping rows (user-facing: grouping)
 let criterionLabels = ['', '', '', '']; // Start with empty labels - no hardcoded defaults
+
+function groupingRowCount() {
+    return document.querySelectorAll('.criterion-label-input').length;
+}
+
+/** D-063: the switch only appears once there are two grouping rows to choose between. */
+function syncGroupingSelectRow(opts) {
+    const row = document.getElementById('grouping-select-row');
+    const box = document.getElementById('prompt1-interests-mode');
+    if (!row || !box) return;
+    const show = groupingRowCount() >= 2;
+    row.classList.toggle('is-available', show);
+    row.hidden = !show;
+    if (!show && box.checked) {
+        box.checked = false;
+        if (!(opts && opts.skipSave) && typeof window.autoSaveToLocalStorage === 'function') {
+            window.autoSaveToLocalStorage();
+        }
+    }
+}
+window.syncGroupingSelectRow = syncGroupingSelectRow;
 
 // Auto-resize textareas in each row to match the tallest one
 function autoResizeTextareasInRows() {
@@ -333,6 +354,7 @@ function addNewCategory() {
     
     // Add buttons are now static in HTML - no position updates needed
     if (typeof refreshPromptCube === 'function') refreshPromptCube();
+    if (typeof window.syncGroupingSelectRow === 'function') window.syncGroupingSelectRow();
     
     console.log('addNewCategory completed successfully');
 }
@@ -514,6 +536,7 @@ function removeCategoryAtIndex(rowIndex) {
     // Auto-resize textareas after deleting category
     setTimeout(autoResizeTextareasInRows, 10);
     if (typeof refreshPromptCube === 'function') refreshPromptCube();
+    if (typeof window.syncGroupingSelectRow === 'function') window.syncGroupingSelectRow();
 }
 
 // Update prompt count displays
@@ -685,7 +708,10 @@ function initializeDefaultContent() {
     addNewCategory();
     console.log('DEBUG: addNewCategory() completed');
     
-    // Keep prompt1InterestsMode unchecked by default for empty start
+    // D-063: empty start is one grouping, so the pick-grouping switch stays hidden
+    if (typeof window.syncGroupingSelectRow === 'function') {
+        window.syncGroupingSelectRow({ skipSave: true });
+    }
     if (checkbox) {
         checkbox.checked = false;
         console.log('DEBUG: Ensured checkbox is unchecked');
@@ -774,7 +800,7 @@ function showInstructionsPopup() {
         overflow-x: hidden;
         flex: 1;
         font-size: 16px;
-        line-height: 1.8;
+        line-height: 1.4;
     `;
     
     // Add scrollbar styling
@@ -797,73 +823,33 @@ function showInstructionsPopup() {
     content.id = 'instructions-popup-content';
     document.head.appendChild(style);
     
-    // Help content — groupings (A, B, C…) match how the randomizer locks a run
+    // D-066: short teacher path — run, edit, save. Same facts as the walkthrough.
     content.innerHTML = `
-        <div style="margin-bottom: 22px;">
-            <p style="margin: 0 0 10px; color: var(--primary-color);">
-                Rando Calrissian helps you set an objective, then guide an activity through thoughtful combinations of prompts and constraints that spark creativity and unexpected connections.
-            </p>
+        <div style="margin-bottom: 16px;">
+            <strong style="color: var(--primary-hover); font-size: 18px;">Run</strong>
+            <ol style="margin: 8px 0 0; padding-left: 22px; color: var(--primary-color);">
+                <li style="margin: 6px 0;">Open <strong>...</strong> (top right) and click <strong>SIMPLE</strong>, <strong>SOD+A</strong>, or <strong>SOD+A w/ Groupings</strong>.</li>
+                <li style="margin: 6px 0;"><strong>START PROMPTING</strong>.</li>
+                <li style="margin: 6px 0;"><strong>RUN</strong> — draw one combination.</li>
+                <li style="margin: 6px 0;"><strong>GO TO NEXT</strong> — keep that result and start the next student. Those options stay out until the list is used up.</li>
+                <li style="margin: 6px 0;"><strong>RE-RUN</strong> — same student, new draw. Those options go back in.</li>
+            </ol>
+            <p style="margin: 8px 0 0; color: var(--primary-color);">On <strong>SOD+A w/ Groupings</strong>, tap <strong>physical</strong>, <strong>digital</strong>, or <strong>textiles</strong> first.</p>
         </div>
-
-        <div style="margin-bottom: 22px;">
-            <strong style="color: var(--primary-hover); font-size: 18px;">The idea</strong>
-            <p style="margin: 10px 0; color: var(--primary-color);">
-                Write one objective, or Skip if you don’t have one yet. Add up to four prompts with labels such as <strong>USES</strong>, <strong>WITH</strong>, or <strong>AND</strong> — or leave a heading blank and it will not show on the card.
-            </p>
-            <p style="margin: 10px 0; color: var(--primary-color);">
-                Prompts are required to run. The objective is optional — if you skip it, the prompting window still generates from your lists.
-            </p>
-            <p style="margin: 10px 0; color: var(--primary-color);">
-                Under each prompt, list options one per line. You can also drop or paste a <strong>PNG or JPG</strong> onto the list (pictures chatter like a scramble, then appear on the card). Optional groupings <strong>A, B, C…</strong> can organize matching options across prompts.
-            </p>
-            <p style="margin: 10px 0; color: var(--primary-color);">
-                When you run the activity, Rando selects one option from each prompt, always from the same grouping. It avoids repeats until every option in a list has been used.
-            </p>
-            <p style="margin: 14px 0 6px; color: var(--primary-hover); font-weight: bold;">Example</p>
-            <p style="margin: 0 0 4px; color: var(--primary-color);"><em>Make a gift for a friend that:</em></p>
-            <p style="margin: 0 0 4px; color: var(--primary-color);"><strong>USES</strong> a paperclip</p>
-            <p style="margin: 0; color: var(--primary-color);"><strong>AND</strong> a laser cutter</p>
+        <div style="margin-bottom: 16px;">
+            <strong style="color: var(--primary-hover); font-size: 18px;">Edit</strong>
+            <p style="margin: 8px 0 0; color: var(--primary-color);">Change any line to match your school. Add or delete lines. That is now your version.</p>
         </div>
-
-        <div style="margin-bottom: 22px;">
-            <strong style="color: var(--primary-hover); font-size: 18px;">Prompts and groupings</strong>
-            <p style="margin: 10px 0; color: var(--primary-color);">
-                A <strong>prompt</strong> is a heading students see, plus its list of options.
-            </p>
-            <p style="margin: 10px 0; color: var(--primary-color);">
-                A <strong>grouping</strong> connects matching options across prompts.
-            </p>
-            <p style="margin: 10px 0; color: var(--primary-color);">
-                Use one grouping for a shared pool. Add more to differentiate by age, experience, interests, or support needs, or to keep combinations compatible.
-            </p>
-        </div>
-
-        <div style="margin-bottom: 22px;">
-            <strong style="color: var(--primary-hover); font-size: 18px;">Good for</strong>
-            <p style="margin: 10px 0; color: var(--primary-color);">
-                Maker and design challenges, brainstorming, creative warm-ups, classroom activities, or simply challenging yourself.
-            </p>
-        </div>
-
-        <div style="margin-bottom: 22px;">
-            <strong style="color: var(--primary-hover); font-size: 18px;">Be creative</strong>
-            <p style="margin: 10px 0; color: var(--primary-color);">
-                Try prompts out. Coach students as they work toward an objective through unexpected combinations. Adjust, rerun, and see where the ideas lead.
-            </p>
-            <p style="margin: 10px 0; color: var(--primary-color);">
-                Designing prompts that spark curiosity, creativity, and divergent thinking is an art. Rando supports intentional prompting that remains intentionally human.
-            </p>
-        </div>
-
-        <div style="margin-bottom: 22px;">
-            <strong style="color: var(--primary-hover); font-size: 18px;">Running the tool</strong>
-            <ul style="margin: 10px 0; padding-left: 25px; color: var(--primary-color);">
-                <li style="margin: 8px 0;"><strong>Editor</strong> — build prompts; swipe or use ‹ › for prompts, letter rail for groupings; <strong>+ Add Grouping</strong> adds a row; <strong>RUN</strong> opens the prompting window</li>
-                <li style="margin: 8px 0;"><strong>Prompting</strong> — <strong>RUN</strong> generates; <strong>GO TO NEXT</strong> starts a new result; ‹ › browses past runs</li>
-                <li style="margin: 8px 0;"><strong>FILE (… menu)</strong> — save activities; Share is a CSV, or a zip folder with pictures; Load either; Sample</li>
-                <li style="margin: 8px 0;"><strong>Customize</strong> — advanced; under Help & Instructions. Themes and the reveal animation</li>
+        <div style="margin-bottom: 16px;">
+            <strong style="color: var(--primary-hover); font-size: 18px;">Save</strong>
+            <ul style="margin: 8px 0 0; padding-left: 22px; color: var(--primary-color);">
+                <li style="margin: 6px 0;">This browser remembers what you type.</li>
+                <li style="margin: 6px 0;"><strong>FILE → Save</strong> writes it onto that session name.</li>
+                <li style="margin: 6px 0;"><strong>FILE → Share</strong> downloads a backup. Load that file on another computer.</li>
+                <li style="margin: 6px 0;">Clearing this browser’s data erases sessions unless you have that file.</li>
             </ul>
         </div>
+        <button type="button" id="help-replay-tour" style="font-family: VT323, monospace; font-size: 16px; padding: 8px 14px; border: 2px solid var(--primary-color); background: var(--background-color); color: var(--primary-color); border-radius: 4px; cursor: pointer;">Replay walkthrough</button>
     `;
     
     // Create close button
@@ -898,6 +884,18 @@ function showInstructionsPopup() {
         document.head.removeChild(style);
     };
     
+    const replayBtn = content.querySelector('#help-replay-tour');
+    if (replayBtn) {
+        replayBtn.onclick = () => {
+            playClickSound();
+            if (overlay.parentNode) overlay.remove();
+            if (style.parentNode) style.remove();
+            if (typeof window.startEditorTour === 'function') {
+                window.startEditorTour({ force: true });
+            }
+        };
+    }
+
     // Close on overlay click (outside dialog)
     overlay.onclick = (e) => {
         if (e.target === overlay) {
@@ -1198,6 +1196,314 @@ function bindObjectiveWidthLimit() {
 
     setTimeout(enforceObjectiveWidthLimit, 0);
 }
+
+// D-066: three-step walkthrough. A run is one randomized draw of prompts.
+const EDITOR_TOUR_SEEN_KEY = 'randoCalrissianTourSeen';
+const EDITOR_TOUR_STEPS = [
+    {
+        title: 'Pick a session',
+        body: [
+            'Open ... (top right). Activity History has three sessions: SIMPLE, SOD+A, and SOD+A w/ Groupings. Click one.'
+        ]
+    },
+    {
+        title: 'Edit',
+        body: [
+            'Change any line to match your school. Add or delete lines. FILE → Save writes it onto that session name.'
+        ]
+    },
+    {
+        title: 'Run',
+        body: [
+            'START PROMPTING. RUN draws one combination. GO TO NEXT keeps that result and starts the next student. RE-RUN is a new draw for the same student.'
+        ]
+    }
+];
+
+function editorTourIsCube() {
+    return document.body.classList.contains('editor-cube-layout');
+}
+
+function editorTourEls(list) {
+    return (list || []).filter(Boolean).map(function (el) { return { els: [el] }; });
+}
+
+/** Each grouping row is letter + that row's list boxes (not the INCLUDES/USES headings). */
+function editorTourGroupingRows() {
+    const kids = Array.from(document.querySelectorAll('#categories-container > *'));
+    const promptCount = document.querySelectorAll('.header-input').length;
+    const stride = 1 + promptCount;
+    const rows = [];
+    for (let i = 0; i < kids.length; i += stride) {
+        const slice = kids.slice(i, i + stride);
+        if (slice.length) rows.push({ els: slice });
+    }
+    return rows;
+}
+
+function editorTourTargets(stepIndex) {
+    const cube = editorTourIsCube();
+    if (stepIndex === 0) {
+        return editorTourEls([
+            document.getElementById('settings-panel-toggle'),
+            document.getElementById('file-menu-dropdown'),
+            document.getElementById('settings-list')
+        ]);
+    }
+    if (stepIndex === 1) {
+        if (cube) {
+            return [{
+                els: [
+                    document.getElementById('cube-prompt-header'),
+                    document.querySelector('.cube-prompt-box') || document.getElementById('cube-prompts')
+                ]
+            }];
+        }
+        const header = document.querySelector('.prompt-headers .prompt-column') || document.querySelector('.header-input');
+        const boxes = Array.from(document.querySelectorAll('.prompt-grid .textarea-container'));
+        return [{ els: [header].concat(boxes).filter(Boolean) }];
+    }
+    if (stepIndex === 2) {
+        return editorTourEls([
+            cube ? document.querySelector('.cube-run') : document.querySelector('.start-prompting')
+        ]);
+    }
+    return [];
+}
+
+let _editorTourStep = 0;
+let _editorTourNodes = null;
+
+function editorTourEnsureStyle() {
+    if (document.getElementById('editor-tour-style')) return;
+    const style = document.createElement('style');
+    style.id = 'editor-tour-style';
+    style.textContent = [
+        '#editor-tour-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:10040;}',
+        '.tour-highlight-frame{position:fixed;border:3px solid var(--primary-color);border-radius:6px;box-shadow:0 0 16px var(--primary-color);z-index:10041;pointer-events:none;}',
+        '#editor-tour-card{position:fixed;z-index:10042;max-width:min(440px,calc(100vw - 32px));background:var(--background-color);color:var(--primary-color);border:3px solid var(--primary-color);border-radius:8px;padding:16px 18px 14px;font-family:VT323,monospace;box-shadow:0 8px 28px rgba(0,0,0,0.45);}',
+        '#editor-tour-card h2{margin:0 0 10px;font-size:22px;font-weight:normal;color:var(--primary-hover);}',
+        '#editor-tour-card p{margin:0 0 10px;font-size:18px;line-height:1.35;}',
+        '#editor-tour-card p:last-of-type{margin-bottom:14px;}',
+        '#editor-tour-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}',
+        '#editor-tour-actions button{font-family:VT323,monospace;font-size:16px;padding:8px 14px;border-radius:4px;cursor:pointer;border:2px solid var(--primary-color);background:var(--background-color);color:var(--primary-color);-webkit-text-fill-color:var(--primary-color);}',
+        '#editor-tour-next{background:var(--primary-color);color:var(--background-color);-webkit-text-fill-color:var(--background-color);}',
+        '#editor-tour-skip{margin-left:auto;opacity:0.9;}'
+    ].join('');
+    document.head.appendChild(style);
+}
+
+function editorTourClearSpotlights() {
+    document.querySelectorAll('.tour-highlight-frame').forEach(function (el) {
+        el.remove();
+    });
+}
+
+function editorTourGroupEls(group) {
+    if (!group) return [];
+    if (group.els) return group.els.filter(Boolean);
+    return group.getBoundingClientRect ? [group] : [];
+}
+
+function editorTourUnionRect(els) {
+    let minL = Infinity;
+    let minT = Infinity;
+    let maxR = -Infinity;
+    let maxB = -Infinity;
+    (els || []).forEach(function (el) {
+        const r = el.getBoundingClientRect();
+        if (r.width < 2 || r.height < 2) return;
+        minL = Math.min(minL, r.left);
+        minT = Math.min(minT, r.top);
+        maxR = Math.max(maxR, r.right);
+        maxB = Math.max(maxB, r.bottom);
+    });
+    if (maxR <= minL || maxB <= minT) return null;
+    return { left: minL, top: minT, right: maxR, bottom: maxB };
+}
+
+function editorTourDrawHighlights(targets) {
+    editorTourClearSpotlights();
+    (targets || []).forEach(function (group) {
+        const box = editorTourUnionRect(editorTourGroupEls(group));
+        if (!box) return;
+        const frame = document.createElement('div');
+        frame.className = 'tour-highlight-frame';
+        frame.style.left = (box.left - 4) + 'px';
+        frame.style.top = (box.top - 4) + 'px';
+        frame.style.width = (box.right - box.left + 8) + 'px';
+        frame.style.height = (box.bottom - box.top + 8) + 'px';
+        document.body.appendChild(frame);
+    });
+}
+
+function editorTourPlaceCard(card, targets) {
+    const pad = 12;
+    const cardW = card.offsetWidth || 400;
+    const cardH = card.offsetHeight || 200;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    let top = (vh - cardH) / 2;
+    let left = (vw - cardW) / 2;
+    const boxes = (targets || []).map(function (group) {
+        return editorTourUnionRect(editorTourGroupEls(group));
+    }).filter(Boolean);
+    if (boxes.length) {
+        let minL = Infinity;
+        let minT = Infinity;
+        let maxR = -Infinity;
+        let maxB = -Infinity;
+        boxes.forEach(function (box) {
+            minL = Math.min(minL, box.left);
+            minT = Math.min(minT, box.top);
+            maxR = Math.max(maxR, box.right);
+            maxB = Math.max(maxB, box.bottom);
+        });
+        const below = maxB + pad;
+        const above = minT - cardH - pad;
+        if (below + cardH + pad <= vh) top = below;
+        else if (above >= pad) top = above;
+        else top = Math.max(pad, Math.min(vh - cardH - pad, minT));
+        left = Math.max(pad, Math.min(vw - cardW - pad, minL));
+    }
+    card.style.top = Math.round(top) + 'px';
+    card.style.left = Math.round(left) + 'px';
+}
+
+function editorTourShowStep() {
+    if (!_editorTourNodes) return;
+    const step = EDITOR_TOUR_STEPS[_editorTourStep];
+    const card = _editorTourNodes.card;
+    const backBtn = _editorTourNodes.backBtn;
+    const nextBtn = _editorTourNodes.nextBtn;
+    editorTourClearSpotlights();
+
+    const wantsPanel = _editorTourStep === 0;
+    const panel = document.getElementById('settings-panel');
+    const panelOpen = panel && panel.classList.contains('open');
+    if (wantsPanel && !panelOpen && typeof toggleSettingsPanel === 'function') {
+        toggleSettingsPanel();
+    } else if (!wantsPanel && panelOpen && typeof closeSettingsPanel === 'function') {
+        closeSettingsPanel();
+    }
+
+    const targets = editorTourTargets(_editorTourStep).filter(Boolean);
+
+    card.querySelector('h2').textContent = step.title;
+    const bodyWrap = card.querySelector('.editor-tour-body');
+    bodyWrap.innerHTML = '';
+    step.body.forEach(function (para) {
+        const p = document.createElement('p');
+        p.textContent = para;
+        bodyWrap.appendChild(p);
+    });
+    backBtn.style.display = _editorTourStep === 0 ? 'none' : '';
+    nextBtn.textContent = _editorTourStep === EDITOR_TOUR_STEPS.length - 1 ? 'Done' : 'Next';
+    requestAnimationFrame(function () {
+        const live = editorTourTargets(_editorTourStep).filter(Boolean);
+        editorTourDrawHighlights(live);
+        editorTourPlaceCard(card, live);
+    });
+}
+
+function editorTourMarkSeen() {
+    try { localStorage.setItem(EDITOR_TOUR_SEEN_KEY, '1'); } catch (e) { /* ignore */ }
+}
+
+function editorTourCleanup() {
+    editorTourClearSpotlights();
+    if (typeof closeSettingsPanel === 'function') closeSettingsPanel();
+    if (_editorTourNodes) {
+        if (_editorTourNodes.overlay && _editorTourNodes.overlay.parentNode) {
+            _editorTourNodes.overlay.remove();
+        }
+        if (_editorTourNodes.card && _editorTourNodes.card.parentNode) {
+            _editorTourNodes.card.remove();
+        }
+        window.removeEventListener('resize', _editorTourNodes.onResize);
+        document.removeEventListener('keydown', _editorTourNodes.onKey);
+    }
+    _editorTourNodes = null;
+}
+
+function stopEditorTour() {
+    editorTourMarkSeen();
+    editorTourCleanup();
+}
+
+function startEditorTour(opts) {
+    opts = opts || {};
+    let seen = false;
+    try { seen = localStorage.getItem(EDITOR_TOUR_SEEN_KEY) === '1'; } catch (e) { seen = false; }
+    if (seen && !opts.force) return;
+    if (_editorTourNodes) editorTourCleanup();
+
+    editorTourEnsureStyle();
+    _editorTourStep = 0;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'editor-tour-overlay';
+    overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) stopEditorTour();
+    });
+
+    const card = document.createElement('div');
+    card.id = 'editor-tour-card';
+    card.setAttribute('role', 'dialog');
+    card.setAttribute('aria-modal', 'true');
+    card.innerHTML = [
+        '<h2></h2>',
+        '<div class="editor-tour-body"></div>',
+        '<div id="editor-tour-actions">',
+        '<button type="button" id="editor-tour-back">Back</button>',
+        '<button type="button" id="editor-tour-next">Next</button>',
+        '<button type="button" id="editor-tour-skip">Skip</button>',
+        '</div>'
+    ].join('');
+
+    const backBtn = card.querySelector('#editor-tour-back');
+    const nextBtn = card.querySelector('#editor-tour-next');
+    const skipBtn = card.querySelector('#editor-tour-skip');
+    backBtn.addEventListener('click', function () {
+        if (_editorTourStep > 0) {
+            _editorTourStep -= 1;
+            editorTourShowStep();
+        }
+    });
+    nextBtn.addEventListener('click', function () {
+        if (_editorTourStep >= EDITOR_TOUR_STEPS.length - 1) {
+            stopEditorTour();
+            return;
+        }
+        _editorTourStep += 1;
+        editorTourShowStep();
+    });
+    skipBtn.addEventListener('click', stopEditorTour);
+
+    const onResize = function () { editorTourShowStep(); };
+    const onKey = function (e) {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            stopEditorTour();
+        } else if (e.key === 'ArrowRight' || e.key === 'Enter') {
+            e.preventDefault();
+            nextBtn.click();
+        } else if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            backBtn.click();
+        }
+    };
+
+    _editorTourNodes = { overlay: overlay, card: card, backBtn: backBtn, nextBtn: nextBtn, onResize: onResize, onKey: onKey };
+    document.body.appendChild(overlay);
+    document.body.appendChild(card);
+    window.addEventListener('resize', onResize);
+    document.addEventListener('keydown', onKey);
+    editorTourShowStep();
+}
+
+window.startEditorTour = startEditorTour;
+window.stopEditorTour = stopEditorTour;
 
 // Make functions globally available
 window.addNewPrompt = addNewPrompt;

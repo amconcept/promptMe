@@ -725,23 +725,11 @@ function collectPromptData() {
     // Get the current student's prompts
     const studentPrompts = [];
     
-    // Check if prompt1InterestsMode is enabled - if so, skip the first prompt
-    const prompt1InterestsMode = categories.prompt1InterestsMode || false;
-    const allHeaders = Object.keys(categories).filter(cat => cat !== 'objective' && cat !== 'prompt1InterestsMode');
-    const firstHeader = prompt1InterestsMode && allHeaders.length > 0 ? allHeaders[0] : null;
-    
     Object.keys(categories).forEach(header => {
         console.log('DEBUG: Checking header:', header);
         
-        // Skip objective, prompt1InterestsMode, and first header if prompt1InterestsMode is enabled
         if (header === 'objective' || header === 'prompt1InterestsMode') {
             console.log('DEBUG: Skipping header:', header, 'reason: special field');
-            return;
-        }
-        
-        // Skip first prompt if prompt1InterestsMode is enabled
-        if (prompt1InterestsMode && header === firstHeader) {
-            console.log('DEBUG: Skipping header:', header, 'reason: first prompt skipped in prompt1InterestsMode');
             return;
         }
         

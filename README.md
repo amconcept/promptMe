@@ -88,7 +88,7 @@ Rando Calrissian has three main parts:
 ### 1. **The Editor** (`editor.html` — where you set up prompts)
 
 - **Add Prompts**: Create up to **4** prompt columns (`MAX_PROMPTS`), each with an optional heading students see, such as USES, WITH, or AND. Leave the heading blank and it will not appear on the card.
-- **Add Groupings**: Create up to **6** grouping rows (`MAX_CATEGORIES`), labelled A, B, C… automatically
+- **Add Groupings**: Create up to **6** grouping rows (`MAX_CATEGORIES`), labelled A, B, C… automatically. With two or more groupings, **Students pick grouping** makes those labels tappable in the prompting window.
 - **Fill in Options**: Add one option per line in each cell. You can also drop or paste a PNG or JPG onto the list (under 2MB). Pictures use the same pixel-fill reveal as words and sentences.
 - **Set an Objective** (optional): Write what students should create or accomplish. You can Skip and still run if you have prompts.
 - **Save Your Activity**: Use the FILE menu to name and save it
@@ -100,8 +100,9 @@ On a **phone or narrow window**, the grid is replaced by a **cube layout** that 
 ### 2. **The Prompting Window** (`sketch.html` — where students get prompts)
 
 - **Enter a name** (optional — see "Unnamed runs")
+- **Tap a grouping label** if the teacher turned on Students pick grouping — robotics vs pottery draws from different rows. Only one grouping is on at a time.
 - **Press RUN**, or the Up Arrow / Enter key, to generate a combination. First press plays a short start tone in the same family as the left / right / down arrows, then the film notes.
-- **Watch the animation** as the leftover card plays the frames from Customize (or the default pattern) at the same speed as **Play** on that page, with one musical note per frame (you pick each frame’s note on Customize). Press **STOP** and square tiles the same color as the background lift off. Through those holes the words scramble (spinning letters) and lock into place with the tiles; a picture is cropped to that same square of tiles and comes through in chunks, then stays that size. You cannot tell the type while the film is covering. If Custom is on but the frames are empty (never drawn, or **Reset All**), RUN skips that overlay and scrambles the letters instead — it does not fill in the default pattern. The pixels stay square and sit in the middle of the card even if the window is wide; empty cells are the page background. The objective sits under the name field; the chosen prompt (or the stack of prompts) sits in the center of the remaining card.
+- **Watch the animation** as the leftover card plays the frames from Customize (or the default pattern) at the same speed as **Play** on that page, with one musical note per frame (you pick each frame’s note on Customize). Press **STOP** and square tiles the same color as the background lift off. Through those holes the words scramble (spinning letters) and lock into place with the tiles; a picture is cropped to that same square of tiles and comes through in chunks, then stays that size. You cannot tell the type while the film is covering. If Custom is on but the frames are empty (never drawn, or **Reset All**), RUN skips that overlay and scrambles the letters instead — it does not fill in the default pattern. The pixels stay square and sit in the middle of the card even if the window is wide; empty cells are the page background. The objective sits under the name field in sentence case, centered, and wraps so a leftover one- or two-word last line is pulled up; the chosen prompt (or the stack of prompts) sits in the center of the remaining card.
 - **Navigate** between students with the ← → arrows
 - **GO TO NEXT** confirms the current result and opens a fresh slot
 
@@ -115,36 +116,25 @@ Opened from **Customize** in the editor `...` menu (under Help & Instructions �
 
 ## Quick Start Guide
 
-**Try the Sample Activity First!**
-- A sample activity called "Sample" is available in the FILE menu and is restored automatically if deleted
-- It is loaded from `Sample-activity-2025-10-27.csv`, which is the source of truth for it
-- Run it to see how the system works
+A first-time editor opens **SIMPLE**. Activity History has three sessions: **SIMPLE**, **SOD+A**, and **SOD+A w/ Groupings**. Help has this same path. Replay the walkthrough from Help.
 
-1. **Open the Editor**
-   - Open `editor.html` in your browser
-   - The sample activity loads automatically on first use
+### Run
+1. Open **...** (top right) and click **SIMPLE**, **SOD+A**, or **SOD+A w/ Groupings**
+2. **START PROMPTING**
+3. **RUN** — draw one combination
+4. **GO TO NEXT** — keep that result and start the next student. Those options stay out until the list is used up
+5. **RE-RUN** — same student, new draw. Those options go back in
 
-2. **Create Your First Prompt**
-   - Click **+ Add Prompt** to create a column (max 4)
-   - Give it a heading (e.g. "USES", "AND")
+On **SOD+A w/ Groupings**, tap **physical**, **digital**, or **textiles** first.
 
-3. **Add Groupings**
-   - Click **+ Add Grouping** to create a row (max 6)
-   - Groupings are labelled A, B, C… automatically
-   - Fill in options, one per line
+### Edit
+Change any line to match your school. Add or delete lines. That is now your version.
 
-4. **Set an Objective** (optional)
-   - Type what students should create or accomplish — it appears under the name field on the leftover card
-   - If you skip it, you can still run as long as you have prompts. The editor will ask once; choose **Skip** to proceed
-
-5. **Save Your Activity**
-   - Open the **FILE** menu (`...` in the top right)
-   - Choose **Save** or **Save As** and give it a name
-
-6. **Start Prompting**
-   - Click **RUN** / **START PROMPTING**
-   - Optionally enter a student name
-   - Press **RUN**, Up Arrow, or Enter to generate
+### Save
+- This browser remembers what you type
+- **FILE → Save** writes it onto that session name
+- **FILE → Share** downloads a backup. Load that file on another computer
+- Clearing this browser’s data erases sessions unless you have that file
 
 ---
 
@@ -161,6 +151,7 @@ Opened from **Customize** in the editor `...` menu (under Help & Instructions �
 | Control | What it does |
 |---------|--------------|
 | **RUN** button (circular) | Generate prompts and **start** the film. While it loops the button reads **STOP** — press again to glitch-land on the prompts (transition sound, then land note). The film does not end on its own. Becomes **RE-RUN** (dimmed) once a result is showing |
+| **Name field** (top of leftover card) | Optional. Empty slot shows **name** on a line. Unnamed runs are labelled Run 1, Run 2… |
 | **GO TO NEXT** button | Confirm the current result and open a fresh slot |
 | **↑ (Up Arrow)** or **Enter** | Generate prompts (same as RUN). Second press while the film is up skips to the result |
 | **↓ (Down Arrow)** | Confirm and advance to the next slot |
@@ -170,6 +161,7 @@ Opened from **Customize** in the editor `...` menu (under Help & Instructions �
 | **report** | Download the report for the current activity |
 | **clear** | Clear the report for the current activity |
 | **edit** | Return to the editor |
+| **Grouping chips** | When Students pick grouping is on: tap a grouping label. The others turn off. That run draws only from the chosen row |
 
 Pressing Up / Enter again on a finished result **re-rolls** that student: their previous
 options go back into the pool and a new combination is drawn (rule R5). While the film
@@ -198,7 +190,7 @@ On a phone or narrow window the editor switches to a single-prompt "cube" view:
 ## Key Features
 
 ### **Smart Repetition Prevention**
-Options that have been drawn stay "in play" and can't be drawn again until they're put back or the pool for that prompt is exhausted, at which point it refreshes. Tracking is per prompt, across all groupings. See `RANDOMIZER_LOGIC_SPEC.md`.
+Options that have been drawn stay "in play" and can't be drawn again until they're put back or the pool for that prompt is exhausted, at which point it refreshes. Tracking is per prompt, across eligible groupings (all of them, or the ones selected when Students pick grouping is on). See `RANDOMIZER_LOGIC_SPEC.md`.
 
 ### **Unnamed runs**
 Student names are **optional**. If no name is entered, runs are labelled automatically as "Run 1", "Run 2", and so on. Naming can be required per activity via the `requireStudentNames` setting; the default is off, so a teacher can start prompting immediately.
@@ -228,10 +220,10 @@ Each preset can be tuned on that page: ink, paper, stroke color, stroke size, le
 On the same page you can keep the default geometric reveal, or draw a custom animation. Two sliders set **grid size** (6–20 squares on a side) and **frames** (2–12 drawings). A new animation starts at 6×6 with 2 frames; an animation already saved in this browser keeps the size you last used. Lowering **Frames** parks the extra drawings; raising it brings them back (**D-041**). **Reset All** is what actually throws those parked drawings away. The frames sit in a centered row above the drawing grid; drag a thumbnail to reorder. Under each thumbnail is a note name — C-1 through C3 (pentatonic C D E G A at each octave), or **mute**. Click it to cycle. Those pitches always sound complementary; the number after the letter is how many octaves above this app’s C, and **-1** is one octave below (**D-042**, **D-049**). Shift-click selects a range of frames; hold Shift while drawing to flip pen and eraser. **Clear Frame** empties the selected frame(s); **Reset All** empties the whole sequence. The leftover-card window at the top of that section previews both modes (silently). **Play** on a custom animation hears those notes — the same ones the prompting window uses (**D-040**). **Land** (next to Grid / Frames) is the ping when the prompts appear, from the same scale (**D-046**). **Copy to Next** duplicates the outlined drawing onto the next slot (not the tone). The pixel palette starts on **Theme ink** so strokes follow the current look; other swatches stay that color. The animation is saved in this browser and **with the open activity**, and can be downloaded as a JSON file. **Restore defaults** returns to the factory geometric film (6×6, 2 frames). Empty Custom does not play that factory film — RUN scrambles letters instead (**D-058**). Drawn Custom and Default Pattern still play as saved (**D-025**, **D-027**, **D-031**, **D-032**, **D-055**).
 
 ### **Welcome popup**
-First-time visitors to `index.html` get a one-time welcome explaining the idea, the difference between prompts and groupings, and a link into Help & Instructions. It is shown once and remembered in local storage (`randoCalrissianWelcomeSeen`).
+First-time visitors to `index.html` get a one-time welcome that names the three sessions. It is shown once (`randoCalrissianWelcomeSeen`). The editor tour is remembered separately (`randoCalrissianTourSeen`). Replay from Help, or `editor.html?tour=1`.
 
 ### **Help & Instructions**
-The editor has a built-in guide covering how prompting works, prompts vs groupings, classroom uses, and every control on both desktop and phone. Link straight to it with `editor.html?help=1`.
+Short path: run, edit, save — including **GO TO NEXT** vs **RE-RUN**. Link with `editor.html?help=1`.
 
 ---
 
@@ -288,11 +280,11 @@ Editor and prompting window sync through a `promptDataUpdated` custom event and 
 
 ### Cache busting
 
-Twenty-three local module `<script>` tags carry `?v=20260830ba` (nine on `editor.html`,
+Twenty-three local module `<script>` tags carry `?v=20260830br` (nine on `editor.html`,
 ten on `sketch.html`, three on `theme.html`, one on `index.html`). After editing any of those modules, bump that value on **all
 twenty-three together**. Mismatched values load a mix of old and new files.
 
-`sketch.html` also loads p5.js from a CDN (untagged). The Sample activity CSV fetch uses the same `?v=20260830ba`
+`sketch.html` also loads p5.js from a CDN (untagged). Classroom session CSV fetches use the same `?v=20260830br`
 value as the tagged modules.
 
 ### Companion documents
@@ -300,7 +292,7 @@ value as the tagged modules.
 | Document | Purpose |
 |----------|---------|
 | `RANDOMIZER_LOGIC_SPEC.md` | Required randomizer behavior (R1–R7, I1–I6, scenarios S1–S10) |
-| `DESIGN_DECISIONS.md` | Why visual/UX choices are the way they are (D1–D59: D6 and D7 retired; D16 superseded by D17; D29 superseded by D32; D34 superseded by D36; D43 superseded by D49), plus future directions |
+| `DESIGN_DECISIONS.md` | Why visual/UX choices are the way they are (D1–D67: D6 and D7 retired; D9 superseded by D63; D16 superseded by D17; D29 superseded by D32; D34 superseded by D36; D43 superseded by D49; D60 superseded by D61; D62 superseded by D66), plus future directions |
 | `CHANGELOG.txt` | Development history |
 | `docs/TROUBLESHOOT_LOCALHOST.md` | Local server troubleshooting |
 

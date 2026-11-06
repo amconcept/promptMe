@@ -14,7 +14,7 @@ function openSketchFromEditor() {
     } else {
         sessionStorage.setItem('promptMeEditorLayout', 'grid');
     }
-    window.location.href = 'sketch.html?from=editor&v=20260830ba';
+    window.location.href = 'sketch.html?from=editor&v=20260830br';
 }
 
 // Quick test function - navigate to sketch. Blocks if prompts missing; offers Skip if only objective missing (D-011).
@@ -87,76 +87,10 @@ function checkIfHasData() {
     return false;
 }
 
-// Ensure Sample activity is always in history (recover if deleted)
+// D-066: restore SIMPLE, SOD+A, SOD+A w/ Groupings if missing
 async function ensureSampleInHistory() {
-    const savedSettings = JSON.parse(localStorage.getItem('promptSettings') || '{}');
-    
-    // Only add if Sample doesn't exist
-    if (!savedSettings['Sample']) {
-        console.log('Sample not in history, loading from CSV to add it');
-        
-        // Load the CSV and add to history
-        try {
-            const response = await fetch('Sample-activity-2025-10-27.csv?v=20260830ba');
-            const csvText = await response.text();
-            const sampleActivity = parseCSVToActivity(csvText);
-            
-            // Convert from CSV format to stored format (matching saveActivityWithName exactly)
-            // CSV format: categories: {header: {category: [items]}}
-            // Stored format: categories: {category: [[items for col1], [items for col2], ...]}, promptHeaders: []
-            const promptHeaders = Object.keys(sampleActivity.categories || {});
-            const convertedCategories = {};
-            
-            // Get all unique category labels (criterion labels) from the CSV data
-            const allCategoryLabels = new Set();
-            promptHeaders.forEach(header => {
-                Object.keys(sampleActivity.categories[header]).forEach(cat => {
-                    if (cat) allCategoryLabels.add(cat);
-                });
-            });
-            
-            // Convert structure - matching the exact logic from saveActivityWithName
-            // which reads: rowIndex * promptCount + colIndex for each textarea
-            allCategoryLabels.forEach(categoryLabel => {
-                // Initialize as array of arrays - one for each prompt column
-                const categoryData = [];
-                
-                // For each prompt header (column)
-                promptHeaders.forEach((header, colIndex) => {
-                    const headerData = sampleActivity.categories[header];
-                    const items = headerData[categoryLabel] || [];
-                    // Filter out empty items and trim (matching saveActivityWithName logic)
-                    categoryData.push(items.filter(item => item && item.trim()).map(item => item.trim()));
-                });
-                
-                // Only add if there's data in at least one column (matching saveActivityWithName condition)
-                if (categoryData.length > 0 && categoryData.some(col => col.length > 0)) {
-                    convertedCategories[categoryLabel] = categoryData;
-                }
-            });
-            
-            // Add to history in the exact format that saveActivityWithName creates
-            savedSettings['Sample'] = {
-                objective: sampleActivity.objective || '',
-                prompt1InterestsMode: sampleActivity.prompt1InterestsMode || false,
-                criterionLabels: sampleActivity.criterionLabels || [],
-                promptHeaders: promptHeaders,
-                categories: convertedCategories,
-                theme: (sampleActivity.theme && sampleActivity.theme !== 'pink' && sampleActivity.theme !== 'green' && sampleActivity.theme !== 'blue' && sampleActivity.theme !== 'purple' && sampleActivity.theme !== 'orange' && sampleActivity.theme !== 'white') ? sampleActivity.theme : 'pinkCRT',
-                background: sampleActivity.background || 'black',
-                name: 'Sample',
-                timestamp: new Date().toISOString()
-            };
-            localStorage.setItem('promptSettings', JSON.stringify(savedSettings));
-            console.log('Sample activity added to history in correct format');
-            console.log('DEBUG: Saved Sample data structure:', {
-                promptHeaders: savedSettings['Sample'].promptHeaders,
-                categories: Object.keys(savedSettings['Sample'].categories),
-                criterionLabels: savedSettings['Sample'].criterionLabels
-            });
-        } catch (error) {
-            console.error('Failed to load Sample from CSV for history recovery:', error);
-        }
+    if (typeof window.ensureBakedSamplesInHistory === 'function') {
+        return window.ensureBakedSamplesInHistory();
     }
 }
 
@@ -165,7 +99,7 @@ async function loadDefaultActivity() {
     // Try to load from CSV file
     let defaultActivity;
     try {
-        const response = await fetch('Sample-activity-2025-10-27.csv?v=20260830ba');
+            const response = await fetch('SIMPLE.csv?v=20260830br');
         const csvText = await response.text();
         defaultActivity = parseCSVToActivity(csvText);
         console.log('Loaded Sample activity from CSV file');
@@ -462,6 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const isFromSketch = urlParams.get('from') === 'sketch';
     const openHelp = urlParams.get('help') === '1';
+    const openTour = urlParams.get('tour') === '1';
     
     console.log('=== DEBUG: Editor initialization ===');
     console.log('Current URL:', window.location.href);
@@ -505,21 +440,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // Only initialize default empty state if starting completely fresh
+        // D-066: first-time (no lists yet) opens SIMPLE, then the short walkthrough
         if (!hasExistingData) {
-            console.log('No existing data found, initializing with default empty state (1 prompt, 1 category)');
-            // Ensure Sample is in history but don't load it automatically
-            // Wait for it to complete before updating the list
-            ensureSampleInHistory().then(() => {
-                // Update settings list after Sample is added
-                if (window.updateSettingsList) {
-                    window.updateSettingsList();
+            console.log('No existing data found, loading SIMPLE');
+            ensureSampleInHistory().then(function () {
+                if (window.updateSettingsList) window.updateSettingsList();
+                if (typeof window.loadSettingsByName === 'function') {
+                    return window.loadSettingsByName('SIMPLE');
                 }
+                if (window.initializeDefaultState) window.initializeDefaultState();
+            }).then(function () {
+                setTimeout(function () {
+                    if (window.startEditorTour) {
+                        window.startEditorTour({ firstVisit: true });
+                    }
+                }, 350);
+            }).catch(function (err) {
+                console.error('Failed first-visit session load:', err);
+                if (window.initializeDefaultState) window.initializeDefaultState();
             });
-            // Initialize with empty default state (1 prompt, 1 category)
-            if (window.initializeDefaultState) {
-                window.initializeDefaultState();
-            }
         } else {
             // Has existing data - load working state from promptCategories (not saved history)
             console.log('Found existing promptCategories, loading working state');
@@ -635,7 +574,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (hasData) {
                 console.log('P pressed in editor - going to sketch to test');
                 saveChanges();
-                window.location.href = 'sketch.html?v=20260830ba';
+                window.location.href = 'sketch.html?v=20260830br';
             } else {
                 console.log('P pressed in editor - no data, going to index');
                 window.location.href = 'index.html';
@@ -647,14 +586,17 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Final prompt headers:', document.querySelectorAll('.header-input'));
     console.log('Final category rows:', document.querySelectorAll('.category-row'));
     
-    // Welcome page: editor.html?help=1 opens Help & Instructions
-    if (openHelp) {
+    // Welcome page: editor.html?help=1 opens Help; ?tour=1 replays the walkthrough (D-066)
+    if (openHelp || openTour) {
         const params = new URLSearchParams(window.location.search);
         params.delete('help');
+        params.delete('tour');
         const qs = params.toString();
         window.history.replaceState({}, document.title, window.location.pathname + (qs ? '?' + qs : ''));
         setTimeout(() => {
-            if (typeof window.showInstructionsPopup === 'function') {
+            if (openTour && typeof window.startEditorTour === 'function') {
+                window.startEditorTour({ force: true });
+            } else if (openHelp && typeof window.showInstructionsPopup === 'function') {
                 window.showInstructionsPopup();
             }
         }, 250);

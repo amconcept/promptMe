@@ -6,6 +6,86 @@ let currentLoadedActivity = null;
 let isLoadingActivity = false; // Flag to prevent clearing activity during loading
 let lastRunActivity = null; // Remember the last activity that was run
 
+// D-062: three baked starters. Cache token must move with the 23 script tags.
+const BAKED_SAMPLE_CACHE = '20260830br';
+const BAKED_SAMPLES = [
+    { name: 'One prompt sample', file: 'One-prompt-sample.csv' },
+    { name: 'Two prompt sample', file: 'Two-prompt-sample.csv' },
+    { name: 'Design challenge', file: 'Design-challenge.csv' }
+];
+const BAKED_SAMPLE_ORDER = BAKED_SAMPLES.map(function (s) { return s.name; });
+
+// D-065: classroom sessions restored if missing. Not the first-time default.
+const WORKSHOP_SESSIONS = [
+    { name: 'SIMPLE', file: 'SIMPLE.csv' },
+    { name: 'SOD+A', file: 'SOD-A.csv' },
+    { name: 'SOD+A w/ Groupings', file: 'SOD-A-w-Groupings.csv' }
+];
+const WORKSHOP_SESSION_ORDER = WORKSHOP_SESSIONS.map(function (s) { return s.name; });
+
+function bakedSampleSpec(name) {
+    for (let i = 0; i < BAKED_SAMPLES.length; i++) {
+        if (BAKED_SAMPLES[i].name === name) return BAKED_SAMPLES[i];
+    }
+    return null;
+}
+
+function workshopSessionSpec(name) {
+    for (let i = 0; i < WORKSHOP_SESSIONS.length; i++) {
+        if (WORKSHOP_SESSIONS[i].name === name) return WORKSHOP_SESSIONS[i];
+    }
+    return null;
+}
+
+async function fetchCsvActivitySettings(spec) {
+    if (!spec || typeof parseActivityCsv !== 'function') return null;
+    const response = await fetch(spec.file + '?v=' + BAKED_SAMPLE_CACHE);
+    const csvText = await response.text();
+    const parsed = parseActivityCsv(csvText);
+    return {
+        objective: parsed.objective || '',
+        prompt1InterestsMode: parsed.prompt1InterestsMode === true,
+        criterionLabels: parsed.criterionLabels || [],
+        promptHeaders: parsed.promptHeaders || [],
+        categories: parsed.categories || {},
+        theme: parsed.theme || 'pinkCRT',
+        background: parsed.background || 'black',
+        name: spec.name,
+        timestamp: new Date().toISOString()
+    };
+}
+
+async function fetchBakedSampleSettings(name) {
+    return fetchCsvActivitySettings(bakedSampleSpec(name));
+}
+
+async function restoreNamedCsvSessions(specs, savedSettings) {
+    let changed = false;
+    for (let i = 0; i < specs.length; i++) {
+        const spec = specs[i];
+        if (savedSettings[spec.name]) continue;
+        try {
+            const settings = await fetchCsvActivitySettings(spec);
+            if (!settings) continue;
+            savedSettings[spec.name] = settings;
+            changed = true;
+        } catch (error) {
+            console.error('Failed to restore session:', spec.name, error);
+        }
+    }
+    return changed;
+}
+
+/** D-066: restore the three classroom sessions if missing. Does not restore D-062 samples. Does not overwrite a teacher's copy. */
+async function ensureBakedSamplesInHistory() {
+    const savedSettings = JSON.parse(localStorage.getItem('promptSettings') || '{}');
+    const workshopChanged = await restoreNamedCsvSessions(WORKSHOP_SESSIONS, savedSettings);
+    if (workshopChanged) {
+        localStorage.setItem('promptSettings', JSON.stringify(savedSettings));
+    }
+    return savedSettings;
+}
+
 /** D-055: Activity History carries the live film so loading an activity recalls it. */
 function attachCurrentRevealToActivity(currentData) {
     if (!currentData) return;
@@ -186,7 +266,7 @@ function saveCurrentActivityAsLastRun() {
     const currentData = {
         objective: document.getElementById('objective-input').value,
         constraintEnabled: true,
-        prompt1InterestsMode: false, // UI removed — feature not ready
+        prompt1InterestsMode: (typeof isGroupingSelectModeOn === 'function') ? isGroupingSelectModeOn() : false,
         criterionLabels: criterionLabels,
         activityName: currentLoadedActivity, // Include the activity name
         categories: {}
@@ -278,9 +358,7 @@ function restoreLastRunActivity() {
     document.getElementById('objective-input').value = data.objective || '';
     if (window.enforceObjectiveWidthLimit) setTimeout(window.enforceObjectiveWidthLimit, 0);
     
-    // Criteria-selectable UI removed — keep off until feature is ready
-    const interestsRestore = document.getElementById('prompt1-interests-mode');
-    if (interestsRestore) interestsRestore.checked = false;
+    // D-063: grouping-select restored after rows are rebuilt below
     
     // Restore criterion labels
     if (data.criterionLabels && Array.isArray(data.criterionLabels)) {
@@ -341,6 +419,10 @@ function restoreLastRunActivity() {
     // Update button states
     updateButtonStates();
     updateActivityTitle();
+
+    if (typeof setGroupingSelectMode === 'function') {
+        setGroupingSelectMode(data.prompt1InterestsMode === true);
+    }
     
     // Save the restored state
     saveChanges();
@@ -376,7 +458,7 @@ function saveCurrentActivity() {
     // Get current prompt data (same as saveActivityWithName)
     const currentData = {
         objective: document.getElementById('objective-input').value,
-        prompt1InterestsMode: false, // UI removed — feature not ready
+        prompt1InterestsMode: (typeof isGroupingSelectModeOn === 'function') ? isGroupingSelectModeOn() : false,
         criterionLabels: criterionLabels, // Include criterion labels
         categories: {},
         promptHeaders: [],
@@ -468,7 +550,7 @@ function saveActivityWithName(settingsName) {
     // Get current prompt data
     const currentData = {
         objective: document.getElementById('objective-input').value,
-        prompt1InterestsMode: false, // UI removed — feature not ready
+        prompt1InterestsMode: (typeof isGroupingSelectModeOn === 'function') ? isGroupingSelectModeOn() : false,
         criterionLabels: criterionLabels,
         categories: {},
         promptHeaders: [],
@@ -700,8 +782,13 @@ function updateSettingsList() {
     // Clear existing items
     settingsList.innerHTML = '';
     
-    // Add saved settings as clickable items
-    Object.keys(savedSettings).sort().forEach(name => {
+    // D-066: classroom sessions first; leftover D-062 samples (if any) then the rest A–Z
+    const names = Object.keys(savedSettings);
+    const pinned = WORKSHOP_SESSION_ORDER.concat(BAKED_SAMPLE_ORDER);
+    const workshop = WORKSHOP_SESSION_ORDER.filter(function (n) { return names.indexOf(n) !== -1; });
+    const baked = BAKED_SAMPLE_ORDER.filter(function (n) { return names.indexOf(n) !== -1; });
+    const rest = names.filter(function (n) { return pinned.indexOf(n) === -1; }).sort();
+    workshop.concat(baked).concat(rest).forEach(name => {
         const settings = savedSettings[name];
         const item = document.createElement('div');
         item.className = 'settings-item';
@@ -783,41 +870,12 @@ async function loadSettingsByName(settingsName) {
     
     let settings;
     
-    // Special handling for Sample - always reload from CSV to ensure latest data
-    if (settingsName === 'Sample') {
-        console.log('Loading Sample - reloading from CSV to ensure latest data');
+    // D-062: baked samples always reload from their CSV so shipped lists stay current
+    if (bakedSampleSpec(settingsName)) {
         try {
-            const response = await fetch('Sample-activity-2025-10-27.csv?v=20260830ba');
-            const csvText = await response.text();
-            const parsed = (typeof parseActivityCsv === 'function')
-                ? parseActivityCsv(csvText)
-                : { objective: '', prompt1InterestsMode: false, criterionLabels: [], promptHeaders: [], categories: {}, theme: 'pinkCRT', background: 'black' };
-            const themeMigration = {
-                'orange': 'orangeCRT',
-                'green': 'greenCRT',
-                'blue': 'blueCRT',
-                'purple': 'purpleCRT',
-                'pink': 'pinkCRT',
-                'white': 'macintosh'
-            };
-            const sampleTheme = themeMigration[parsed.theme] || parsed.theme || 'pinkCRT';
-            const sampleSettings = {
-                objective: parsed.objective,
-                prompt1InterestsMode: parsed.prompt1InterestsMode,
-                criterionLabels: parsed.criterionLabels,
-                promptHeaders: parsed.promptHeaders,
-                categories: parsed.categories,
-                theme: sampleTheme,
-                background: parsed.background || 'black',
-                name: 'Sample',
-                timestamp: new Date().toISOString()
-            };
-            
-            // Use the parsed settings object
-            settings = sampleSettings;
+            settings = await fetchBakedSampleSettings(settingsName);
         } catch (error) {
-            console.error('Failed to load Sample from CSV, falling back to saved version:', error);
-            // Fall through to regular loading
+            console.error('Failed to load baked sample from CSV, falling back to saved version:', error);
             const savedSettings = JSON.parse(localStorage.getItem('promptSettings') || '{}');
             settings = savedSettings[settingsName];
         }
@@ -926,9 +984,7 @@ async function loadSettingsByName(settingsName) {
         document.getElementById('objective-input').value = settings.objective || '';
         if (window.enforceObjectiveWidthLimit) setTimeout(window.enforceObjectiveWidthLimit, 0);
         
-        // Criteria-selectable UI removed — keep off until feature is ready
-        const interestsCheckbox = document.getElementById('prompt1-interests-mode');
-        if (interestsCheckbox) interestsCheckbox.checked = false;
+        // D-063: grouping-select restored after rows are rebuilt below
         
         // Load criterion labels if they exist
         if (settings.criterionLabels && Array.isArray(settings.criterionLabels)) {
@@ -1063,6 +1119,10 @@ async function loadSettingsByName(settingsName) {
         }
         if (typeof window.hydrateAllPromptImageFields === 'function') {
             window.hydrateAllPromptImageFields();
+        }
+
+        if (typeof setGroupingSelectMode === 'function') {
+            setGroupingSelectMode(settings.prompt1InterestsMode === true);
         }
 
         // IMPORTANT: Use saveChanges() to properly save to promptCategories
@@ -1431,6 +1491,10 @@ window.sharePromptSet = sharePromptSet;
 window.loadPromptSet = loadPromptSet;
 window.startNewPromptSet = startNewPromptSet;
 window.updateSettingsList = updateSettingsList;
+window.ensureBakedSamplesInHistory = ensureBakedSamplesInHistory;
+window.BAKED_SAMPLES = BAKED_SAMPLES;
+window.WORKSHOP_SESSIONS = WORKSHOP_SESSIONS;
+window.bakedSampleSpec = bakedSampleSpec;
 window.deleteActivity = deleteActivity;
 window.selectSettings = selectSettings;
 window.loadSettingsByName = loadSettingsByName;

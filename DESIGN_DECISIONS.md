@@ -36,7 +36,7 @@ Routine visual tweaks are CHANGELOG-only (see Documentation routing in `.cursorr
 | ~~D6~~ | *Retired — see 2.1* | | |
 | ~~D7~~ | *Retired — see 2.1* | | |
 | D8 | Theme system (8 presets: orangeCRT, blueCRT, windows, greenCRT, purpleCRT, pinkCRT, macintosh, black) is **fully live** — CHANGELOG's "THEME SYSTEM REMOVAL" entry is simply wrong, not a sign this was meant to go away. Picker lives on `theme.html` (D-024), not in the editor `...` dropdown. | This is now understood as the seed of F5's "teachers can style it their way," not legacy weight — direction is to grow it, not decide whether to delete it | theme-manager.js + editor.html, sketch.html, index.html, theme.html |
-| D9 | `prompt1InterestsMode` (student-interest/category-selection): **open question, not dead code** — mechanism is fully built (checkbox UI, wiring, CSV round-trip) but hardcoded off. Paused because the real unsolved problem is *how a student's interest gets identified*, not the widget itself. See Future Directions F2 for where this is headed. | Alec wants this feature back, but not until the identification method is designed | editor.html (hidden/disabled checkbox), editor-data-manager.js, editor-settings-manager.js, sketch-refactored.js, prompt-generator.js, data-manager.js, ui-manager.js |
+| D9 | *Superseded by D-063 — grouping labels in the prompting window identify which rows to draw from.* | Identification was unsolved; the control was hidden | `prompt1InterestsMode` storage key kept |
 | D10 | Auto-save copies cube → grid **only while phone/cube layout is live** | Desktop and phone share one data model but two DOM copies. The cube stays in the page on desktop, hidden and empty. Flushing it on every save overwrote the visible prompt list after the 600ms auto-save delay. | `saveChanges()` in editor-data-manager.js; `flushPromptCube()` in editor-prompt-cube.js |
 | D11 | Objective is optional at run time. Editor warns (“Missing objective”) with Skip; the prompting window only blocks when there are no prompts. | Teachers should be able to try prompt lists before writing an objective. Hard-blocking RUN after Skip made Skip a dead end. | `quickTest()` in editor-main.js; `triggerPromptRun()` in sketch-refactored.js |
 | D12 | Prompt lists of **4+ words** (or one token ≥ 28 chars) use sentence reveal: ~1s target, fewer scramble flashes, beep per word. Layout wraps first and will not shrink below a readable floor. 1–3 words keep the original letter-by-letter timing. | Word-count is a teacher-facing rule that matches how lists are written; character-count is the fallback for a single long token. | `TIMING` in animation-manager.js; `CARD_FIT` in sketch-refactored.js |
@@ -87,6 +87,14 @@ Routine visual tweaks are CHANGELOG-only (see Documentation routing in `.cursorr
 | D57 | Share quotes CSV cells (RFC 4180). Pictures download as a zip (`activity.csv` + `media/<id>.png\|jpg`) after SHARE / CANCEL. No pictures → plain `.csv`. Load accepts `.csv` or `.zip`. Not base64 in the CSV. | Commas in sentences were split on Load. D-015 forbade binaries in the CSV; a folder-with-media pack is the share path. | `activity-pack.js`; `exportSettings` / `importSettings` |
 | D58 | Empty Custom film does **not** play Default Pattern. RUN uses letter scramble (pictures: flicker dots). Default Pattern still plays the geometric film. | Substituting the factory blobs made Reset All / a blank custom look like the default animation. | `revealUsesPixelFilm()`; `startScrambleAnimation()` |
 | D59 | Leftover-card **frame** is its own Tune knob (0–8px, 0 = none). Chrome Stroke size stays 1–6. Missing `cardStroke` on an old overlay keeps the old outline (`strokeWidth + 3`). | Stroke size could not turn the prompting-page card border off (it always added 3px). | `--card-stroke-width`; `sketchCardStroke()` |
+| D60 | *Superseded by D-061 — leftover-card objective is sentence case, centered, last wrap line at least 3 words.* | Alec then asked for sentence case and a fuller second line. | `toSentenceCase()` / `balanceLastWrapLine()` |
+| D61 | Leftover-card objective is **sentence case**, **centered**. 6+ words wrap to two even lines; last line is never 1–2 leftover words. Prompt headings stay ALL CAPS / centered. | Title Case + left looked like a heading; a one-word wrap (“That…”) looked unfinished. | `toSentenceCase()`; `wrapObjectiveToWidth()`; `CARD_FIT.OBJECTIVE_MIN_LAST_LINE_WORDS` |
+| D62 | *Superseded by D-066 — History restore and first-visit are the three classroom sessions, not the sample trio.* | First-timers should only see SIMPLE / SOD+A / SOD+A w/ Groupings. | sample CSV files remain in the repo |
+| D63 | **Students pick grouping** (editor, 2+ rows): grouping labels are tappable chips on the prompting window. Draw uses the selected row. Do not skip Prompt 1. Off by default. **One chip at a time: D-064.** | Alec: robotics vs pottery should get different rows; identification is the grouping label itself. | `#grouping-select-row`; `#grouping-picker`; `prompt1InterestsMode` |
+| D64 | Grouping chips are **radio**: tapping one deselects the others. Exactly one is on. First row is the default if nothing was stored. | Alec: only one active button at a time. | `selectGroupingChip()` |
+| D65 | Three classroom sessions always restore in History if missing: **SIMPLE**, **SOD+A**, **SOD+A w/ Groupings**. Groupings session is physical / digital / **textiles**, Students pick grouping on. History click uses the saved copy (not a CSV reload), so later desk edits stick. First-visit default is **D-066**. | Alec: set up three prompt sessions in memory; then bake the live groupings lists. | `WORKSHOP_SESSIONS`; `SIMPLE.csv`; `SOD-A.csv`; `SOD-A-w-Groupings.csv` |
+| D66 | New browsers restore **only** SIMPLE, SOD+A, SOD+A w/ Groupings. First-visit opens **SIMPLE** and a three-step walkthrough (pick / edit / run). Help is the same short Run / Edit / Save path. D-062 sample names are not auto-restored. | Alec: if we push, they should only see the three; new teachers need concise run / edit / save, with GO TO NEXT defined. | `ensureBakedSamplesInHistory()`; `EDITOR_TOUR_STEPS`; Help popup; `index.html` welcome |
+| D67 | Leftover-card name field shows placeholder **name** (dim) and a bottom rule when empty. Names stay optional. | Alec: on load it was not clear a space to type a name existed. Placeholder was a space on a transparent input. | `NAME_FIELD`; `.sketch-name-input` |
 
 ---
 
@@ -615,6 +623,86 @@ still holds as a general principle. It just doesn't need a D-row pinning specifi
 
 ---
 
+## D-060 — Objective is Title Case, left-aligned
+**Date:** 2026-10-14 · **Status:** Superseded by D-061 · **Touches:** sketch-refactored.js
+
+**Decision** On the leftover card, the objective is shown in **Title Case** (each word capitalized) and **left-aligned** to the inner card padding. Prompt headings (`WITH`, `USING`, …) stay ALL CAPS and centered. Storage and the editor keep whatever the teacher typed; only the card display changes.
+**Why** Alec: make the objective title case and left justified.
+**Rejected** Sentence case (only the first word); matching the objective to prompt-heading caps and center (reads as a second banner, not the brief).
+**Consequence** Do not restore `objectiveText.toUpperCase()` or `textAlign(CENTER)` on the objective. Wrap and height use the same title-case string so lines do not overflow after the case change.
+
+---
+
+## D-061 — Objective is sentence case, centered, no short last wrap
+**Date:** 2026-10-14 · **Status:** Active · **Touches:** sketch-refactored.js
+
+**Decision** On the leftover card, the objective is shown in **sentence case** (first letter of each sentence capital, rest lower) and **centered**. Six or more words wrap to **two even lines** when both fit, so a long brief is not a single banner. The last wrap line must have at least **3 words** (`CARD_FIT.OBJECTIVE_MIN_LAST_LINE_WORDS`) — never a leftover “That…”. Shorter phrases stay one line. Prompt headings stay ALL CAPS and centered. Storage and the editor keep whatever the teacher typed; only the card display changes.
+**Why** Alec: sentence case, center justified, wrap so it is never just one or two words on the second line (that looks funny). Title Case + left (D-060) was the previous ask.
+**Rejected** Keeping Title Case. Leaving a long sentence on one line when two even lines would fit. Shrinking type to jam a short leftover onto the first line.
+**Consequence** Do not restore Title Case, left-align, or ALL CAPS on the objective. Height measurement must use the same sentence-case + balanced wrap as the draw, or the card will clip. A 3-word leftover is allowed only when the previous line cannot spare a word without overflowing.
+
+---
+
+## D-062 — Three baked samples and a first-visit walkthrough
+**Date:** 2026-10-18 · **Status:** Superseded by D-066 · **Touches:** editor-settings-manager.js, editor-main.js, editor-ui-manager.js, index.html, One-prompt-sample.csv, Two-prompt-sample.csv, Design-challenge.csv
+
+**Decision** Activity History always restores **One prompt sample**, **Two prompt sample**, and **Design challenge** from those CSV files (not named SOD+A). Design challenge groupings are **physical** and **digital**. A first-time editor (no prompt lists in this browser) opens Two prompt sample and a six-step spotlight walkthrough (Welcome, Objective, Prompts, Groupings, FILE, RUN). A **run** is one randomized draw of prompts. Replay lives in Help (`?tour=1` also replays). Teachers who already have lists are not switched or overwritten. Baked CSV reloads on History click so shipped lists stay current; a teacher’s own copy under another name is untouched.
+**Why** Alec: bake the design-challenge lists; first-timers should land on prompts and be asked to adjust to their school; keep a small sample; show a grouping example; walkthrough popups highlighting features.
+**Rejected** Replacing Sample with SOD+A 2.0 as the only starter. Auto-starting the tour for returning browsers. Putting Customize on the tour.
+**Consequence** Do not drop a baked sample from History without a new decision. First-visit must not call `initializeDefaultState()` instead of Two prompt sample. Do not name Design challenge SOD+A in the UI. Walkthrough Prompts frames **one** prompt column (heading + its list box). Groupings frames each horizontal row (letter + boxes), not the prompt headings.
+
+---
+
+## D-063 — Students pick grouping by tapping labels
+**Date:** 2026-11-04 · **Status:** Active · **Touches:** editor.html, editor-ui-manager.js, editor-data-manager.js, editor-settings-manager.js, ui-manager.js, sketch.html, sketch-refactored.js, prompt-generator.js, data-manager.js, RANDOMIZER_LOGIC_SPEC.md
+
+**Decision** If the teacher turns on **Students pick grouping** (visible once there are two grouping rows), the prompting window shows those grouping labels as tappable chips. A run draws only from the selected grouping. That chip is R7 (the row is forced). Chip exclusivity is **D-064**. Prompt columns all still draw. Storage/CSV key stays `prompt1InterestsMode`. Default is off.
+**Why** Alec: rebuild select-based-on-grouping so robotics students get robotics rows and pottery students get pottery rows. The unsolved D9 question was *how interest is identified* — the answer is the grouping label itself, not Prompt 1 and not a hidden control panel.
+**Rejected** Using Prompt 1 as the interest picker (skipped that column on the card). Putting the picker back in the removed control panel (`SKETCH_HIDE_CONTROL_PANEL`). Showing the editor switch with only one grouping (nothing to pick). F2 invisible teacher steering (separate future).
+**Consequence** Do not hide `#prompt1-interests-mode` or hardcode it false. Do not `slice(1)` prompt types when the flag is on. Exhaustion (R6) for a filtered run is the selected grouping’s union; pottery stays in play when robotics refills. F2 remains a different idea (teacher steers without the student seeing a choice). Chip multi-select is rejected in D-064.
+
+---
+
+## D-064 — Grouping chips are radio, one at a time
+**Date:** 2026-11-04 · **Status:** Active · **Touches:** ui-manager.js, sketch.html
+
+**Decision** When Students pick grouping is on, exactly **one** grouping chip is active. Tapping a chip turns it on and turns every other chip off. The first grouping is selected if nothing was stored. Tapping the already-on chip leaves it on (cannot have zero).
+**Why** Alec: only one active button at a time; as soon as a grouping is selected, others deselect.
+**Rejected** Independent toggles / several chips on at once (D-063’s first ship). An extra All chip (the editor switch off already means every grouping).
+**Consequence** Do not restore multi-select on these chips. With the feature on, every run is R7 for the chosen row.
+
+---
+
+## D-065 — Three classroom sessions in Activity History
+**Date:** 2026-11-04 · **Status:** Active · **Touches:** editor-settings-manager.js, SIMPLE.csv, SOD-A.csv, SOD-A-w-Groupings.csv
+
+**Decision** Activity History always restores **SIMPLE**, **SOD+A**, and **SOD+A w/ Groupings** if those names are missing. Groupings is the split (physical / digital / **textiles**, Students pick grouping on). **SOD+A** is that same union in one grouping (INCLUDES / USES / EXPLORES). **SIMPLE** is that same union in one **INCORPORATES** list. First-time editor opens **SIMPLE** (**D-066**). Clicking a workshop name in History loads the saved copy, not a fresh CSV, so later list edits persist. Existing **SOD+A 2.0** is not renamed or overwritten.
+**Why** Alec: set up three prompt sessions in memory — simple one-prompt, SOD+A combined, SOD+A with physical / digital / textiles.
+**Rejected** Reloading from CSV on every History click (would wipe desk edits). First-visit default and dropping D-062 samples: **D-066**.
+**Consequence** Do not drop these three from History restore without a new decision. Do not treat `SOD+A` and `SOD+A 2.0` as the same activity.
+
+---
+
+## D-066 — Classroom sessions only, short teacher path
+**Date:** 2026-11-04 · **Status:** Active · **Touches:** editor-settings-manager.js, editor-main.js, editor-ui-manager.js, index.html, README.md
+
+**Decision** A new browser restores **only** **SIMPLE**, **SOD+A**, and **SOD+A w/ Groupings**. First-visit opens **SIMPLE** and a three-step walkthrough (pick a session → edit → run). Help is the same short path: **Run**, **Edit**, **Save**. **GO TO NEXT** keeps the result and starts the next student (options stay out). **RE-RUN** redraws the same student (options go back in). **FILE → Save** writes the session in this browser; **FILE → Share** is the file backup. D-062 sample names are not auto-restored; leftover copies are not deleted.
+**Why** Alec: after cleanup, a pushed version should only show the three sessions; a never-seen-this teacher needs concise run / edit / save, with GO TO NEXT defined; too much text loses them.
+**Rejected** Keeping One / Two prompt sample and Design challenge in History for new browsers. The six-step sample walkthrough as first-visit. A long Help essay.
+**Consequence** Do not restore D-062 samples on first visit. Do not auto-delete a teacher’s leftover sample names. Do not reopen first-visit with Two prompt sample.
+
+---
+
+## D-067 — Name slot is visible when empty
+**Date:** 2026-11-06 · **Status:** Active · **Touches:** ui-manager.js
+
+**Decision** The leftover-card name field shows placeholder **name** at reduced opacity and a bottom rule. Names stay optional (unnamed runs are still Run 1, Run 2…). Typed text uses full ink.
+**Why** Alec: when we load, it is not clear that a space to input a name is available. The field was transparent with placeholder `" "` so the slot disappeared into the card.
+**Rejected** Leaving the space placeholder. Requiring a name before RUN. Auto-focus (would pop the phone keyboard).
+**Consequence** Do not set the name placeholder to a space or empty string. Do not hide the underline on the empty field.
+
+---
+
 ## 3. Known drift (flag, don't silently "fix")
 
 - ~~CHANGELOG's documented module line counts no longer match actual file sizes.~~
@@ -641,12 +729,11 @@ here so the reasoning isn't lost between conversations.
 - **F2 — Invisible teacher curation.** A teacher should be able to bias or
   pin which options come up — either preset before a session or adjusted
   live while a student is at the desk — without the student perceiving
-  anything other than genuine randomness. This directly extends the open
-  `prompt1InterestsMode` question (see D9): "interest" doesn't have to be
-  something a student declares — it can be something a teacher steers
-  invisibly. Implementing this means adding a weighting/override layer on
-  top of the existing uniform-random draw, without changing the visible
-  reveal behavior at all.
+  anything other than genuine randomness. This is a different path from
+  D-063 (student taps a grouping label). "Interest" can still be something
+  a teacher steers invisibly. Implementing this means adding a weighting/override
+  layer on top of the existing uniform-random draw, without changing the
+  visible reveal behavior at all.
 - **F3 — Design constraint: mimics AI, requires teacher intent.** The system
   should feel unpredictable/generative the way AI output does, but it must
   structurally force the teacher to make deliberate curatorial choices
