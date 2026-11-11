@@ -14,7 +14,7 @@ function openSketchFromEditor() {
     } else {
         sessionStorage.setItem('promptMeEditorLayout', 'grid');
     }
-    window.location.href = 'sketch.html?from=editor&v=20260830bu';
+    window.location.href = 'sketch.html?from=editor&v=20260830bw';
 }
 
 // Quick test function - navigate to sketch. Blocks if prompts missing; offers Skip if only objective missing (D-011).
@@ -99,7 +99,7 @@ async function loadDefaultActivity() {
     // Try to load from CSV file
     let defaultActivity;
     try {
-            const response = await fetch('SIMPLE.csv?v=20260830bu');
+            const response = await fetch('SIMPLE.csv?v=20260830bw');
         const csvText = await response.text();
         defaultActivity = parseCSVToActivity(csvText);
         console.log('Loaded Sample activity from CSV file');
@@ -538,6 +538,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // When editor tab becomes visible again, refresh UI from working state (promptCategories)
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden && window.loadSavedData) {
+            const typing = document.activeElement &&
+                (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT');
+            // D-071: rebuilding the grid drops the caret and jumps to the top of a long list
+            if (typing) return;
             const raw = localStorage.getItem('promptCategories');
             if (raw) {
                 try {
@@ -545,6 +549,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (data.activityName) currentLoadedActivity = data.activityName;
                 } catch (e) { /* ignore */ }
                 setTimeout(() => {
+                    const stillTyping = document.activeElement &&
+                        (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT');
+                    if (stillTyping) return;
                     loadSavedData();
                     if (window.updateButtonStates) window.updateButtonStates();
                     if (window.updateActivityTitle) window.updateActivityTitle();
@@ -574,7 +581,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (hasData) {
                 console.log('P pressed in editor - going to sketch to test');
                 saveChanges();
-                window.location.href = 'sketch.html?v=20260830bu';
+                window.location.href = 'sketch.html?v=20260830bw';
             } else {
                 console.log('P pressed in editor - no data, going to index');
                 window.location.href = 'index.html';

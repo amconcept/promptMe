@@ -7,7 +7,7 @@ let isLoadingActivity = false; // Flag to prevent clearing activity during loadi
 let lastRunActivity = null; // Remember the last activity that was run
 
 // D-062: three baked starters. Cache token must move with the 23 script tags.
-const BAKED_SAMPLE_CACHE = '20260830bu';
+const BAKED_SAMPLE_CACHE = '20260830bw';
 const BAKED_SAMPLES = [
     { name: 'One prompt sample', file: 'One-prompt-sample.csv' },
     { name: 'Two prompt sample', file: 'Two-prompt-sample.csv' },

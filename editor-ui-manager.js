@@ -31,6 +31,39 @@ function syncGroupingSelectRow(opts) {
 }
 window.syncGroupingSelectRow = syncGroupingSelectRow;
 
+// D-071: measure off-screen. Setting the live box to height:auto collapses it
+// and the page jumps to the top of the list while the teacher is typing at the bottom.
+function measureTextareaContentHeight(textarea) {
+    const cs = window.getComputedStyle(textarea);
+    const probe = document.createElement('textarea');
+    probe.value = textarea.value;
+    probe.rows = 1;
+    probe.setAttribute('aria-hidden', 'true');
+    probe.tabIndex = -1;
+    probe.style.cssText = [
+        'position:absolute',
+        'left:-9999px',
+        'top:0',
+        'height:auto',
+        'min-height:0',
+        'overflow:hidden',
+        'visibility:hidden',
+        'pointer-events:none',
+        'box-sizing:' + cs.boxSizing,
+        'width:' + textarea.clientWidth + 'px',
+        'padding:' + cs.padding,
+        'border-width:' + cs.borderWidth,
+        'border-style:' + cs.borderStyle,
+        'font:' + cs.font,
+        'line-height:' + cs.lineHeight,
+        'letter-spacing:' + cs.letterSpacing
+    ].join(';');
+    document.body.appendChild(probe);
+    const height = probe.scrollHeight;
+    probe.remove();
+    return height;
+}
+
 // Auto-resize textareas in each row to match the tallest one
 function autoResizeTextareasInRows() {
     const textareas = document.querySelectorAll('.textarea-container textarea');
@@ -39,37 +72,31 @@ function autoResizeTextareasInRows() {
     if (textareas.length === 0 || promptCount === 0) {
         return;
     }
+
+    const scroller = document.scrollingElement || document.documentElement;
+    const scrollY = scroller.scrollTop;
     
-    // Calculate number of rows (categories)
     const rowCount = Math.ceil(textareas.length / promptCount);
     
-    // For each row, find the tallest textarea and set all in that row to match
     for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-        let maxHeight = 100; // Minimum height
+        let maxHeight = 100;
         
-        // First pass: find the maximum scrollHeight needed
         for (let colIndex = 0; colIndex < promptCount; colIndex++) {
-            const textareaIndex = rowIndex * promptCount + colIndex;
-            const textarea = textareas[textareaIndex];
-            
+            const textarea = textareas[rowIndex * promptCount + colIndex];
             if (textarea) {
-                // Temporarily set height to auto to get accurate scrollHeight
-                textarea.style.height = 'auto';
-                const scrollHeight = textarea.scrollHeight;
-                maxHeight = Math.max(maxHeight, scrollHeight);
+                maxHeight = Math.max(maxHeight, measureTextareaContentHeight(textarea));
             }
         }
         
-        // Second pass: set all textareas in this row to the max height
         for (let colIndex = 0; colIndex < promptCount; colIndex++) {
-            const textareaIndex = rowIndex * promptCount + colIndex;
-            const textarea = textareas[textareaIndex];
-            
+            const textarea = textareas[rowIndex * promptCount + colIndex];
             if (textarea) {
                 textarea.style.height = maxHeight + 'px';
             }
         }
     }
+
+    scroller.scrollTop = scrollY;
 }
 
 // Function to update criterion label

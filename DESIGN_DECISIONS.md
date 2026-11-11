@@ -96,7 +96,9 @@ Routine visual tweaks are CHANGELOG-only (see Documentation routing in `.cursorr
 | D66 | New browsers restore **only** SIMPLE, SOD+A, SOD+A w/ Groupings. First-visit opens **SIMPLE** and a three-step walkthrough (pick / edit / run). Help is the same short Run / Edit / Save path. D-062 sample names are not auto-restored. | Alec: if we push, they should only see the three; new teachers need concise run / edit / save, with GO TO NEXT defined. | `ensureBakedSamplesInHistory()`; `EDITOR_TOUR_STEPS`; Help popup; `index.html` welcome |
 | D67 | Leftover-card name field shows placeholder **name** (dim) and a bottom rule when empty. Names stay optional. | Alec: on load it was not clear a space to type a name existed. Placeholder was a space on a transparent input. | `NAME_FIELD`; `.sketch-name-input` |
 | D68 | Phone objective is **not** cut to one line. The field scrolls; the card wraps the whole sentence (D-061). A working copy that is only the start of the History sentence gets the ending back. | Alec: on the phone the card stopped at “and make” and dropped “an object that…”. | `enforceObjectiveWidthLimit()`; `restoreObjectiveTailIfPhoneTrimmed()` |
-| D69 | Baked **SIMPLE** is the shorter desk list in `SIMPLE.csv`, not a fresh union of SOD+A w/ Groupings. SOD+A and the groupings session stay as they are. | Alec edited SIMPLE in the app and asked to bake that list. Rebuilding it from the groupings would put the machines and sensors back. | `SIMPLE.csv` |
+| D69 | *Superseded by D-070 — SIMPLE is the logo redesign list, still not a union of groupings.* | Later bake replaced the shorter materials list. | `SIMPLE.csv` |
+| D70 | Baked **SIMPLE** is **LOGO REDESIGN CHALLENGE**: one unlabeled prompt (blank heading, D-018), grouping A, pick off, 21 company/franchise items. Not a union of SOD+A w/ Groupings. SOD+A and groupings stay as they are. History still loads a teacher’s saved copy, not a fresh CSV. | Alec replaced SIMPLE with a logo brief and dropped INCORPORATES. A bake from groupings would put materials/machines back. | `SIMPLE.csv` |
+| D71 | Prompt-list boxes grow by measuring height off-screen. Do not set the live textarea to `height: auto` while typing. Do not rebuild the editor grid from storage if a list field is focused. | Alec: typing at the bottom of a long list bounced the screen to the top. `height: auto` collapses the box to measure it. | `measureTextareaContentHeight()`; `autoResizeTextareasInRows()`; `visibilitychange` |
 
 ---
 
@@ -716,12 +718,32 @@ still holds as a general principle. It just doesn't need a D-row pinning specifi
 ---
 
 ## D-069 — SIMPLE is the shorter desk list
-**Date:** 2026-11-06 · **Status:** Active · **Touches:** SIMPLE.csv
+**Date:** 2026-11-06 · **Status:** Superseded by D-070 · **Touches:** SIMPLE.csv
 
 **Decision** The baked **SIMPLE** activity is the INCORPORATES list Alec edited in the app (no rubber, no machines or sensors, no 3D modelling / embroidery / sewing). It is not rebuilt from **SOD+A w/ Groupings**. **SOD+A** stays the union of that groupings session. History still loads a teacher’s saved copy, not a fresh CSV.
 **Why** Alec updated SIMPLE and asked for the hard-coded file to match. D-065 had described SIMPLE as that same union, which would put the removed lines back on the next bake.
 **Rejected** Regenerating SIMPLE from the groupings lists. Changing SOD+A or SOD+A w/ Groupings to match the shorter list.
 **Consequence** Do not refill `SIMPLE.csv` from the other two sessions. `elasticity` appears once (the extra copy at the end of the list was removed).
+
+---
+
+## D-070 — SIMPLE is the logo redesign list
+**Date:** 2026-11-11 · **Status:** Active · **Touches:** SIMPLE.csv
+
+**Decision** Baked **SIMPLE** is objective **LOGO REDESIGN CHALLENGE**, one prompt with a **blank heading** (D-018: unlabeled on the card), grouping **A**, Students pick grouping off, and the 21 company/franchise lines in `SIMPLE.csv`. It is not rebuilt from **SOD+A w/ Groupings**. **SOD+A** and **SOD+A w/ Groupings** stay as they are. History still loads a teacher’s saved copy, not a fresh CSV (D-065).
+**Why** Alec replaced the materials SIMPLE list with a logo brief, then dropped INCORPORATES. A future session treating D-065/D-069 as current would restore cardboard/machines and the old heading.
+**Rejected** Changing SOD+A or the groupings session. Keeping INCORPORATES or renaming it FOR.
+**Consequence** Do not refill `SIMPLE.csv` from the other two sessions. Do not put INCORPORATES back on SIMPLE. Overwrite History **SIMPLE** only when Alec asks to bake; do not wipe groupings.
+
+---
+
+## D-071 — Long prompt lists must not jump to the top while typing
+**Date:** 2026-11-11 · **Status:** Active · **Touches:** editor-ui-manager.js, editor-main.js
+
+**Decision** Growing a prompt list measures needed height on an off-screen copy. The live box is not set to `height: auto`. Window scroll is restored after a resize. Coming back to the tab does not rebuild the whole grid if a list or other field is focused.
+**Why** Alec: at the bottom of a long list the screen bounced to the top. `height: auto` is the usual way to measure a textarea; it briefly collapses the box, so the page follows that collapse.
+**Rejected** Leaving the collapse-to-measure trick. Turning off auto-resize (row heights would stop matching).
+**Consequence** Do not put `textarea.style.height = 'auto'` back on the live fields to “fix” measurement.
 
 ---
 
